@@ -77,11 +77,6 @@ DataLoader<T>::CountReferences( T iData ) {
 }
 
 
-
-
-// MRILoader DataManager::mMRILoader;
-// MRISLoader DataManager::mMRISLoader;
-
 DataManager::DataManager() : DebugReporter() {
 }
 
@@ -103,10 +98,7 @@ DataManager::GetMRISLoader() {
   return sLoader;
 }
 
-// This line necessary to generate the right code.
-template DataLoader<MRI*>;
-list<MRI*> DataLoader<MRI*>::mlData;
-map<MRI*,int> DataLoader<MRI*>::mRefs;
+template class DataLoader<MRI*>;
 
 MRI* 
 MRILoader::LoadData( std::string& ifnData ) { 
@@ -140,10 +132,7 @@ MRILoader::DoesFileNameMatchObject( MRI* iData, std::string& ifnData ) {
 }
 
 
-// This line necessary to generate the right code.
-template DataLoader<MRIS*>;
-list<MRIS*> DataLoader<MRIS*>::mlData;
-map<MRIS*,int> DataLoader<MRIS*>::mRefs;
+template class DataLoader<MRIS*>;
 
 MRIS* 
 MRISLoader::LoadData( std::string& ifnData ) { 
