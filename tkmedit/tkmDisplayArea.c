@@ -3,8 +3,8 @@
 //
 // Warning: Do not edit the following four lines.  CVS maintains them.
 // Revision Author: $Author: kteich $
-// Revision Date  : $Date: 2003/07/18 20:12:32 $
-// Revision       : $Revision: 1.77.4.1 $
+// Revision Date  : $Date: 2003/07/18 22:08:02 $
+// Revision       : $Revision: 1.77.4.2 $
 
 #include "tkmDisplayArea.h"
 #include "tkmMeditWindow.h"
@@ -3678,6 +3678,9 @@ DspA_tErr DspA_BrushVoxels_ ( tkmDisplayAreaRef this,
   xVoxelRef        paBrushedVoxs = NULL;
   int              nBrushedVoxs = 0;
 
+  DebugEnterFunction( ("DspA_BrushVoxels_( this=%p, ipCenterVox=%p, "
+		       "ipData=%p )", this, ipCenterVox, ipData) );
+
   /* Convert the center vox to an MRI index. */
   if( this->mabDisplayFlags[DspA_tDisplayFlag_AuxVolume] ) {
     Volm_ConvertIdxToMRIIdx( this->mpVolume[tkm_tVolumeType_Aux], 
@@ -3731,6 +3734,9 @@ DspA_tErr DspA_BrushVoxels_ ( tkmDisplayAreaRef this,
 
   /* Allocate the array of voxels. Set it to the max it can be, with
      is the size of the cuboid in the bounds calc'd above. */
+  DebugNote( ("Allocation brushed voxels array of size %d",
+	      sizeof(xVoxel) * (nXMax - nXMin + 1) *
+	      (nYMax - nYMin + 1) * (nZMax - nZMin + 1)) );
   paBrushedVoxs = malloc( sizeof(xVoxel) * 
 			  (nXMax - nXMin + 1) *
 			  (nYMax - nYMin + 1) * 
@@ -3781,8 +3787,9 @@ DspA_tErr DspA_BrushVoxels_ ( tkmDisplayAreaRef this,
     free( paBrushedVoxs );
   }
 
+  DebugExitFunction;
+
   return eResult;
-  
 }
 
 void DspA_BrushVoxelsInThreshold_ ( xVoxelRef ipaVoxel, int inCount,
