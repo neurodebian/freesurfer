@@ -18342,7 +18342,7 @@ int main(int argc, char *argv[])   /* new main */
   /* end rkt */
   
   /* rkt: check for and handle version tag */
-  nargs = handle_version_option (argc, argv, "$Id: tksurfer.c,v 1.94 2005/01/05 21:28:47 kteich Exp $", "$Name:  $");
+  nargs = handle_version_option (argc, argv, "$Id: tksurfer.c,v 1.94.2.1 2005/03/31 20:08:18 kteich Exp $", "$Name:  $");
   if (nargs && argc - nargs == 1)
     exit (0);
   argc -= nargs;
@@ -24372,7 +24372,8 @@ int fbnd_new_line_from_marked_vertices ()
 		  vu_x = u->x - v->x;
 		  vu_y = u->y - v->y;
 		  vu_z = u->z - v->z;
-		  
+
+#if 0		  
 		  /* calc the dot product between srcdest vector and
                      uv vector. if it's < 0, this neighbor is in the
                      opposite direction of dest, and we can skip it. */
@@ -24382,6 +24383,7 @@ int fbnd_new_line_from_marked_vertices ()
 		    {
 		      continue;
 		    }
+#endif
 		  
 		  /* recalc the weight. */
 		  dist_uv = sqrt(((v->x - u->x) * (v->x - u->x)) +
