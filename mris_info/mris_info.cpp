@@ -3,8 +3,8 @@
 //
 // Warning: Do not edit the following four lines.  CVS maintains them.
 // Revision Author: $Author: tosa $
-// Revision Date  : $Date: 2005/02/07 22:31:13 $
-// Revision       : $Revision: 1.6.2.1 $
+// Revision Date  : $Date: 2005/02/11 16:16:15 $
+// Revision       : $Revision: 1.6.2.2 $
 //
 
 #include <iostream>
@@ -32,7 +32,9 @@ extern "C" {
 
 using namespace std;
 
-static char vcid[] = "$Id: mris_info.cpp,v 1.6.2.1 2005/02/07 22:31:13 tosa Exp $";
+static char vcid[] = "$Id: mris_info.cpp,v 1.6.2.2 2005/02/11 16:16:15 tosa Exp $";
+
+static char version[] = "$Name";
 
 int main(int argc, char *argv[])
 {
