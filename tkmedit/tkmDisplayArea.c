@@ -3,8 +3,8 @@
 //
 // Warning: Do not edit the following four lines.  CVS maintains them.
 // Revision Author: $Author: kteich $
-// Revision Date  : $Date: 2003/07/18 22:08:02 $
-// Revision       : $Revision: 1.77.4.2 $
+// Revision Date  : $Date: 2003/07/19 21:22:20 $
+// Revision       : $Revision: 1.77.4.3 $
 
 #include "tkmDisplayArea.h"
 #include "tkmMeditWindow.h"
@@ -3662,6 +3662,9 @@ DspA_tErr DspA_BrushVoxels_ ( tkmDisplayAreaRef this,
 			      void(*ipFunction)(xVoxelRef,int,void*) ) {
   
   DspA_tErr        eResult     = DspA_tErr_NoErr;
+  int              nDimensionX = 0;
+  int              nDimensionY = 0;
+  int              nDimensionZ = 0;
   int              nXCenter    = 0;
   int              nYCenter    = 0;
   int              nZCenter    = 0;
@@ -3681,13 +3684,18 @@ DspA_tErr DspA_BrushVoxels_ ( tkmDisplayAreaRef this,
   DebugEnterFunction( ("DspA_BrushVoxels_( this=%p, ipCenterVox=%p, "
 		       "ipData=%p )", this, ipCenterVox, ipData) );
 
-  /* Convert the center vox to an MRI index. */
+  /* Convert the center vox to an MRI index. Also get the dimensions
+     of the right volume. */
   if( this->mabDisplayFlags[DspA_tDisplayFlag_AuxVolume] ) {
     Volm_ConvertIdxToMRIIdx( this->mpVolume[tkm_tVolumeType_Aux], 
 			     ipCenterVox, &MRIIdx );
+    Volm_GetDimensions( this->mpVolume[tkm_tVolumeType_Aux], 
+			&nDimensionX, &nDimensionY, &nDimensionZ );
   } else {
     Volm_ConvertIdxToMRIIdx( this->mpVolume[tkm_tVolumeType_Main], 
 			     ipCenterVox, &MRIIdx );
+    Volm_GetDimensions( this->mpVolume[tkm_tVolumeType_Main], 
+			&nDimensionX, &nDimensionY, &nDimensionZ );
   }
 
   /* get our center voxel. */
@@ -3723,20 +3731,17 @@ DspA_tErr DspA_BrushVoxels_ ( tkmDisplayAreaRef this,
 
   /* Calc the limits and cap them. */
   nXMin = MAX( nXCenter - nXRadius, 0 );
-  nXMax = MIN( nXCenter + nXRadius, this->mnVolumeSizeX-1 );
+  nXMax = MIN( nXCenter + nXRadius, nDimensionX );
   nYMin = MAX( nYCenter - nYRadius, 0 );
-  nYMax = MIN( nYCenter + nYRadius, this->mnVolumeSizeY-1 );
+  nYMax = MIN( nYCenter + nYRadius, nDimensionY );
   nZMin = MAX( nZCenter - nZRadius, 0 );
-  nZMax = MIN( nZCenter + nZRadius, this->mnVolumeSizeZ-1 );
+  nZMax = MIN( nZCenter + nZRadius, nDimensionZ );
 
   /* set our voxel. */
   xVoxl_Set( &MRIIdx, nXMin, nYMin, nZMin );
 
   /* Allocate the array of voxels. Set it to the max it can be, with
      is the size of the cuboid in the bounds calc'd above. */
-  DebugNote( ("Allocation brushed voxels array of size %d",
-	      sizeof(xVoxel) * (nXMax - nXMin + 1) *
-	      (nYMax - nYMin + 1) * (nZMax - nZMin + 1)) );
   paBrushedVoxs = malloc( sizeof(xVoxel) * 
 			  (nXMax - nXMin + 1) *
 			  (nYMax - nYMin + 1) * 

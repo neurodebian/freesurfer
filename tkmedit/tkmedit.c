@@ -4,9 +4,9 @@
 
 // Warning: Do not edit the following four lines.  CVS maintains them.
 // Revision Author: $Author: kteich $
-// Revision Date  : $Date: 2003/07/18 20:12:19 $
-// Revision       : $Revision: 1.163.4.1 $
-char *VERSION = "$Revision: 1.163.4.1 $";
+// Revision Date  : $Date: 2003/07/19 21:22:21 $
+// Revision       : $Revision: 1.163.4.2 $
+char *VERSION = "$Revision: 1.163.4.2 $";
 
 #define TCL
 #define TKMEDIT 
@@ -1047,7 +1047,7 @@ void ParseCmdLineArgs ( int argc, char *argv[] ) {
      shorten our argc and argv count. If those are the only args we
      had, exit. */
   /* rkt: check for and handle version tag */
-  nNumProcessedVersionArgs = handle_version_option (argc, argv, "$Id: tkmedit.c,v 1.163.4.1 2003/07/18 20:12:19 kteich Exp $");
+  nNumProcessedVersionArgs = handle_version_option (argc, argv, "$Id: tkmedit.c,v 1.163.4.2 2003/07/19 21:22:21 kteich Exp $");
   if (nNumProcessedVersionArgs && argc - nNumProcessedVersionArgs == 1)
     exit (0);
   argc -= nNumProcessedVersionArgs;
@@ -5171,7 +5171,7 @@ int main ( int argc, char** argv ) {
   /* read tcl/tk internal startup scripts */
   eTcl = Tcl_Init( interp );
   if( TCL_OK != eTcl ) {
-    DebugPrint( ("Tcl_Init returned %d\n", (int)eTcl) );
+    DebugPrint( ("Tcl_Init returned %d: %s\n", (int)eTcl, interp->result) );
     tkm_DisplayError( "Initializing Tcl",
           "Error initializing Tcl",
           "For some reason, Tcl couldn't be initialized. Possible "
@@ -5182,7 +5182,7 @@ int main ( int argc, char** argv ) {
   }
   eTcl = Tk_Init( interp );
   if( TCL_OK != eTcl ) {
-    DebugPrint( ("Tk_Init returned %d\n", (int)eTcl) );
+    DebugPrint( ("Tk_Init returned %d: %s\n", (int)eTcl, interp->result) );
     tkm_DisplayError( "Initializing Tk",
           "Error initializing Tk",
           "For some reason, Tk couldn't be initialized. Possible "
@@ -5193,7 +5193,7 @@ int main ( int argc, char** argv ) {
   }
   eTcl = Tix_Init( interp );
   if( TCL_OK != eTcl ) {
-    DebugPrint( ("Tix_Init returned %d\n", (int)eTcl) );
+    DebugPrint( ("Tix_Init returned %d: %s\n", (int)eTcl, interp->result) );
     tkm_DisplayError( "Initializing Tix",
           "Error initializing Tix",
           "For some reason, Tix couldn't be initialized. Possible "
@@ -5204,7 +5204,7 @@ int main ( int argc, char** argv ) {
   }
   eTcl = Blt_Init( interp );
   if( TCL_OK != eTcl ) {
-    DebugPrint( ("Blt_Init returned %d\n", (int)eTcl) );
+    DebugPrint( ("Blt_Init returned %d: %s\n", (int)eTcl, interp->result) );
     tkm_DisplayError( "Initializing BLT",
           "Error initializing BLT",
           "For some reason, BLT couldn't be initialized. Possible "
