@@ -22,3 +22,4 @@ release:
 uninstall-release:
 	$(MAKE) uninstall 
 	$(MAKE) uninstall-release -C docs
+	$(MAKE) uninstall-release -C grad_unwarp_tables
