@@ -1,6 +1,11 @@
 //
 // mris_info.cpp
 //
+// Warning: Do not edit the following four lines.  CVS maintains them.
+// Revision Author: $Author: tosa $
+// Revision Date  : $Date: 2005/02/07 22:31:13 $
+// Revision       : $Revision: 1.6.2.1 $
+//
 
 #include <iostream>
 #include <iomanip>
@@ -16,7 +21,7 @@ extern "C" {
 #include "mri.h"
 #include "transform.h"
 #include "mrisurf.h"
-
+#include "version.h"
   char *Progname = "mris_info";
 }
 
@@ -27,8 +32,18 @@ extern "C" {
 
 using namespace std;
 
+static char vcid[] = "$Id: mris_info.cpp,v 1.6.2.1 2005/02/07 22:31:13 tosa Exp $";
+
 int main(int argc, char *argv[])
 {
+  int nargs;
+
+  /* rkt: check for and handle version tag */
+  nargs = handle_version_option (argc, argv, vcid, "$Name:  $");
+  if (nargs && argc - nargs == 1)
+    exit (0);
+  argc -= nargs;
+
   vector<string> type;
   type.push_back("MRIS_BINARY_QUADRANGLE_FILE");
   type.push_back("MRIS_ASCII_TRIANGLE_FILE");
