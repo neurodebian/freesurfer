@@ -30,10 +30,10 @@
 #   script.
 #
 #
-# $Id: FreeSurferEnv.csh,v 1.3.6.3 2005/03/28 22:26:54 kteich Exp $
+# $Id: FreeSurferEnv.csh,v 1.3.6.4 2005/03/29 17:27:09 kteich Exp $
 #############################################################################
 
-set VERSION = '$Id: FreeSurferEnv.csh,v 1.3.6.3 2005/03/28 22:26:54 kteich Exp $'
+set VERSION = '$Id: FreeSurferEnv.csh,v 1.3.6.4 2005/03/29 17:27:09 kteich Exp $'
 
 ## Get the name of the operating system
 set os = `uname -s`
@@ -209,7 +209,7 @@ set path = ( $FSFAST_HOME/bin/ \
              $FREESURFER_HOME/bin/noarch      \
              $FREESURFER_HOME/bin/         \
              $FSL_BIN                   \
-	     $path
+	     $path \
             )
 
 if(! $?NO_MINC) then
