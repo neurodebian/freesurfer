@@ -1227,6 +1227,8 @@ VolumeCollection::WriteROIsToSegmentation ( string ifnVolume ) {
     throw runtime_error( "Couldn't create seg volume" );
   }
 
+  MRIcopyHeader( mMRI, segVolume );
+
   // Go through the volume...
   int index[3];
   for( index[2] = 0; index[2] < mMRI->depth; index[2]++ ) {
