@@ -1,6 +1,6 @@
-#! /usr/pubsw/bin/tixwish
+#! /usr/bin/tixwish
 
-# $Id: tkmedit.tcl,v 1.83.2.1 2005/04/07 16:54:31 kteich Exp $
+# $Id: tkmedit.tcl,v 1.83.2.2 2005/04/07 17:04:11 kteich Exp $
 
 
 source $env(FREESURFER_HOME)/lib/tcl/tkm_common.tcl

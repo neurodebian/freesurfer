@@ -1,6 +1,6 @@
-#! /usr/pubsw/bin/tixwish
+#! /usr/bin/tixwish
 
-# $Id: tksurfer.tcl,v 1.66.2.1 2005/04/07 16:54:31 kteich Exp $
+# $Id: tksurfer.tcl,v 1.66.2.2 2005/04/07 17:04:11 kteich Exp $
 
 package require BLT;
 
