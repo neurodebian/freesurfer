@@ -1,6 +1,6 @@
-#! /usr/bin/tixwish
+#! /usr/pubsw/bin/tixwish
 
-# $Id: tkm_wrappers.tcl,v 1.26 2003/09/03 18:09:36 kteich Exp $
+# $Id: tkm_wrappers.tcl,v 1.26.6.1 2005/04/07 16:54:31 kteich Exp $
 
 # tkm_MakeBigLabel fwFrame "Label Text"
 # tkm_MakeSmallLabel fwFrame "Label Text"

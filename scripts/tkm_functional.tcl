@@ -1,6 +1,6 @@
-#! /usr/bin/tixwish
+#! /usr/pubsw/bin/tixwish
 
-# $Id: tkm_functional.tcl,v 1.24 2004/12/19 02:21:05 kteich Exp $
+# $Id: tkm_functional.tcl,v 1.24.2.1 2005/04/07 16:54:31 kteich Exp $
 
 package require BLT;
 
