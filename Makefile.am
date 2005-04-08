@@ -79,10 +79,6 @@ release:
 	  else :; fi; \
 	done
 	$(mkinstalldirs) $(DESTDIR)$(prefix)
-	d="$(srcdir)/scripts/"; \
-	    f="freesurferenv.csh"; \
-	    echo " $(INSTALL_SCRIPT) $$d$$p $(DESTDIR)$(prefix)/$$f"; \
-	    $(INSTALL_SCRIPT) $$d$$f $(DESTDIR)$(prefix)/$$f 
 	$(MAKE) install -C images
 	$(MAKE) release -C distribution
 
@@ -101,6 +97,5 @@ uninstall-release:
 	  echo " rm -f $(DESTDIR)$(libdir)/tcl/$$f"; \
 	  rm -f $(DESTDIR)$(libdir)/tcl/$$f; \
 	done
-	rm -f $(DSESTDIR)$(prefix)/freesurferenv.csh
 	$(MAKE) uninstall -C images
 	$(MAKE) uninstall-release -C distribution
