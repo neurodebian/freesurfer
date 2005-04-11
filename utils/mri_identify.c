@@ -234,9 +234,19 @@ int mri_identify(char *fname_passed)
 	  if (is_mnc(fname))
 	    return type;
 	  break;
-	case MRI_ANALYZE_FILE:
-	  if (is_analyze(fname))
+	case NII_FILE:
+	  if (is_nii(fname))
 	    return type;
+	  break;
+	case NIFTI1_FILE:
+	  if (is_nifti1(fname))
+	    return type;
+	  break;
+	case MRI_ANALYZE_FILE:
+	  // Need to check nifti1 here because it has .img/.hdr
+	  // like analyze but has a different header
+	  if(is_nifti1(fname))   return NIFTI1_FILE;
+	  if(is_analyze(fname))  return type;
 	  break;
 	case MRI_ANALYZE4D_FILE:
 	  // must add is_analyze4d().  I have no idea what to do thus return
@@ -260,14 +270,6 @@ int mri_identify(char *fname_passed)
 	  break;
 	case XIMG_FILE:
 	  if (is_ximg(fname))
-	    return type;
-	  break;
-	case NIFTI1_FILE:
-	  if (is_nifti1(fname))
-	    return type;
-	  break;
-	case NII_FILE:
-	  if (is_nii(fname))
 	    return type;
 	  break;
 	default:
@@ -304,6 +306,10 @@ int mri_identify(char *fname_passed)
     return(MRI_MGH_FILE);
   else if(is_mnc(fname))
     return(MRI_MINC_FILE);
+  else if(is_nifti1(fname)) // must appear before ANALYZE
+    return(NIFTI1_FILE);
+  else if(is_nii(fname))
+    return(NII_FILE);
   else if(is_analyze(fname))
     return(MRI_ANALYZE_FILE);
   else if(is_siemens(fname))
@@ -316,10 +322,6 @@ int mri_identify(char *fname_passed)
     return(GDF_FILE);
   else if(is_ximg(fname))
     return(XIMG_FILE);
-  else if(is_nifti1(fname))
-    return(NIFTI1_FILE);
-  else if(is_nii(fname))
-    return(NII_FILE);
   else
     return(MRI_VOLUME_TYPE_UNKNOWN);
 
@@ -867,6 +869,8 @@ int is_nifti1(char *fname)
   FILE *fp;
   char magic[4];
 
+  //printf("Checking NIFTI1\n");
+
   strcpy(fname_stem, fname);
   dot = strrchr(fname_stem, '.');
   if(dot != NULL)
@@ -896,6 +900,8 @@ int is_nifti1(char *fname)
   }
 
   fclose(fp);
+
+  //printf("Checking magic number %s %s\n",magic,NIFTI1_MAGIC);
 
   if(memcmp(magic, NIFTI1_MAGIC, 4) != 0)
     return(FALSE);
