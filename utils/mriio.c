@@ -2771,7 +2771,7 @@ static int mincWrite(MRI *mri, char *fname)
   separations[di_x] = (Real)(mri->xsize);
   separations[di_y] = (Real)(mri->ysize);
   separations[di_z] = (Real)(mri->zsize);
-  separations[3] = 1.0;
+  separations[3] = 1.0; // appears to do nothing
   set_volume_separations(minc_volume, separations); 
   /* has side effect to change transform and thus must be set first */
 
@@ -4103,7 +4103,7 @@ static int write_bhdr(MRI *mri, FILE *fp)
   fprintf(fp, "      normal_a: %f\n", na);
   fprintf(fp, "      normal_s: %f\n", ns);
   fprintf(fp, "      image_te: %f\n", mri->te);
-  fprintf(fp, "      image_tr: %f\n", mri->tr);
+  fprintf(fp, "      image_tr: %f\n", mri->tr/1000.0); // convert to sec
   fprintf(fp, "      image_ti: %f\n", mri->ti);
   fprintf(fp, "    flip_angle: %f\n", mri->flip_angle);
 
@@ -4163,8 +4163,10 @@ int read_bhdr(MRI *mri, FILE *fp)
         sscanf(l, "%*s %f", &mri->zsize);
       else if(strncmp(l, "image_te: ", 10) == 0)
         sscanf(l, "%*s %f", &mri->te);
-      else if(strncmp(l, "image_tr: ", 10) == 0)
+      else if(strncmp(l, "image_tr: ", 10) == 0){
         sscanf(l, "%*s %f", &mri->tr);
+	mri->tr = 1000.0 * mri->tr; // convert from sec to msec
+      }
       else if(strncmp(l, "image_ti: ", 10) == 0)
         sscanf(l, "%*s %f", &mri->ti);
       else if(strncmp(l, "flip_angle: ", 10) == 0)
@@ -5070,7 +5072,7 @@ static MRI *analyzeRead(char *fname, int read_volume)
   mri->xsize = fabs(hdr->dime.pixdim[1]);  /* col res */
   mri->ysize = fabs(hdr->dime.pixdim[2]);  /* row res */
   mri->zsize = fabs(hdr->dime.pixdim[3]);  /* slice res */
-  mri->tr    = hdr->dime.pixdim[4];  /* time  res */
+  mri->tr    = 1000*hdr->dime.pixdim[4];  /* time  res */
 
   signX = (hdr->dime.pixdim[1] > 0) ? 1 : -1;
   signY = (hdr->dime.pixdim[2] > 0) ? 1 : -1;
@@ -5449,7 +5451,7 @@ static int analyzeWriteFrame(MRI *mri, char *fname, int frame)
   /* Added by DNG 10/2/01 */
   hdr.dime.dim[0] = 4; /* number of dimensions */
   hdr.dime.dim[4] = 1; /* time */
-  hdr.dime.pixdim[4] = mri->tr;
+  hdr.dime.pixdim[4] = mri->tr/1000.0; // convert to sec
   hdr.dime.bitpix = 8*bytes_per_voxel;
   memcpy(hdr.dime.vox_units,"mm\0",3);
   /*----------------------------*/
@@ -5725,20 +5727,10 @@ static int analyzeWrite4D(MRI *mri, char *fname)
   hdr.dime.dim[4] = mri->nframes;
   hdr.dime.dim[0] = 4;              /* flirt expects to be always 4 */
 
-#if 0
-  if(mri->nframes > 1){
-    hdr.dime.dim[0] = 4; /* number of dimensions (??) */
-    hdr.dime.dim[4] = mri->nframes;  /* nframes */
-  }
-  else{
-    hdr.dime.dim[4] = 0;  /* nframes */
-    hdr.dime.dim[0] = 3; /* number of dimensions (??) */
-  }
-#endif
   hdr.dime.pixdim[1] = mri->xsize; /* col res */
   hdr.dime.pixdim[2] = mri->ysize; /* row res */
   hdr.dime.pixdim[3] = mri->zsize; /* slice res */
-  hdr.dime.pixdim[4] = mri->tr;    /* time res */
+  hdr.dime.pixdim[4] = mri->tr/1000.0; /* time res in sec*/
 
   MRIlimits(mri, &min, &max);
   hdr.dime.glmin = (int)min;
@@ -7831,6 +7823,11 @@ static MRI *ximgRead(char *fname, int read_volume)
 
 } /* end ximgRead() */
 
+/*------------------------------------------------------------------
+  nifti1Read() - note: there is also an niiRead(). Make sure to 
+  edit both. NIFTI1 is defined to be the two-file NIFTI standard, ie,
+  there must be a .img and .hdr file. (see is_nifti1(char *fname))
+  -----------------------------------------------------------------*/
 static MRI *nifti1Read(char *fname, int read_volume)
 {
 
@@ -7997,8 +7994,8 @@ static MRI *nifti1Read(char *fname, int read_volume)
   mri->xsize = hdr.pixdim[1];
   mri->ysize = hdr.pixdim[2];
   mri->zsize = hdr.pixdim[3];
-  if(hdr.dim[0] == 4)
-    mri->tr = hdr.pixdim[4];
+  // Keep in msec as NIFTI_UNITS_MSEC is specified
+  if(hdr.dim[0] == 4) mri->tr = hdr.pixdim[4];
 
   if(hdr.qform_code == 0)
   {
@@ -8310,6 +8307,11 @@ static MRI *nifti1Read(char *fname, int read_volume)
 
 } /* end nifti1Read() */
 
+
+/*------------------------------------------------------------------
+  nifti1Write() - note: there is also an niiWrite(). Make sure to 
+  edit both.
+  -----------------------------------------------------------------*/
 static int nifti1Write(MRI *mri, char *fname)
 {
 
@@ -8348,7 +8350,7 @@ static int nifti1Write(MRI *mri, char *fname)
     hdr.pixdim[1] = mri->xsize;
     hdr.pixdim[2] = mri->ysize;
     hdr.pixdim[3] = mri->zsize;
-    hdr.pixdim[4] = mri->tr;
+    hdr.pixdim[4] = mri->tr/1000.0; // sec, see also xyzt_units
   }
 
   if(mri->type == MRI_UCHAR)
@@ -8394,7 +8396,7 @@ static int nifti1Write(MRI *mri, char *fname)
   hdr.vox_offset = 0;
   hdr.scl_slope = 0.0;
   hdr.slice_code = 0;
-  hdr.xyzt_units = NIFTI_UNITS_MM | NIFTI_UNITS_MSEC;
+  hdr.xyzt_units = NIFTI_UNITS_MM | NIFTI_UNITS_SEC;
   hdr.cal_max = 0.0;
   hdr.cal_min = 0.0;
   hdr.toffset = 0;
@@ -8457,6 +8459,10 @@ static int nifti1Write(MRI *mri, char *fname)
 
 } /* end nifti1Write() */
 
+/*------------------------------------------------------------------
+  niiRead() - note: there is also an nifti1Read(). Make sure to 
+  edit both.
+  -----------------------------------------------------------------*/
 static MRI *niiRead(char *fname, int read_volume)
 {
 
@@ -8931,6 +8937,10 @@ static MRI *niiRead(char *fname, int read_volume)
 
 } /* end niiRead() */
 
+/*------------------------------------------------------------------
+  niiWrite() - note: there is also an nifti1Write(). Make sure to 
+  edit both.
+  -----------------------------------------------------------------*/
 static int niiWrite(MRI *mri, char *fname)
 {
 
@@ -8965,7 +8975,7 @@ static int niiWrite(MRI *mri, char *fname)
     hdr.pixdim[1] = mri->xsize;
     hdr.pixdim[2] = mri->ysize;
     hdr.pixdim[3] = mri->zsize;
-    hdr.pixdim[4] = mri->tr;
+    hdr.pixdim[4] = mri->tr/1000.0; // see also xyzt_units
   }
 
   if(mri->type == MRI_UCHAR)
@@ -9011,7 +9021,7 @@ static int niiWrite(MRI *mri, char *fname)
   hdr.vox_offset = sizeof(hdr);
   hdr.scl_slope = 0.0;
   hdr.slice_code = 0;
-  hdr.xyzt_units = NIFTI_UNITS_MM | NIFTI_UNITS_MSEC;
+  hdr.xyzt_units = NIFTI_UNITS_MM | NIFTI_UNITS_SEC;
   hdr.cal_max = 0.0;
   hdr.cal_min = 0.0;
   hdr.toffset = 0;
