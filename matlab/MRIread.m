@@ -13,11 +13,11 @@ function mri = MRIread(fstring,headeronly)
 % The vox2ras0 matrix is the matrix that converts a 0-based
 % column, row, and slice to XYZ. vox2ras1 is the same with
 % 1-based indices. The volume is rows, cols, slices frames,
-% but the vox2ras expects col, row, slice.
+% but the vox2ras expects col, row, slice. TR is in msec.
 %
 % If headeronly=1, then the pixel data are not read in.
 %
-% $Id: MRIread.m,v 1.5 2004/11/18 00:47:55 greve Exp $
+% $Id: MRIread.m,v 1.5.2.1 2005/04/12 15:34:44 greve Exp $
 
 mri = [];
 
@@ -49,7 +49,7 @@ switch(fmt)
     mri.vol = [];
     volsz(1:2) = [volsz(2) volsz(1)];
   end
-  tr = mr_parms(1);
+  tr = mr_parms(1);  % already in msec
   flip_angle = mr_parms(2);
   te = mr_parms(3);
   ti = mr_parms(4);
@@ -75,7 +75,7 @@ switch(fmt)
     volsz = [nrows ncols nslices ntp];
   end
   M = bmri.T;
-  tr = bmri.tr;
+  tr = 1000*bmri.tr; % convert to msec
   flip_angle = bmri.flip_angle;
   te = bmri.te;
   ti = bmri.ti;

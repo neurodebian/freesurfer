@@ -12,7 +12,7 @@ function err = MRIwrite(mri,fstring)
 % mri.x_r, this change will not be reflected in the output volume.
 % 
 %
-% $Id: MRIwrite.m,v 1.2 2004/11/18 00:47:26 greve Exp $
+% $Id: MRIwrite.m,v 1.2.2.1 2005/04/12 15:34:45 greve Exp $
 
 err = 1;
 
@@ -35,7 +35,7 @@ switch(fmt)
   return;
  case {'bhdr'} %----------- BHDR ------------%
   bmri.te = mri.te;
-  bmri.tr = mri.tr;
+  bmri.tr = mri.tr/1000.0; % convert from msec to sec
   bmri.ti = mri.ti;
   bmri.flip_angle = mri.flip_angle;
   bmri.voldim = [size(mri.vol,1) size(mri.vol,2) size(mri.vol,3)];
