@@ -1,0 +1,13 @@
+
+.PHONY: newrelease
+
+# A rule for making the release. It just removes files in an exclude list.
+release: install
+	  @list=$(EXCLUDE_FILES); for p in $$list; do \
+	    find $(prefix) -name $$p -exec rm {} \;; \
+	  done; \
+	  list='$(SUBDIRS)'; for subdir in $$list; do \
+	    echo "Making newrelease in $$subdir"; \
+            (cd $$subdir && $(MAKE) $(AM_MAKEFLAGS) newrelease) \
+             || exit 1; \
+          done;
