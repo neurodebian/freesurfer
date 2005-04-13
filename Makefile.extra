@@ -8,6 +8,6 @@ release: install
 	  done; \
 	  list='$(SUBDIRS)'; for subdir in $$list; do \
 	    echo "Making newrelease in $$subdir"; \
-            (cd $$subdir && $(MAKE) $(AM_MAKEFLAGS) newrelease) \
+            (cd $$subdir && $(MAKE) $(AM_MAKEFLAGS) release) \
              || exit 1; \
           done;
