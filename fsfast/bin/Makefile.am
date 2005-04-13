@@ -25,17 +25,9 @@ uninstall-local:
 	fi; \
 	done
  
-include exclude_files.sh
+# Our release target. Include files to be excluded here. They will be
+# found and removed after 'make install' is run during the 'make
+# release' target.
+EXCLUDE_FILES="tdr-avgechoes tdr-fidmat tdr-ghostcomp tdr-rcolmat"
+include $(top_srcdir)/Makefile.extra
 
-release:
-	$(MAKE) install
-	@list=$(BIN_REMOVE_LIST); for p in $$list ; do \
-	  d="$(DESTDIR)$(prefix)/fsfast/bin/"; \
-	  if test -x $$d$$p; then \
-	  echo "rm -f $$d$$p"; \
-	  rm -f $$d$$p; \
-	  fi; \
-	done
-
-uninstall-release:
-	$(MAKE) uninstall

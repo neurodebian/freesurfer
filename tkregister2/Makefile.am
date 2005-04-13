@@ -9,3 +9,11 @@ bin_PROGRAMS = tkregister2
 tkregister2_SOURCES=tkregister2.c
 tkregister2_LDADD= $(addprefix $(top_srcdir)/,$(LIBS_MGH)) $(LIBS_TCL_OPENGL)
 tkregister2_LDFLAGS=
+
+# Our release target. Include files to be excluded here. They will be
+# found and removed after 'make install' is run during the 'make
+# release' target.
+EXCLUDE_FILES=""
+include $(top_srcdir)/Makefile.extra
+
+

@@ -173,3 +173,9 @@ SEDFLAGS = -e 's,xEXEC_PREFIXx,$(exec_prefix),g' \
 csurf: csurf.in
 	sed < $< $(SEDFLAGS) > $@ 
 	chmod +x $@
+
+# Our release target. Include files to be excluded here. They will be
+# found and removed after 'make install' is run during the 'make
+# release' target.
+EXCLUDE_FILES="dcmdir-info-mgh dipmovie-flat.tcl fix_subject_on_seychelles make_final_surfaces_subject_on_seychelles morph_subject_on_seychelles recon-all-nmr"
+include $(top_srcdir)/Makefile.extra

@@ -75,14 +75,6 @@ check_PROGRAMS= testIDTracker testBroadcaster testUtilities \
 	testScubaTransform testScubaColorLUT testScubaROI testScubaROIVolume \
 	testVectorOps testRASToVoxel testCoordTimer
 
-# if WANT_QTSCUBA
-# bin_PROGRAMS += qtscuba
-# qtscuba_SOURCES=$(UTILITIES_SRCS) $(BASIC_SRCS) $(FSDATA_SRCS) $(GUI_SRCS) $(LAYER_SRCS) QTScubaWidget.cpp qtscuba.cpp
-# qtscuba_CXXFLAGS=-I${QTDIR}/include
-# qtscuba_LDFLAGS=-L${QTDIR}/lib -lqt-mt
-# check_PROGRAMS += testVolumeHistogram
-# endif
-
 TESTS=$(check_PROGRAMS) 
 
 ## Test programs.
@@ -148,9 +140,10 @@ testScubaROI_SOURCES=test_ScubaROI.cpp \
 testScubaROIVolume_SOURCES=test_ScubaROIVolume.cpp \
 	$(UTILITIES_SRCS) $(BASIC_SRCS) $(FSDATA_SRCS) 
 
+# Our release target. Include files to be excluded here. They will be
+# found and removed after 'make install' is run during the 'make
+# release' target.
+EXCLUDE_FILES=""
+include $(top_srcdir)/Makefile.extra
 
-# if WANT_QTSCUBA
-# testVolumeHistogram_SOURCES=$(UTILITIES_SRCS) $(BASIC_SRCS) $(FSDATA_SRCS) $(GUI_SRCS) $(LAYER_SRCS) QtVolumeHistogram.cpp test_VolumeHistogram.cpp
-# testVolumeHistogram_CXXFLAGS=-I${QTDIR}/include
-# testVolumeHistogram_LDFLAGS=-L${QTDIR}/lib -lqt-mt
-# endif
+

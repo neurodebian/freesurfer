@@ -11,3 +11,11 @@ mri_probedicom_SOURCES=mri_probedicom.c
 mri_probedicom_LDADD= $(addprefix $(top_srcdir)/, $(LIBS_MGH)) $(GLUT_LIBS)
 mri_probedicom_LDFLAGS=
 
+
+# Our release target. Include files to be excluded here. They will be
+# found and removed after 'make install' is run during the 'make
+# release' target.
+EXCLUDE_FILES=""
+include $(top_srcdir)/Makefile.extra
+
+

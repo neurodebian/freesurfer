@@ -1,7 +1,7 @@
 /*
   fsgdf.c
   Utilities for reading freesurfer group descriptor file format 
-  $Id: fsgdf.c,v 1.20 2004/06/11 21:04:32 kteich Exp $
+  $Id: fsgdf.c,v 1.20.4.1 2005/04/13 17:47:21 kteich Exp $
 
   See:   http://surfer.nmr.mgh.harvard.edu/docs/fsgdf.txt
 
@@ -77,7 +77,7 @@ static int gdfGetDefVarLabelNo(FSGD *gd);
 
 /* RKT - hack to get the .so to have Progname declared. I hate this. */
 #ifdef DECLARE_PROGNAME
-char *Progname = "fsgdf";
+// char *Progname = "fsgdf";
 #endif
 
 /*--------------------------------------------------*/

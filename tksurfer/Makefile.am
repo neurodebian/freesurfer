@@ -9,3 +9,11 @@ bin_PROGRAMS = tksurfer
 tksurfer_SOURCES=tksurfer.c $(top_srcdir)/fsgdf/fsgdf_wrap.c
 tksurfer_LDADD= $(addprefix $(top_srcdir)/,$(LIBS_MGH)) $(top_srcdir)/fsgdf/libfsgdf.a $(LIBS_TCL_OPENGL) -lpthread
 tksurfer_LDFLAGS=
+
+# Our release target. Include files to be excluded here. They will be
+# found and removed after 'make install' is run during the 'make
+# release' target.
+EXCLUDE_FILES=""
+include $(top_srcdir)/Makefile.extra
+
+

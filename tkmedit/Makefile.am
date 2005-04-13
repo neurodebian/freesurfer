@@ -9,3 +9,11 @@ bin_PROGRAMS = tkmedit
 tkmedit_SOURCES=tkmedit.c tkmDisplayArea.c tkmFunctionalVolume.c tkmMeditWindow.c
 tkmedit_LDADD= $(addprefix $(top_srcdir)/,$(LIBS_MGH)) $(LIBS_TCL_OPENGL)
 tkmedit_LDFLAGS=
+
+# Our release target. Include files to be excluded here. They will be
+# found and removed after 'make install' is run during the 'make
+# release' target.
+EXCLUDE_FILES=""
+include $(top_srcdir)/Makefile.extra
+
+
