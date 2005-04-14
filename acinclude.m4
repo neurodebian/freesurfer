@@ -197,6 +197,13 @@ else
         PTHREAD_CC="$CC"
 fi
 
+
+AC_MSG_CHECKING([if need to add -pthread to libs])
+if test x"$PTHREAD_CFLAGS" = x-pthread; then
+  PTHREAD_LIBS="-pthread"
+  AC_MSG_RESULT(${PTHREAD_LIBS})
+fi
+
 AC_SUBST(PTHREAD_LIBS)
 AC_SUBST(PTHREAD_CFLAGS)
 AC_SUBST(PTHREAD_CC)
