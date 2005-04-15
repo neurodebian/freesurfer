@@ -8,7 +8,7 @@ AM_LDFLAGS=-L$(top_srcdir)/lib $(LDFLAGS_TCL)
 bin_PROGRAMS = tkregister2
 tkregister2_SOURCES=tkregister2.c
 tkregister2_LDADD= $(addprefix $(top_srcdir)/,$(LIBS_MGH)) $(LIBS_TCL_OPENGL)
-tkregister2_LDFLAGS=
+tkregister2_LDFLAGS=$(PTHREAD_CFLAGS) $(PTHREAD_LIBS)
 
 # Our release target. Include files to be excluded here. They will be
 # found and removed after 'make install' is run during the 'make

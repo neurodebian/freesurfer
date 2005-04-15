@@ -8,7 +8,7 @@ AM_LDFLAGS=-L$(top_srcdir)/lib
 bin_PROGRAMS = mris2rgb
 mris2rgb_SOURCES=mris2rgb.c
 mris2rgb_LDADD= $(addprefix $(top_srcdir)/,$(LIBS_MGH)) $(GLUT_LIBS)
-mris2rgb_LDFLAGS=
+mris2rgb_LDFLAGS=$(PTHREAD_CFLAGS) $(PTHREAD_LIBS)
 
 # Our release target. Include files to be excluded here. They will be
 # found and removed after 'make install' is run during the 'make
