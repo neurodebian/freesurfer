@@ -60,7 +60,7 @@ GUI_SRCS= \
 bin_PROGRAMS = scuba
 scuba_SOURCES=$(UTILITIES_SRCS) $(BASIC_SRCS) $(FSDATA_SRCS) $(GUI_SRCS) $(LAYER_SRCS) scuba.cpp 
 LDADD= $(addprefix $(top_srcdir)/,$(LIBS_MGH)) $(LIBS_TCL_OPENGL)
-scuba_LDFLAGS=
+scuba_LDFLAGS=$(PTHREAD_CFLAGS) $(PTHREAD_LIBS)
 
 foodir=$(prefix)/lib/tcl
 foo_SCRIPTS=scuba.tcl tkcon.tcl histolabel.tcl
