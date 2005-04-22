@@ -10,7 +10,7 @@ if { $err } {
     load [file dirname [info script]]/libscuba[info sharedlibextension] scuba
 }
 
-DebugOutput "\$Id: scuba.tcl,v 1.68 2005/01/07 19:47:17 kteich Exp $"
+DebugOutput "\$Id: scuba.tcl,v 1.68.2.1 2005/04/22 20:30:18 kteich Exp $"
 
 # gTool
 #   current - current selected tool (nav,)
@@ -4347,7 +4347,7 @@ proc SaveSceneScript { ifnScene } {
     set f [open $ifnScene w]
 
     puts $f "\# Scene file generated "
-    puts $f "\# by scuba.tcl version \$Id: scuba.tcl,v 1.68 2005/01/07 19:47:17 kteich Exp $"
+    puts $f "\# by scuba.tcl version \$Id: scuba.tcl,v 1.68.2.1 2005/04/22 20:30:18 kteich Exp $"
     puts $f ""
 
     # Find all the data collections.
@@ -4689,7 +4689,7 @@ wm withdraw .
 tkuFinish
 
 # Make the default color LUTs.
-foreach fnLUT {tkmeditColorsCMA tkmeditParcColorsCMA surface_labels.txt Simple_surface_labels2002.txt jeans_labels.txt} {
+foreach fnLUT {tkmeditColorsCMA tkmeditParcColorsCMA surface_labels.txt Simple_surface_labels2002.txt jeans_labels.txt FreeSurferColorLUT.txt} {
     if { [file exists $env(FREESURFER_HOME)/$fnLUT] } {
 	set lutID [MakeNewColorLUT]
 	SetColorLUTLabel $lutID "$fnLUT"
