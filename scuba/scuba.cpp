@@ -159,11 +159,11 @@ int main ( int argc, char** argv ) {
    
   }
   catch( runtime_error e ) {
-    cerr << "failed with exception: " << e.what() << endl;
+    cerr << "Failed with exception: " << e.what() << endl;
     exit( 1 );
   }
   catch( exception e ) {
-    cerr << "failed with exception: " << e.what() << endl;
+    cerr << "Failed with exception: " << e.what() << endl;
     exit( 1 );
   }
   catch(...) {
