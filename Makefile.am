@@ -13,7 +13,7 @@ FSLUTILS=fslutils
 
 STATSDIRS=optseq2 spm2bfloat statcombine stat_normalize
 
-MISCDIRS=histo_compute_joint_density histo_register_block regdat2xfm brik2bfloat minc_to_bshort test_window_env paint scripts images distribution
+MISCDIRS=histo_compute_joint_density histo_register_block regdat2xfm brik2bfloat minc_to_bshort test_window_env paint scripts images distribution label_area
 
 SUBDIRS=unix dicom hipsstubs rgb utils log fsgdf $(MRISUBDIRS) $(MRISSUBDIRS) $(GLSUBDIRS) $(FSGDF) $(FSLUTILS) $(STATSDIRS) $(MISCDIRS)  scuba fsfast matlab
 

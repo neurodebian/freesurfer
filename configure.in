@@ -810,6 +810,7 @@ mri_threshold/Makefile \
 dummy/Makefile \
 fsfast/Makefile fsfast/bin/Makefile fsfast/docs/Makefile fsfast/toolbox/Makefile \
 matlab/Makefile \
+label_area/Makefile \
  ) 
 
 
