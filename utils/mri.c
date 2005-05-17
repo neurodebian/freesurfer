@@ -8,10 +8,10 @@
  *
  */
 // Warning: Do not edit the following four lines.  CVS maintains them.
-// Revision Author: $Author: tosa $
-// Revision Date  : $Date: 2004/11/30 16:03:46 $
-// Revision       : $Revision: 1.281 $
-char *MRI_C_VERSION = "$Revision: 1.281 $";
+// Revision Author: $Author: greve $
+// Revision Date  : $Date: 2005/05/17 19:37:25 $
+// Revision       : $Revision: 1.281.2.1 $
+char *MRI_C_VERSION = "$Revision: 1.281.2.1 $";
 
 /*-----------------------------------------------------
   INCLUDE FILES
@@ -11327,3 +11327,30 @@ MRIcomputeLabelNbhd(MRI *mri_labels, MRI *mri_vals, int x, int y, int z, int *la
 	return(NO_ERROR) ;
 }
 
+/*--------------------------------------------------------------
+  MRIfovCol(mri) - computes the edge-to-edge FOV in the column 
+  direction. fov is in mm.
+  -------------------------------------------------------------*/
+float MRIfovCol(MRI *mri)
+{
+  MATRIX *M,*v,*a,*b,*d;
+  float fov;
+
+  M = MRIgetVoxelToRasXform(mri) ;
+  v = MatrixAlloc(4,1,MATRIX_REAL);
+  v->rptr[1][4] = 1;
+  v->rptr[1][1] = mri->width-1+0.5; // edge of last column
+  a = MatrixMultiply(M,v,NULL);     // xyz of last column
+  v->rptr[1][1] = -0.5;             // edge of first column
+  b = MatrixMultiply(M,v,NULL);     // xyz of first column
+  d = MatrixSubtract(a,b,NULL); // xyz difference
+  fov = VectorLen(d);           // fov is in mm
+  MatrixFree(&M);
+  MatrixFree(&v);
+  MatrixFree(&a);
+  MatrixFree(&b);
+  MatrixFree(&d);
+
+  //printf("MRIfovCol() %g\n",fov);
+  return(fov);
+}
