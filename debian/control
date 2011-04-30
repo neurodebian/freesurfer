@@ -1,0 +1,20 @@
+Source: freesurfer
+Section: science
+Priority: extra
+Maintainer: NeuroDebian Team <team@neuro.debian.net>
+Uploaders: Michael Hanke <mih@debian.org>, Yaroslav Halchenko <debian@onerussian.com>
+Build-Depends: debhelper (>= 7.0.50~), libminc-dev, libvxl1-dev, tk8.5-dev, tcl-dev, tix-dev, blt-dev, libvtk5-dev (>= 5.6), libkwwidgets1-dev
+Standards-Version: 3.9.1
+Homepage: http://surfer.nmr.mgh.harvard.edu/
+Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/freesurfer.git
+Vcs-Git: git://git.debian.org/git/pkg-exppsy/freesurfer.git
+
+Package: freesurfer
+Architecture: all
+Depends: ${misc:Depends}, freesurfer-5.1
+Description: Metapackage for the latest version of Freesurfer
+
+Package: freesurfer-5.1
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description:

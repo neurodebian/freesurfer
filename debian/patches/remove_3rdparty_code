@@ -1,0 +1,65 @@
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -10,7 +10,6 @@
+   dmri_tensoreig  
+ 
+ GLSUBDIRS=\
+-	glut \
+ 	mris2rgb \
+ 	nmovie \
+ 	mris_show \
+@@ -308,10 +306,6 @@
+ 	unix \
+ 	dicom \
+ 	hipsstubs \
+-	expat \
+-	jpeg \
+-	tiff \
+-	xml2 \
+ 	rgb \
+ 	log \
+ 	gpu_utils \
+--- a/configure.in
++++ b/configure.in
+@@ -3219,7 +3219,6 @@
+            dmri_tensoreig/Makefile
+            dngtester/Makefile
+            dummy/Makefile
+-           expat/Makefile
+            fem_elastic/Makefile
+            fsfast/Makefile
+            fsfast/bin/Makefile
+@@ -3227,7 +3226,6 @@
+            fsfast/toolbox/Makefile
+            fsgdf/Makefile
+            fslutils/Makefile
+-           glut/Makefile
+            gpu_utils/Makefile
+            opencl_algorithms/Makefile
+            hiam_make_surfaces/Makefile
+@@ -3249,7 +3247,6 @@
+            include/fs_vnl/Makefile
+            itkio/Makefile
+            itkutils/Makefile
+-           jpeg/Makefile
+            label_area/Makefile
+            label_border/Makefile
+            label2patch/Makefile
+@@ -3523,7 +3520,6 @@
+            test_makevol/Makefile
+            test_window_env/Makefile
+            tetgen/Makefile
+-           tiff/Makefile
+            tkmedit/Makefile
+            tkregister2/Makefile
+            tkregister2/cmdl/Makefile
+@@ -3541,8 +3537,7 @@
+            qdec_glmfit/Makefile
+            qdecproject/Makefile
+            vtkfsio/Makefile
+-           vtkutils/Makefile
+-           xml2/Makefile])
++           vtkutils/Makefile])
+ 
+ ########################################################################
+ 

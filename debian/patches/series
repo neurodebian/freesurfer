@@ -1,0 +1,7 @@
+dump_ancient_libtoolm4
+qt_build_compat
+datapkg_split
+remove_3rdparty_code
+dont_build_3rdparty
+exhaustive_clean
+internal_shared_libs

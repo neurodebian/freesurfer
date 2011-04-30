@@ -1,0 +1,5 @@
+freesurfer (5~cvs20110426-1) UNRELEASED; urgency=low
+
+  * Initial release. (Closes: #XXXXXX)
+
+ -- Michael Hanke <mih@debian.org>  Sat, 30 Apr 2011 09:10:39 -0400
