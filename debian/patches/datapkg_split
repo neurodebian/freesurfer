@@ -1,0 +1,37 @@
+diff --git a/Makefile.am b/Makefile.am
+index bfddd39..98275b0 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -328,7 +328,6 @@ SUBDIRS=\
+ 	qdecproject \
+ 	svm-lib \
+ 	scripts \
+-	distribution \
+ 	$(GLSUBDIRS) \
+ 	$(MRISUBDIRS) \
+ 	$(MRISSUBDIRS) \
+diff --git a/configure.in b/configure.in
+index 4bad4cd..f83d432 100644
+--- a/configure.in
++++ b/configure.in
+@@ -3215,20 +3215,6 @@ AC_OUTPUT([Makefile
+            cudatest/volumecopy/Makefile
+            cudatest/mrilabeltest/Makefile
+            dicom/Makefile
+-           distribution/Makefile
+-           distribution/average/Makefile
+-           distribution/average/surf/Makefile
+-           distribution/docs/Makefile
+-           distribution/diffusion/Makefile
+-           distribution/diffusion/mgh-dti-seqpack/Makefile
+-           distribution/trctrain/Makefile
+-           distribution/fsafd/Makefile
+-           distribution/grad_unwarp_tables/Makefile
+-           distribution/lib/Makefile
+-           distribution/lib/bem/Makefile
+-           distribution/sessions/Makefile
+-           distribution/subjects/Makefile
+-           distribution/fsl-extra/Makefile
+            dmri_poistats/Makefile
+            dmri_tensoreig/Makefile
+            dngtester/Makefile

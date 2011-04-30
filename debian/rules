@@ -1,0 +1,52 @@
+#!/usr/bin/make -f
+export AUTOMAKE = automake --add-missing -Wno-portability
+export LIBTOOLIZE = libtoolize --force
+
+%:
+	dh $@ --with autoreconf
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+		--disable-Werror \
+		--with-vxl-include=/usr \
+		--with-tcl-include=/usr/include/tcl \
+		--enable-tcltk-apps \
+		--disable-static \
+		--with-gnu-ld \
+		--with-nifti-dir=/usr \
+		--with-tiff-dir=/usr \
+		--with-jpeg-dir=/usr \
+		--with-expat-dir=/usr \
+		--with-gl-dir=/usr \
+		--with-cppunit-dir=/usr \
+		--with-qt=/usr/bin \
+		--with-vtk-dir=/usr \
+		--with-vtk-include=/usr/include/vtk-5.6 \
+		--with-kwwidgets-dir=/usr \
+		--with-wxwidgets-dir=/usr \
+		--with-itk-dir=/usr \
+		--with-fltk-dir=/usr \
+		CFLAGS="-I/usr/include/libxml2 -I/usr/include/GL" \
+		LDFLAGS="-Wl,--allow-shlib-undefined"
+
+override_dh_auto_build:
+	# create fake data files that are part of the upstream source tree, but
+	# come in a separate Debian package for space efficiency
+	grep 'GEMS/data*' freesurfer-data.md5sums |cut -d ' ' -f 3,3| xargs touch
+	grep 'talairach_avi/*' freesurfer-data.md5sums |cut -d ' ' -f 3,3 |xargs touch
+	dh_auto_build
+
+override_dh_auto_clean:
+	dh_auto_clean
+	# get recreated by autoreconf
+	find . -name Makefile.in -delete
+	-rm aclocal.m4 config.h.in INSTALL
+	-rm config/*
+	# remove help headers
+	for f in $$(find . -name '*.xml' ! -wholename '*debian*'); do \
+		[ -f $${f}.h ] && rm $${f}.h; \
+	done
+	# remove fake data files
+	-grep 'GEMS/data*' freesurfer-data.md5sums |cut -d ' ' -f 3,3| xargs rm
+	-grep 'talairach_avi/*' freesurfer-data.md5sums |cut -d ' ' -f 3,3 |xargs rm
+
