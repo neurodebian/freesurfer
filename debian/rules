@@ -8,6 +8,7 @@ export LIBTOOLIZE = libtoolize --force
 override_dh_auto_configure:
 	dh_auto_configure -- \
 		--disable-Werror \
+		--with-cuda=no \
 		--with-vxl-include=/usr \
 		--with-tcl-include=/usr/include/tcl \
 		--enable-tcltk-apps \
