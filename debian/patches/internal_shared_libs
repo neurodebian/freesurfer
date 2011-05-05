@@ -611,7 +611,7 @@ Subject: [PATCH 2/2] Shared libs
       ac_vtk_includes="$vtk_i"
    ])
  
-@@ -2497,28 +2499,31 @@
+@@ -2497,34 +2499,37 @@
  
    # these are the minimum ITK libs necessary to support Nrrd IO,
    # notice they are all static (avoiding LD_LIBRARY_PATH usage)
@@ -658,11 +658,21 @@ Subject: [PATCH 2/2] Shared libs
    # ITK v3.16.0 needs libuuid for function `gdcm::Util::GenerateUUID'
 -  if test -e /usr/lib/libuuid.a ; then
 -     LIB_UUID_A="/usr/lib/libuuid.a"
+-     AC_SUBST(LIB_UUID_A)
+-  fi
+-  if test -e /usr/lib64/libuuid.a ; then
+-     LIB_UUID_A="/usr/lib64/libuuid.a"
 +  if test -e /usr/lib/libuuid.so ; then
-+     LIB_UUID_A="/usr/lib/libuuid.so"
++     LIB_UUID_A="-luuid"
       AC_SUBST(LIB_UUID_A)
    fi
-   if test -e /usr/lib64/libuuid.a ; then
++  #if test -e /usr/lib64/libuuid.a ; then
++  #   LIB_UUID_A="/usr/lib64/libuuid.a"
++  #   AC_SUBST(LIB_UUID_A)
++  #fi
+   LIBS_ITK="$LIBS_ITK $LIB_UUID_A"
+ else
+   AC_MSG_RESULT([Not building ITK apps.])
 @@ -2565,7 +2570,7 @@
  
  if test ! "$ac_gl_includes" = "NO"; then
@@ -1290,15 +1300,19 @@ Subject: [PATCH 2/2] Shared libs
  LIBS += -lvtkHybrid -lvtkVolumeRendering -lvtkRendering -lvtkIO \
 --- a/freeview_wx/Makefile.am
 +++ b/freeview_wx/Makefile.am
-@@ -408,7 +408,7 @@
+@@ -408,9 +408,9 @@
  # put a wrapper around the bin, used to setup tcltktixblt,vtk,kww enviro vars
  # and if the OS is MACOSX have a different install-hook to create a bundle
  freeview_wx_LDADD=\
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
+-	$(top_builddir)/vtkfsio/libvtkfsio.a \
+-	$(top_builddir)/vtkutils/libvtkutils.a \
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
- 	$(top_builddir)/vtkfsio/libvtkfsio.a \
- 	$(top_builddir)/vtkutils/libvtkutils.a \
++	$(top_builddir)/vtkfsio/libvtkfsio.la \
++	$(top_builddir)/vtkutils/libvtkutils.la \
  	$(VTK_CARBON_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
+ 	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
+ 	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) \
 @@ -418,7 +418,7 @@
  	$(VTK_SQLITE_LIB) \
  	-lvtkImaging -lvtkFiltering \
@@ -5437,3 +5451,17 @@ Subject: [PATCH 2/2] Shared libs
  	ftime.c windiag.c xwindow.c \
  	oglutil.c xvmri.c texfont.c xvutil.c glStub.c
  
+--- a/dicom/Makefile.am
++++ b/dicom/Makefile.am
+@@ -7,9 +7,9 @@
+ 
+ AM_LDFLAGS=
+ 
+-noinst_LIBRARIES= libdicom.a
++lib_LTLIBRARIES= libdicom.la
+ 
+-libdicom_a_SOURCES = condition.c dcmcond.c lst.c \
++libdicom_la_SOURCES = condition.c dcmcond.c lst.c \
+ 	ctnthread.c  dcmdict.c dcm.c dcmsupport.c
+ 
+ EXTRA_DIST=
