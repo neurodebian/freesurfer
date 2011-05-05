@@ -678,15 +678,19 @@ Subject: [PATCH 2/2] Shared libs
  LIBS_MGH="\
 -  utils/libutils.a \
 -  fsgdf/libfsgdf.a \
-+  \
-   rgb/librgb.a \
-   unix/libunix.a \
-   dicom/libdicom.a \
-   hipsstubs/libhipsstubs.a \
+-  rgb/librgb.a \
+-  unix/libunix.a \
+-  dicom/libdicom.a \
+-  hipsstubs/libhipsstubs.a \
 -  log/liblog.a \
 -  xml2/libxml2.a"
-+  log/liblog.a"
-+DLIBS_MGH="-L\$(top_builddir)/utils -lutils -lxml2 -lfsgdf"
++  fsgdf/libfsgdf.la \
++  rgb/librgb.la \
++  unix/libunix.la \
++  dicom/libdicom.la \
++  hipsstubs/libhipsstubs.la \
++  log/liblog.la"
++DLIBS_MGH="-L\$(top_builddir)/utils -lutils -lxml2"
  
  # use local libjpeg if --with-jpeg-dir not used:
  if test "$ac_jpeg_libraries" = "NO"; then
@@ -1324,12 +1328,11 @@ Subject: [PATCH 2/2] Shared libs
  	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
 --- a/fsgdf/Makefile.am
 +++ b/fsgdf/Makefile.am
-@@ -17,11 +17,12 @@
+@@ -17,11 +17,11 @@
  endif
  AM_LDFLAGS=
  
 -noinst_LIBRARIES= libfsgdf.a
-+noinst_LIBRARIES=
 +lib_LTLIBRARIES= libfsgdf.la
  if ENABLE_TCLTK_APPS
 -libfsgdf_a_SOURCES = fsgdf.c fsgdf_wrap.c FsgdfPlot.cxx
@@ -1340,12 +1343,15 @@ Subject: [PATCH 2/2] Shared libs
  endif
  
  if ENABLE_TCLTK_APPS
-@@ -38,7 +39,7 @@
+@@ -36,9 +36,9 @@
+ 					$(top_builddir)/fsgdf/; fi;
+ 
  check_PROGRAMS=foo test
- test_SOURCES=test.c fsgdf_wrap.c
+-test_SOURCES=test.c fsgdf_wrap.c
++test_SOURCES=test.c
  test_LDFLAGS=$(LDFLAGS_TCL)
 -test_LDADD=libfsgdf.a $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(LIBS_TCL)
-+test_LDADD=libfsgdf.a $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) $(LIBS_TCL)
++test_LDADD=$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) $(LIBS_TCL)
  TESTS=setup_test_data test
  endif
  
@@ -2257,9 +2263,12 @@ Subject: [PATCH 2/2] Shared libs
  foodir=$(prefix)/docs/xml
 --- a/mri_gdfglm/Makefile.am
 +++ b/mri_gdfglm/Makefile.am
-@@ -9,7 +9,7 @@
+@@ -7,9 +7,9 @@
  
- mri_gdfglm_SOURCES=mri_gdfglm.c $(top_srcdir)/fsgdf/fsgdf.c
+ bin_PROGRAMS = mri_gdfglm
+ 
+-mri_gdfglm_SOURCES=mri_gdfglm.c $(top_srcdir)/fsgdf/fsgdf.c
++mri_gdfglm_SOURCES=mri_gdfglm.c 
  
 -mri_gdfglm_LDADD=$(addprefix $(top_builddir)/, $(LIBS_MGH))
 +mri_gdfglm_LDADD=$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
@@ -3074,11 +3083,13 @@ Subject: [PATCH 2/2] Shared libs
  # found and removed after 'make install' is run during the 'make
 --- a/mri_stats2seg/Makefile.am
 +++ b/mri_stats2seg/Makefile.am
-@@ -7,7 +7,7 @@
+@@ -6,8 +6,8 @@
+ AM_CXXFLAGS=-I$(top_srcdir)/include -I$(top_srcdir)/include/dicom
  
  bin_PROGRAMS = mri_stats2seg
- mri_stats2seg_SOURCES=mri_stats2seg.c $(top_srcdir)/fsgdf/fsgdf.c
+-mri_stats2seg_SOURCES=mri_stats2seg.c $(top_srcdir)/fsgdf/fsgdf.c
 -mri_stats2seg_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
++mri_stats2seg_SOURCES=mri_stats2seg.c
 +mri_stats2seg_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_stats2seg_LDFLAGS=$(OS_LDFLAGS)
  
@@ -5299,11 +5310,38 @@ Subject: [PATCH 2/2] Shared libs
  EXTRA_DIST=
 --- a/vtkfsio/Makefile.am
 +++ b/vtkfsio/Makefile.am
-@@ -43,12 +43,12 @@
- 	$(top_builddir)/fsgdf/libfsgdf.a \
- 	$(top_builddir)/vtkfsio/libvtkfsio.a \
- 	$(top_builddir)/vtkutils/libvtkutils.a \
+@@ -13,9 +13,9 @@
+ 
+ AM_LDFLAGS=
+ 
+-noinst_LIBRARIES= libvtkfsio.a
++lib_LTLIBRARIES= libvtkfsio.la
+ 
+-libvtkfsio_a_SOURCES=\
++libvtkfsio_la_SOURCES=\
+ 	vtkFSSurfaceLabelSource.cxx \
+ 	vtkFSSurfaceLabelSource.h \
+ 	vtkFSSurfaceWriter.cxx \
+@@ -27,7 +27,7 @@
+ 	vtkFSVolumeSource.cxx \
+ 	vtkFSVolumeSource.h
+ 
+-EXTRA_DIST=$(libvtkfsio_a_SOURCES) lh.vtkFSSurfaceWriterTestFile
++EXTRA_DIST=$(libvtkfsio_la_SOURCES) lh.vtkFSSurfaceWriterTestFile
+ 
+ if ENABLE_KWWIDGETS_APPS
+ check_PROGRAMS = vtkFSSurfaceWriterTester
+@@ -40,15 +40,15 @@
+ vtkFSSurfaceWriterTester_SOURCES=vtkFSSurfaceWriterTester.cxx
+ 
+ vtkFSSurfaceWriterTester_LDADD=\
+-	$(top_builddir)/fsgdf/libfsgdf.a \
+-	$(top_builddir)/vtkfsio/libvtkfsio.a \
+-	$(top_builddir)/vtkutils/libvtkutils.a \
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
++	$(top_builddir)/fsgdf/libfsgdf.la \
++	$(top_builddir)/vtkfsio/libvtkfsio.la \
++	$(top_builddir)/vtkutils/libvtkutils.la \
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
  	$(LDFLAGS_TCL) $(LIBS_TCL_OPENGL) \
  	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkWidgets -lvtkGraphics \
@@ -5325,8 +5363,12 @@ Subject: [PATCH 2/2] Shared libs
  	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  	-lexpat $(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
  	-ltiff $(VTK_TIFF_LIB) -ljpeg $(VTK_JPEG_LIB) \
-@@ -123,13 +123,13 @@
- 	$(top_builddir)/fsgdf/libfsgdf.a \
+@@ -120,16 +120,16 @@
+ 	RgbatransferfunctioneditortesterLibInit.cxx
+ 
+ vtkKWRGBATransferFunctionEditorTester_LDADD=\
+-	$(top_builddir)/fsgdf/libfsgdf.a \
++	$(top_builddir)/fsgdf/libfsgdf.la \
  	$(top_builddir)/vtkfsio/libvtkfsio.a \
  	$(top_builddir)/vtkutils/libvtkutils.a \
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
@@ -5368,3 +5410,30 @@ Subject: [PATCH 2/2] Shared libs
  	utils \
  	utilscpp \
  	vtkfsio \
+--- a/rgb/Makefile.am
++++ b/rgb/Makefile.am
+@@ -5,8 +5,8 @@
+ AM_CPPFLAGS=-I$(top_srcdir)/include -I$(top_srcdir)/include/dicom
+ AM_LDFLAGS=
+ 
+-noinst_LIBRARIES= librgb.a
+-librgb_a_SOURCES = close.c   name.c  rdwr.c  row.c \
++lib_LTLIBRARIES= librgb.la
++librgb_la_SOURCES = close.c   name.c  rdwr.c  row.c \
+ 	filbuf.c  open.c  rgbutils.c flsbuf.c  pix.c   rle.c
+ 
+ # Our release target. Include files to be excluded here. They will be
+--- a/unix/Makefile.am
++++ b/unix/Makefile.am
+@@ -8,9 +8,9 @@
+ 
+ AM_LDFLAGS=
+ 
+-noinst_LIBRARIES=libunix.a
++lib_LTLIBRARIES=libunix.la
+ 
+-libunix_a_SOURCES=cuserid.c unix_thread.c xwin.c \
++libunix_la_SOURCES=cuserid.c unix_thread.c xwin.c \
+ 	ftime.c windiag.c xwindow.c \
+ 	oglutil.c xvmri.c texfont.c xvutil.c glStub.c
+ 
