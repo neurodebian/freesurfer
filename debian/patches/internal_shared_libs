@@ -5465,3 +5465,29 @@ Subject: [PATCH 2/2] Shared libs
  	ctnthread.c  dcmdict.c dcm.c dcmsupport.c
  
  EXTRA_DIST=
+--- a/hipsstubs/Makefile.am
++++ b/hipsstubs/Makefile.am
+@@ -5,8 +5,8 @@
+ AM_CPPFLAGS=-I$(top_srcdir)/include -I$(top_srcdir)/include/dicom
+ AM_LDFLAGS=
+ 
+-noinst_LIBRARIES= libhipsstubs.a
+-libhipsstubs_a_SOURCES = hipsrepl.c  hipsstubs.c
++lib_LTLIBRARIES= libhipsstubs.la
++libhipsstubs_la_SOURCES = hipsrepl.c  hipsstubs.c
+ 
+ # Our release target. Include files to be excluded here. They will be
+ # found and removed after 'make install' is run during the 'make
+--- a/log/Makefile.am
++++ b/log/Makefile.am
+@@ -5,8 +5,8 @@
+ AM_CPPFLAGS=-I$(top_srcdir)/include
+ AM_LDFLAGS=
+ 
+-noinst_LIBRARIES= liblog.a
+-liblog_a_SOURCES = congraph.c  h_logz.c   map.c \
++lib_LTLIBRARIES= liblog.la
++liblog_la_SOURCES = congraph.c  h_logz.c   map.c \
+ 	connect.c   lmedian.c  runfuncs.c
+ 
+ # Our release target. Include files to be excluded here. They will be
