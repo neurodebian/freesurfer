@@ -677,7 +677,8 @@ Subject: [PATCH 2/2] Shared libs
  # stupid circular dependency on iopen swapInt etc.
  LIBS_MGH="\
 -  utils/libutils.a \
-   fsgdf/libfsgdf.a \
+-  fsgdf/libfsgdf.a \
++  \
    rgb/librgb.a \
    unix/libunix.a \
    dicom/libdicom.a \
@@ -685,7 +686,7 @@ Subject: [PATCH 2/2] Shared libs
 -  log/liblog.a \
 -  xml2/libxml2.a"
 +  log/liblog.a"
-+DLIBS_MGH="-L\$(top_builddir)/utils -lutils -lxml2"
++DLIBS_MGH="-L\$(top_builddir)/utils -lutils -lxml2 -lfsgdf"
  
  # use local libjpeg if --with-jpeg-dir not used:
  if test "$ac_jpeg_libraries" = "NO"; then
@@ -1323,7 +1324,23 @@ Subject: [PATCH 2/2] Shared libs
  	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
 --- a/fsgdf/Makefile.am
 +++ b/fsgdf/Makefile.am
-@@ -38,7 +38,7 @@
+@@ -17,11 +17,12 @@
+ endif
+ AM_LDFLAGS=
+ 
+-noinst_LIBRARIES= libfsgdf.a
++noinst_LIBRARIES=
++lib_LTLIBRARIES= libfsgdf.la
+ if ENABLE_TCLTK_APPS
+-libfsgdf_a_SOURCES = fsgdf.c fsgdf_wrap.c FsgdfPlot.cxx
++libfsgdf_la_SOURCES = fsgdf.c fsgdf_wrap.c FsgdfPlot.cxx
+ else
+-libfsgdf_a_SOURCES = fsgdf.c fsgdf_wrap.c
++libfsgdf_la_SOURCES = fsgdf.c fsgdf_wrap.c
+ endif
+ 
+ if ENABLE_TCLTK_APPS
+@@ -38,7 +39,7 @@
  check_PROGRAMS=foo test
  test_SOURCES=test.c fsgdf_wrap.c
  test_LDFLAGS=$(LDFLAGS_TCL)
