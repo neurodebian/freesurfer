@@ -4726,11 +4726,15 @@ Subject: [PATCH 2/2] Shared libs
  # trick to get test data into the build directory
 --- a/orient_mri/Makefile.am
 +++ b/orient_mri/Makefile.am
-@@ -24,11 +24,11 @@
+@@ -22,13 +22,13 @@
+ 	vtkOrientMRIInteractorStyleView2D.h \
+ 	OrientMRILibInit.cxx
  orient_mri_LDADD= \
- 	$(top_builddir)/vtkfsio/libvtkfsio.a \
- 	$(top_builddir)/vtkutils/libvtkutils.a \
+-	$(top_builddir)/vtkfsio/libvtkfsio.a \
+-	$(top_builddir)/vtkutils/libvtkutils.a \
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(LIBS_TCL_OPENGL) \
++	$(top_builddir)/vtkfsio/libvtkfsio.la \
++	$(top_builddir)/vtkutils/libvtkutils.la \
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) $(LIBS_TCL_OPENGL) \
  	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkWidgets -lvtkGraphics \
  	-lvtkImaging -lvtkFiltering \
@@ -5107,11 +5111,16 @@ Subject: [PATCH 2/2] Shared libs
  if HAVE_MAC_OSX
 --- a/tkmedit/Makefile.am
 +++ b/tkmedit/Makefile.am
-@@ -29,10 +29,10 @@
- 	tkmMeditWindow.h \
- 	$(top_srcdir)/fsgdf/fsgdf_wrap.c
- tkmedit_LDADD= $(top_builddir)/fsgdf/libfsgdf.a \
+@@ -26,13 +26,12 @@
+ 	tkmedit.h \
+ 	tkmDisplayArea.h \
+ 	tkmFunctionalVolume.h \
+-	tkmMeditWindow.h \
+-	$(top_srcdir)/fsgdf/fsgdf_wrap.c
+-tkmedit_LDADD= $(top_builddir)/fsgdf/libfsgdf.a \
 -	$(addprefix $(top_builddir)/,$(LIBS_MGH)) \
++	tkmMeditWindow.h 
++tkmedit_LDADD= $(top_builddir)/fsgdf/libfsgdf.la \
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
  	$(LIBS_TCL_OPENGL) \
  	$(X_LIBS) $(LIBTIFF) \
@@ -5148,11 +5157,13 @@ Subject: [PATCH 2/2] Shared libs
  # found and removed after 'make install' is run during the 'make
 --- a/tksurfer/Makefile.am
 +++ b/tksurfer/Makefile.am
-@@ -23,10 +23,10 @@
+@@ -22,11 +22,11 @@
+ if ENABLE_TCLTK_APPS
  bin_PROGRAMS=tksurfer
  tksurfer_SOURCES=tksurfer.c
- tksurfer_LDADD= $(top_builddir)/fsgdf/libfsgdf.a \
+-tksurfer_LDADD= $(top_builddir)/fsgdf/libfsgdf.a \
 -  $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
++tksurfer_LDADD= $(top_builddir)/fsgdf/libfsgdf.la \
 +  $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
  	$(LIBS_TCL_OPENGL) \
  	$(X_LIBS) -lGL $(LIBTIFF) \
@@ -5368,6 +5379,21 @@ Subject: [PATCH 2/2] Shared libs
  	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) \
 --- a/vtkutils/Makefile.am
 +++ b/vtkutils/Makefile.am
+@@ -35,12 +35,12 @@
+ AM_LDFLAGS=
+ 
+ if ENABLE_KWWIDGETS_APPS
+-noinst_LIBRARIES= libvtkutils.a
++lib_LTLIBRARIES= libvtkutils.la
+ else
+ noinst_LIBRARIES=
+ endif
+ 
+-libvtkutils_a_SOURCES= \
++libvtkutils_la_SOURCES= \
+ 	vtkKWProgressDialog.cxx \
+ 	vtkKWRGBATransferFunctionEditor.cxx \
+ 	vtkKWRGBATransferFunctionEditorTcl.cxx \
 @@ -93,7 +93,7 @@
  	-lvtkIO -lvtkWidgets -lvtkGraphics \
  	-lvtkImaging -lvtkFiltering \
@@ -5491,3 +5517,23 @@ Subject: [PATCH 2/2] Shared libs
  	connect.c   lmedian.c  runfuncs.c
  
  # Our release target. Include files to be excluded here. They will be
+--- a/tksurfer/Makefile
++++ b/tksurfer/Makefile
+@@ -60,7 +60,7 @@
+ #am__DEPENDENCIES_2 =  \
+ #	$(top_builddir)/tiff/libtiff.a
+ tksurfer_DEPENDENCIES =  \
+-	$(top_builddir)/fsgdf/libfsgdf.a \
++	$(top_builddir)/fsgdf/libfsgdf.la \
+ 	$(addprefix $(top_builddir)/, \
+ 	$(LIBS_MGH)) $(am__DEPENDENCIES_1) \
+ 	$(am__DEPENDENCIES_1) \
+@@ -405,7 +405,7 @@
+ 
+ AM_LDFLAGS = $(LDFLAGS_TCL) $(TIFF_LIBS)
+ tksurfer_SOURCES = tksurfer.c
+-tksurfer_LDADD = $(top_builddir)/fsgdf/libfsgdf.a \
++tksurfer_LDADD = $(top_builddir)/fsgdf/libfsgdf.la \
+   $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
+ 	$(LIBS_TCL_OPENGL) \
+ 	$(X_LIBS) -lGL $(LIBTIFF) \
