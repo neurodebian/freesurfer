@@ -44,7 +44,7 @@ override_dh_auto_clean:
 	-rm config/*
 	# remove help headers
 	for f in $$(find . -name '*.xml' ! -wholename '*debian*'); do \
-		[ -f $${f}.h ] && rm $${f}.h; \
+		[ -f $${f}.h ] && rm $${f}.h || :; \
 	done
 	# remove fake data files
 	-grep 'GEMS/data*' freesurfer-data.md5sums |cut -d ' ' -f 3,3| xargs rm
