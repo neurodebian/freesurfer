@@ -5517,23 +5517,3 @@ Subject: [PATCH 2/2] Shared libs
  	connect.c   lmedian.c  runfuncs.c
  
  # Our release target. Include files to be excluded here. They will be
---- a/tksurfer/Makefile
-+++ b/tksurfer/Makefile
-@@ -60,7 +60,7 @@
- #am__DEPENDENCIES_2 =  \
- #	$(top_builddir)/tiff/libtiff.a
- tksurfer_DEPENDENCIES =  \
--	$(top_builddir)/fsgdf/libfsgdf.a \
-+	$(top_builddir)/fsgdf/libfsgdf.la \
- 	$(addprefix $(top_builddir)/, \
- 	$(LIBS_MGH)) $(am__DEPENDENCIES_1) \
- 	$(am__DEPENDENCIES_1) \
-@@ -405,7 +405,7 @@
- 
- AM_LDFLAGS = $(LDFLAGS_TCL) $(TIFF_LIBS)
- tksurfer_SOURCES = tksurfer.c
--tksurfer_LDADD = $(top_builddir)/fsgdf/libfsgdf.a \
-+tksurfer_LDADD = $(top_builddir)/fsgdf/libfsgdf.la \
-   $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
- 	$(LIBS_TCL_OPENGL) \
- 	$(X_LIBS) -lGL $(LIBTIFF) \
