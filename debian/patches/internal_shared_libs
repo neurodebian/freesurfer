@@ -4746,11 +4746,19 @@ Subject: [PATCH 2/2] Shared libs
  	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) $(VTK_SQLITE_LIB) \
 --- a/qdec/Makefile.am
 +++ b/qdec/Makefile.am
-@@ -27,7 +27,7 @@
- 	$(top_builddir)/vtkfsio/libvtkfsio.a \
- 	$(top_builddir)/vtkutils/libvtkutils.a \
- 	$(top_builddir)/qdecproject/libqdecproject.a \
+@@ -23,11 +23,11 @@
+ 	QdecUtilities.cxx QdecLibInit.cxx \
+ 	QdecEvents.h QdecVertexAnnotationLookup.h
+ qdec_LDADD=  \
+-	$(top_builddir)/fsgdf/libfsgdf.a \
+-	$(top_builddir)/vtkfsio/libvtkfsio.a \
+-	$(top_builddir)/vtkutils/libvtkutils.a \
+-	$(top_builddir)/qdecproject/libqdecproject.a \
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(LIBS_TCL_OPENGL) \
++	$(top_builddir)/fsgdf/libfsgdf.la \
++	$(top_builddir)/vtkfsio/libvtkfsio.la \
++	$(top_builddir)/vtkutils/libvtkutils.la \
++	$(top_builddir)/qdecproject/libqdecproject.la \
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) $(LIBS_TCL_OPENGL) \
  	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
@@ -5394,7 +5402,21 @@ Subject: [PATCH 2/2] Shared libs
  	vtkKWProgressDialog.cxx \
  	vtkKWRGBATransferFunctionEditor.cxx \
  	vtkKWRGBATransferFunctionEditorTcl.cxx \
-@@ -93,7 +93,7 @@
+@@ -83,17 +83,18 @@
+ TESTS=
+ endif
+ 
+-IconLoaderTest_SOURCES=IconLoaderTest.cxx IconLoaderTest.h IconLoader.cxx
++IconLoaderTest_SOURCES=IconLoaderTest.cxx IconLoaderTest.h
+ 
+ IconLoaderTest_LDADD=\
+-	$(top_builddir)/vtkfsio/libvtkfsio.a \
+-	$(top_builddir)/vtkutils/libvtkutils.a \
++	libvtkutils.la \
++	$(top_builddir)/vtkfsio/libvtkfsio.la \
++	$(top_builddir)/vtkutils/libvtkutils.la \
+ 	$(LDFLAGS_TCL) $(LIBS_TCL_OPENGL) \
+ 	$(VTK_LIBS) $(VTK_VERDICT_LIB) $(VTK_SQLITE_LIB) \
  	-lvtkIO -lvtkWidgets -lvtkGraphics \
  	-lvtkImaging -lvtkFiltering \
  	-lvtkCommon -lvtksys \
@@ -5403,7 +5425,7 @@ Subject: [PATCH 2/2] Shared libs
  	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  	-lexpat $(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
  	-ltiff $(VTK_TIFF_LIB) -ljpeg $(VTK_JPEG_LIB) \
-@@ -120,16 +120,16 @@
+@@ -120,16 +121,16 @@
  	RgbatransferfunctioneditortesterLibInit.cxx
  
  vtkKWRGBATransferFunctionEditorTester_LDADD=\
@@ -5423,7 +5445,7 @@ Subject: [PATCH 2/2] Shared libs
  	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  	-lexpat $(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
  	-ltiff $(VTK_TIFF_LIB) -ljpeg $(VTK_JPEG_LIB) \
-@@ -150,7 +150,7 @@
+@@ -150,7 +151,7 @@
  	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkWidgets -lvtkGraphics \
  	-lvtkImaging -lvtkFiltering \
  	-lvtkCommon -lvtksys \
@@ -5517,3 +5539,22 @@ Subject: [PATCH 2/2] Shared libs
  	connect.c   lmedian.c  runfuncs.c
  
  # Our release target. Include files to be excluded here. They will be
+--- a/qdecproject/Makefile.am
++++ b/qdecproject/Makefile.am
+@@ -9,13 +9,13 @@
+ 
+ AM_LDFLAGS=
+ 
+-noinst_LIBRARIES= libqdecproject.a
++lib_LTLIBRARIES= libqdecproject.la
+ 
+-libqdecproject_a_SOURCES= QdecContrast.cxx  QdecDataTable.cxx  \
++libqdecproject_la_SOURCES= QdecContrast.cxx  QdecDataTable.cxx  \
+ 	QdecFactor.cxx QdecGlmDesign.cxx  QdecGlmFit.cxx  QdecGlmFitResults.cxx  \
+ 	QdecProject.cxx  QdecSubject.cxx
+ 
+-am_libqdecprojet_a_OBJECTS=$(libqdecproject_a_SOURCES:%.cxx=%.o)
++am_libqdecprojet_la_OBJECTS=$(libqdecproject_la_SOURCES:%.cxx=%.o)
+ 
+ EXTRA_DIST=	ProgressUpdateGUI.h  QdecContrast.h  QdecDataTable.h  \
+ 	QdecFactor.h  QdecGlmDesign.h  QdecGlmFit.h  QdecGlmFitResults.h  \
