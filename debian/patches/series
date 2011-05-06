@@ -4,4 +4,5 @@ datapkg_split
 remove_3rdparty_code
 dont_build_3rdparty
 exhaustive_clean
+use_f2c_not_g2c
 internal_shared_libs
