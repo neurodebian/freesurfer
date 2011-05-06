@@ -1469,33 +1469,84 @@ Subject: [PATCH 2/2] Shared libs
  # found and removed after 'make install' is run during the 'make
 --- a/fem_elastic/Makefile.am
 +++ b/fem_elastic/Makefile.am
-@@ -38,8 +38,12 @@
- 	ZlibStringCompressor.cpp ZlibStringCompressor.h
+@@ -19,79 +19,95 @@
+ AM_LDFLAGS=$(OS_LDFLAGS) -z muldefs
+ endif
+ 
+-common3d_SOURCES=\
++common3d_SOURCES=
++
++dlibcommon3d_SOURCES=\
+ 	fem_3d.cpp fem_3d.h solver.h \
+ 	misc.h mesh.h toctree.hpp node.h simple_timer.h tag_fio.h \
+ 	coords.h material.h element.h gmpError.h streamIoMisc.h stl_utils.hpp \
+ 	small_matrix.cpp small_matrix.h \
+ 	morph.cpp morph.h \
+-	morph_utils.cpp morph_utils.h
++	morph_utils.cpp morph_utils.h \
++	misc_maths.cpp misc_maths.h \
++	transformUtils.cpp transformUtils.h \
++	surf_utils.cpp surf_utils.h \
++	ZlibStringCompressor.cpp ZlibStringCompressor.h
+ 
+ bin_PROGRAMS=createMorph applyMorph surf2vol exportGcam
+ 
+ createMorph_SOURCES=\
+ 	$(common3d_SOURCES) \
+ 	fcreateMorph.cpp \
+-	misc_maths.cpp misc_maths.h \
+-	transformUtils.cpp transformUtils.h \
+-	surf_utils.cpp surf_utils.h \
+-	ZlibStringCompressor.cpp ZlibStringCompressor.h
++	misc_maths.h \
++	transformUtils.h \
++	surf_utils.h \
++	ZlibStringCompressor.h
  
  createMorph_LDADD=\
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 -	$(top_builddir)/tetgen/libtetgen.a $(BOOST_PO_LIB)
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
-+	$(top_builddir)/tetgen/libtetgen.la $(BOOST_PO_LIB)
++	$(top_builddir)/tetgen/libtetgen.la $(BOOST_PO_LIB) \
++    libfem_elastic.la
 +
-+# Workaround for fem_elastic/Makefile.am: object `fcreateMorph.$(OBJEXT)' created both with libtool and without
-+# per http://www.gnu.org/software/hello/manual/automake/Objects-created-both-with-libtool-and-without.html
-+createMorph_CPPFLAGS = $(AM_CFLAGS)
  
  applyMorph_SOURCES=\
  	$(common3d_SOURCES) \
-@@ -50,8 +54,8 @@
- 	ZlibStringCompressor.cpp ZlibStringCompressor.h
+ 	fapplyMorph.cpp \
+-	misc_maths.cpp misc_maths.h \
+-	transformUtils.cpp transformUtils.h \
+-	surf_utils.cpp surf_utils.h \
+-	ZlibStringCompressor.cpp ZlibStringCompressor.h
++	misc_maths.h \
++	transformUtils.h \
++	surf_utils.h \
++	ZlibStringCompressor.h
  
  applyMorph_LDADD=\
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 -	$(top_builddir)/tetgen/libtetgen.a $(BOOST_PO_LIB)
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
-+	$(top_builddir)/tetgen/libtetgen.la $(BOOST_PO_LIB)
++	$(top_builddir)/tetgen/libtetgen.la $(BOOST_PO_LIB) \
++    libfem_elastic.la
++
++# Workaround for fem_elastic/Makefile.am: object `fcreateMorph.$(OBJEXT)' created both with libtool and without
++# per http://www.gnu.org/software/hello/manual/automake/Objects-created-both-with-libtool-and-without.html
++# And since it is not just the 'main()' so it should be safer to just allow those two objects to duplicate
++createMorph_CPPFLAGS = $(AM_CFLAGS)
++applyMorph_CPPFLAGS = $(AM_CFLAGS)
  
  surf2vol_SOURCES=\
  	$(common3d_SOURCES) \
-@@ -67,15 +71,15 @@
+ 	fsurf2vol.cpp cstats.h surf_types.h \
+ 	surf_powell.cpp surf_powell.h \
+ 	surf_energy.cpp surf_energy.h \
+-	misc_maths.cpp \
+-	transformUtils.cpp \
+-	surf_utils.cpp \
+-	ZlibStringCompressor.cpp \
+ 	pbCluster_mesh_crop.cpp pbCluster_mesh_crop.h mesh_bfs.h \
+ 	untangler.cpp untangler.h pbmesh_crop.h
  
  if HAVE_MAC_OSX
  surf2vol_LDADD=\
@@ -1505,7 +1556,10 @@ Subject: [PATCH 2/2] Shared libs
 +	$(top_builddir)/tetgen/libtetgen.la \
  	$(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat \
  	-lpetscvec -lpetsc -lpmpich -lmpich -llmpe -lmpe -lflapack -lfblas \
- 	$(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
+-	$(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
++	$(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN) \
++    libfem_elastic.la
++
  else
  surf2vol_LDADD=\
 -    $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
@@ -1513,22 +1567,30 @@ Subject: [PATCH 2/2] Shared libs
 +    $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +    $(top_builddir)/tetgen/libtetgen.la \
      $(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat \
-     -lpetscvec -lpetsc -lmpich  $(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
+-    -lpetscvec -lpetsc -lmpich  $(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
++    -lpetscvec -lpetsc -lmpich  $(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN) \
++    libfem_elastic.la
++
  endif
-@@ -86,12 +90,12 @@
- 	ZlibStringCompressor.cpp ZlibStringCompressor.h
+ 
+ exportGcam_SOURCES=\
+ 	$(common3d_SOURCES) \
+ 	exportGcam.cpp \
+-	ZlibStringCompressor.cpp ZlibStringCompressor.h
++	ZlibStringCompressor.h
  
  exportGcam_LDADD=\
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 -	$(top_builddir)/tetgen/libtetgen.a $(BOOST_PO_LIB)
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
-+	$(top_builddir)/tetgen/libtetgen.la $(BOOST_PO_LIB)
++	$(top_builddir)/tetgen/libtetgen.la $(BOOST_PO_LIB) \
++    libfem_elastic.la
  
  # build library...
 -noinst_LIBRARIES= libfem_elastic.a
 -libfem_elastic_a_SOURCES = $(createMorph_SOURCES) $(applyMorph_SOURCES)
 +lib_LTLIBRARIES= libfem_elastic.la
-+libfem_elastic_la_SOURCES = $(createMorph_SOURCES) $(applyMorph_SOURCES)
++libfem_elastic_la_SOURCES = $(dlibcommon3d_SOURCES) $(createMorph_SOURCES) $(applyMorph_SOURCES)
  
  endif
  endif
