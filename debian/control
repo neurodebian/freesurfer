@@ -4,13 +4,16 @@ Priority: extra
 Maintainer: NeuroDebian Team <team@neuro.debian.net>
 Uploaders: Michael Hanke <mih@debian.org>, Yaroslav Halchenko <debian@onerussian.com>
 Build-Depends: debhelper (>= 7.0.50~), dh-autoreconf,
+               gfortran, libf2c2-dev,
                libminc-dev,
                libvxl1-dev,
                tk8.5-dev, tcl-dev,
                tix-dev,
                blt-dev,
                libvtk5-dev (>= 5.6),
+               libinsighttoolkit3-dev (<< 3.20),
                libkwwidgets1-dev,
+               fluid,
 Standards-Version: 3.9.1
 Homepage: http://surfer.nmr.mgh.harvard.edu/
 Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/freesurfer.git
