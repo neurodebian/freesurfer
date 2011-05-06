@@ -1349,11 +1349,15 @@ Subject: [PATCH 2/2] Shared libs
  mriVoxInLabelPartialVolumeTest_cuda_SOURCES = mriVoxInLabelPartialVolumeTest.cpp
 --- a/dmri_poistats/Makefile.am
 +++ b/dmri_poistats/Makefile.am
-@@ -67,11 +67,11 @@
+@@ -65,13 +65,13 @@
+   $(IO_SRCS) \
+   dmri_poistats.cxx 
  dmri_poistats_LDADD = $(LIBS_ITK) \
- 	$(top_builddir)/itkio/libitkio.a \
- 	$(top_builddir)/itkutils/libitkutils.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
 -	-lITKBasicFilters -litkgdcm -litkpng -litktiff -lITKSpatialObject \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
 +	-lITKBasicFilters -lITKSpatialObject \
  	-lITKNumerics -litkvnl_inst -litkvnl_algo -litkv3p_netlib \
  	-litkvnl -litkvcl \
@@ -1364,11 +1368,13 @@ Subject: [PATCH 2/2] Shared libs
  dmri_poistats_LDFLAGS = $(OS_LDFLAGS)
  dmri_poistats_CXXFLAGS = 
  
-@@ -82,18 +82,18 @@
+@@ -81,20 +81,20 @@
+   $(UTILS_SRCS) \
    dmri_initialize_path.cxx 
  dmri_initialize_path_LDADD = $(LIBS_ITK) \
- 	$(top_builddir)/itkutils/libitkutils.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
 -	-lITKBasicFilters -litkgdcm -litkpng -litktiff -lITKSpatialObject \
++	$(top_builddir)/itkutils/libitkutils.la \
 +	-lITKBasicFilters -lITKSpatialObject \
  	-lITKNumerics -litkvnl_inst -litkvnl_algo -litkv3p_netlib \
  	-litkvnl -litkvcl \
@@ -1383,36 +1389,48 @@ Subject: [PATCH 2/2] Shared libs
  dmri_mask_SOURCES = \
    dmri_mask.cxx 
 -dmri_mask_LDADD = $(addprefix $(top_builddir)/, $(LIBS_MGH) ) \
+-	$(top_builddir)/itkutils/libitkutils.a
 +dmri_mask_LDADD = $(addprefix $(top_builddir)/, $(LIBS_MGH) ) $(DLIBS_MGH) \
- 	$(top_builddir)/itkutils/libitkutils.a
++	$(top_builddir)/itkutils/libitkutils.la
  dmri_mask_LDFLAGS = $(OS_LDFLAGS)
  dmri_mask_CXXFLAGS = 
-@@ -130,7 +130,7 @@
+ 
+@@ -130,9 +130,9 @@
  
  TestPoistatsReplica_CXXFLAGS=$(CPPUNIT_CFLAGS) -Wno-non-virtual-dtor
  
 -TestPoistatsReplica_LDADD=$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
 +TestPoistatsReplica_LDADD=$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
- 	$(top_builddir)/itkio/libitkio.a \
- 	$(top_builddir)/itkutils/libitkutils.a \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
  	$(CPPUNIT_LIBS) -lcppunit -ldl 	\
-@@ -149,7 +149,7 @@
+ 	-lITKBasicFilters -litkgdcm -litkpng -litktiff -lITKSpatialObject \
+ 	-lITKNumerics -litkvnl_inst -litkvnl_algo -litkv3p_netlib \
+@@ -149,9 +149,9 @@
  
  TestPoistatsReplicas_CXXFLAGS=$(CPPUNIT_CFLAGS) -Wno-non-virtual-dtor
  
 -TestPoistatsReplicas_LDADD=$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
 +TestPoistatsReplicas_LDADD=$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
- 	$(top_builddir)/itkio/libitkio.a \
- 	$(top_builddir)/itkutils/libitkutils.a \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
  	$(CPPUNIT_LIBS) -lcppunit -ldl 	\
+ 	-lITKBasicFilters -litkgdcm -litkpng -litktiff -lITKSpatialObject \
+ 	-lITKNumerics -litkvnl_inst -litkvnl_algo -litkv3p_netlib \
 @@ -170,14 +170,14 @@
  TestPoistats_CXXFLAGS=$(CPPUNIT_CFLAGS) -Wno-non-virtual-dtor
  
  TestPoistats_LDADD= \
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
- 	$(top_builddir)/itkio/libitkio.a \
- 	$(top_builddir)/itkutils/libitkutils.a \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
  	$(LIBS_ITK) \
  	$(CPPUNIT_LIBS)	-lcppunit \
 -	-lITKBasicFilters -litkgdcm -litkpng -litktiff -lITKSpatialObject \
@@ -1596,15 +1614,19 @@ Subject: [PATCH 2/2] Shared libs
  endif
 --- a/freeview/Makefile.am
 +++ b/freeview/Makefile.am
-@@ -392,7 +392,7 @@
+@@ -392,9 +392,9 @@
  freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS) \
  	-framework Cocoa -framework IOKit
  freeview_LDADD		= $(QT_LIBS)	\
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
+-	$(top_builddir)/vtkfsio/libvtkfsio.a \
+-	$(top_builddir)/vtkutils/libvtkutils.a \
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
- 	$(top_builddir)/vtkfsio/libvtkfsio.a \
- 	$(top_builddir)/vtkutils/libvtkutils.a \
++	$(top_builddir)/vtkfsio/libvtkfsio.la \
++	$(top_builddir)/vtkutils/libvtkutils.la \
  	$(VTK_COCOA_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
+ 	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
+ 	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) \
 @@ -402,7 +402,7 @@
  	$(VTK_SQLITE_LIB) \
  	-lvtkImaging -lvtkFiltering \
@@ -1614,15 +1636,19 @@ Subject: [PATCH 2/2] Shared libs
  	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  	-lvtkWidgets -lvtkHybrid \
  	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB)
-@@ -458,7 +458,7 @@
+@@ -458,9 +458,9 @@
  freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS)
  freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS)
  freeview_LDADD		= $(QT_LIBS)	\
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
+-	$(top_builddir)/vtkfsio/libvtkfsio.a \
+-	$(top_builddir)/vtkutils/libvtkutils.a \
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
- 	$(top_builddir)/vtkfsio/libvtkfsio.a \
- 	$(top_builddir)/vtkutils/libvtkutils.a \
++	$(top_builddir)/vtkfsio/libvtkfsio.la \
++	$(top_builddir)/vtkutils/libvtkutils.la \
  	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
+ 	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
+ 	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) \
 @@ -468,10 +468,10 @@
  	$(VTK_SQLITE_LIB) \
  	-lvtkImaging -lvtkFiltering \
@@ -5132,11 +5158,13 @@ Subject: [PATCH 2/2] Shared libs
  	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
 --- a/qdec_glmfit/Makefile.am
 +++ b/qdec_glmfit/Makefile.am
-@@ -5,7 +5,7 @@
+@@ -4,8 +4,8 @@
+ 
  bin_PROGRAMS = qdec_glmfit
  qdec_glmfit_SOURCES=qdec_glmfit.cxx
- qdec_glmfit_LDADD= $(top_builddir)/qdecproject/libqdecproject.a \
+-qdec_glmfit_LDADD= $(top_builddir)/qdecproject/libqdecproject.a \
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH))
++qdec_glmfit_LDADD= $(top_builddir)/qdecproject/libqdecproject.la \
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  qdec_glmfit_LDFLAGS=$(OS_LDFLAGS)
  
@@ -5393,11 +5421,17 @@ Subject: [PATCH 2/2] Shared libs
  if ENABLE_TCLTK_APPS
 --- a/scuba2/Makefile.am
 +++ b/scuba2/Makefile.am
-@@ -69,11 +69,11 @@
- 	$(top_builddir)/fsgdf/libfsgdf.a \
- 	$(top_builddir)/vtkfsio/libvtkfsio.a \
- 	$(top_builddir)/vtkutils/libvtkutils.a \
+@@ -66,14 +66,14 @@
+ 	ScubaLibInit.cxx
+ 
+ scuba2_LDADD=  \
+-	$(top_builddir)/fsgdf/libfsgdf.a \
+-	$(top_builddir)/vtkfsio/libvtkfsio.a \
+-	$(top_builddir)/vtkutils/libvtkutils.a \
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(LIBS_TCL_OPENGL) \
++	$(top_builddir)/fsgdf/libfsgdf.la \
++	$(top_builddir)/vtkfsio/libvtkfsio.la \
++	$(top_builddir)/vtkutils/libvtkutils.la \
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) $(LIBS_TCL_OPENGL) \
  	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkWidgets -lvtkGraphics \
  	-lvtkImaging -lvtkFiltering \
