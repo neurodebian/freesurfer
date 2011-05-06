@@ -5921,23 +5921,3 @@ Subject: [PATCH 2/2] Shared libs
  
  # Our release target. Include files to be excluded here. They will be
  # found and removed after 'make install' is run during the 'make
---- a/dngtester/Makefile
-+++ b/dngtester/Makefile
-@@ -53,7 +53,7 @@
- am_dngtester_OBJECTS = dngtester.$(OBJEXT)
- dngtester_OBJECTS = $(am_dngtester_OBJECTS)
- am__DEPENDENCIES_1 =
--dngtester_DEPENDENCIES = $(top_builddir)/fsgdf/libfsgdf.a $(addprefix \
-+dngtester_DEPENDENCIES = $(top_builddir)/fsgdf/libfsgdf.la $(addprefix \
- 	$(top_builddir)/, $(LIBS_MGH)) $(am__DEPENDENCIES_1)
- dngtester_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
- 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-@@ -384,7 +384,7 @@
- AM_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/include/dicom
- AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/include/dicom
- dngtester_SOURCES = dngtester.c
--dngtester_LDADD = $(top_builddir)/fsgdf/libfsgdf.a \
-+dngtester_LDADD = $(top_builddir)/fsgdf/libfsgdf.la \
-   $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
- 
- dngtester_LDFLAGS = $(OS_LDFLAGS)
