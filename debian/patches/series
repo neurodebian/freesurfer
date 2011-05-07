@@ -6,3 +6,4 @@ dont_build_3rdparty
 exhaustive_clean
 use_f2c_not_g2c
 internal_shared_libs
+install_path_mri_cvs_register
