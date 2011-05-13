@@ -37,6 +37,9 @@ override_dh_auto_build:
 	grep 'talairach_avi/*' freesurfer-data.md5sums |cut -d ' ' -f 3,3 |xargs touch
 	dh_auto_build
 
+override_dh_auto_test:
+	: # none for now
+
 override_dh_auto_clean:
 	dh_auto_clean
 	# get recreated by autoreconf
