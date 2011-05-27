@@ -3,28 +3,43 @@
 set -e
 set -u
 
-utarball=$1
 data_dir=freesurfer-data/data
+
+tar_excludes="--exclude=CVS --exclude=tiff --exclude=jpeg --exclude=expat
+	--exclude=xml2 --exclude=glut --exclude=x86cpucaps"
 
 # make working directory
 curdir=$(pwd)
 wdir=$(mktemp -d)
 
+# process input
+fs_snapshot="$1"
+if [ -d "$fs_snapshot" ]; then
+	echo "Copy/filter sources into $wdir"
+	tar $tar_excludes -cf- "$fs_snapshot" | tar -xf- -C "$wdir"
+	dname=$(basename $fs_snapshot)
+else
+	echo "Unpack sources into $wdir"
+	tar $tar_excludes -xf "$curdir/$fs_snapshot"  -C "$wdir"
+	dname=dev
+fi
+
 cd $wdir
 
-echo "Unpack sources"
-tar --exclude=CVS --exclude=tiff --exclude=jpeg --exclude=expat \
-	--exclude=xml2 --exclude=glut --exclude=x86cpucaps \
-	-xf $curdir/$utarball
+# Assure that it is called dev for consistency
+[ "$dname" = "dev" ] && dname="+dev" || { mv $dname dev; dname=""; }
 
 echo "Determine version"
-uversion_raw=$(grep AC_INIT dev/configure.in | cut -d ',' -f 2,2 | tr -d ' ')
+# Use STABLE_VER_NUM to deduce the base version
+uversion_raw=$(sed -n -e '/STABLE_VER_NUM/s,.*="v\(.*\)",\1,gp' dev/distribution/build_release_type.csh)
 LC_ALL=C lastmod=$(find dev -type f -exec ls -og --time-style=long-iso {} \; |sort --key 4 |tail -n1 | cut -d ' ' -f 4,4 | tr -d "-")
-if [ "${uversion_raw:0:3}" = "dev" ]; then
-	uversion="${uversion_raw#dev*}~cvs${lastmod}"
-else
-	uversion="${uversion_raw}+cvs${lastmod}"
-fi
+
+# That base version seems to be a base in dev as well but we want to
+# add a 'dev' suffix if we are wrapping development branch instead of
+# the stable one, and since +d > +c development should always be
+# higher than the one in stable release
+uversion="${uversion_raw}${dname}+cvs${lastmod}"
+
 echo "Got version: ${uversion}"
 
 echo "Repackaging"
@@ -53,6 +68,12 @@ rm dev/fsfast/docs/MGH-NMR-StdProc-Handbook.doc
 rm -rf dev/docs
 # generated wrappers
 find dev -name '*Tcl.cxx' -delete
+# CorTech not-even-non-free components
+rm -rf dev/tk{medit,register2,surfer}
+grep -il CorTech dev/scripts/* | xargs rm -f
+# There are some filts under fsfast/bin/ which rely on tksurfer etc,
+# but at least they are legal to distribute, so let's keep them
+
 
 echo "Compute checksums"
 # compute checksums for data and store them in the sources
