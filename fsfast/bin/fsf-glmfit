@@ -1,0 +1,372 @@
+#! /bin/csh -f
+
+#
+# fsf-glmfit
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2007/01/09 22:41:17 $
+#    $Revision: 1.3 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: fsf-glmfit,v 1.3 2007/01/09 22:41:17 nicks Exp $';
+set inputargs = ($argv);
+set ystem = ();
+set nacfstem = ();
+set xmatfile = ();
+set outdir = ();
+set synth = 0;
+set synth_std = 0;
+set synth_ar1 = 0;
+set synth_amp = 0;
+set monly = 0;
+set MLF = ();
+set keepresid = 0;
+set nskip = 0;
+
+## If there are no arguments, just print useage and exit ##
+set PrintHelp = 0;
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+set n = `echo $argv | grep -e -version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+set StartTime = `date`;
+
+#----------------------------------------------#
+if($#MLF == 0) set MLF = $outdir/fsf_glmfit_tmp.m
+rm -f $MLF
+tee $MLF > /dev/null <<EOF
+
+tic;
+ystem = splitstring('$ystem');
+xmatfile  = '$xmatfile';
+nacfstem = splitstring('$nacfstem');
+outdir = '$outdir';
+nskip = $nskip;
+synth = $synth;
+synth_std = $synth_std;
+synth_ar1 = $synth_ar1;
+synth_amp = $synth_amp;
+
+tmp = load(xmatfile);
+if(isempty(tmp)) return; end
+X     = tmp.X;
+[nfx nbeta] = size(X);
+ntask = tmp.nTask;
+Ctask = eye(ntask,nbeta);
+R = eye(nfx) - X*inv(X'*X)*X';
+
+if(synth)
+  nacfsynth = synth_ar1.^[0:nfx-1]';
+  Snsynth = toeplitz(nacfsynth);
+  Srsynth = R*Snsynth*R;
+  synth_ar1r = mean(diag(Srsynth,1))/mean(diag(Srsynth));
+  fprintf('synth_ar1 = %g, synth_ar1r = %g\n',synth_ar1,synth_ar1r);
+end
+
+[nslices nr nc nf] = fmri_bvoldim(ystem);
+if(isempty(nslices) | nslices == 0) return; end
+nf = nf - nskip;
+
+if(nf ~= nfx)
+  fprintf('ERROR: nframes = %d, does not equal X (%d)\n',nf,nfx);
+  return;
+end
+
+for slice = 1:nslices
+  fprintf('slice %d (t=%g)\n',slice,toc)
+
+  mristruct = fast_ldbhdr(ystem);
+  if(~synth)
+    yslice  = fast_ldbslice(ystem,slice-1);
+    if(nskip > 0) yslice = yslice(:,:,nskip+1:end); end
+    yslice = fast_vol2mat(yslice,1);
+  else
+    [nslices nr nc nf] = fmri_bvoldim(ystem);
+    nf = nf - nskip;
+    nv = nr*nc;
+    yslice = 0;
+    if(synth_std > 0) 
+      yslice = synth_std*randn(nf,nv);
+      if(abs(synth_ar1) > 0)
+        nacfsynth = synth_ar1.^[0:nf-1]';
+        Fsynth = chol(toeplitz(nacfsynth))';
+        yslice = Fsynth*yslice;
+      end
+    end
+    if(abs(synth_amp) > 0)
+      yslice = yslice + (synth_amp*X(nf1:nf2,:)*ones(nbeta,nv));
+    end
+  end % synth
+  ymn = mean(yslice,1);
+  ymn = reshape(ymn,[nr nc]);
+
+  if(isempty(nacfstem))
+    [beta, rvar, vdof, r] = fast_glmfit(yslice,X);
+    [F Fsig] = fast_fratio(beta,X,rvar,Ctask);
+    ztask = fast_p2z(Fsig);
+    Fbetasig = [];
+    zbeta = [];
+    for nthbeta = 1:nbeta
+      C = zeros(1,nbeta);
+      C(nthbeta) = 1;
+      [Fbeta Fbetasigtmp ces] = fast_fratio(beta,X,rvar,C);
+      zbeta = [zbeta; fast_p2z(Fbetasigtmp)];
+      Fbetasigtmp = Fbetasigtmp .* sign(ces);
+      Fbetasig = [Fbetasig; Fbetasigtmp];
+    end
+  end
+
+  racf = fast_acorr(r,'unbiasedcoeff');
+
+  beta = fast_mat2vol(beta,[nr nc],1);
+  rvar = fast_mat2vol(rvar,[nr nc],1);
+
+  if(synth)
+    betamn = mean(beta(:));
+    rstdmn = sqrt(mean(rvar(:)));
+    fprintf('  Synth: beta = %g, exp=%g, rstd=%g, exp=%g\n',...
+             betamn,synth_amp,rstdmn,synth_std);
+  end
+
+  Fsig = fast_mat2vol(Fsig,[nr nc],1);
+  Fsig = -log10(Fsig);
+  F    = fast_mat2vol(F,[nr nc],1);
+  ztask = fast_mat2vol(ztask,[nr nc],1);
+
+  Fbetasig = fast_mat2vol(Fbetasig,[nr nc],1);
+  ind = find(abs(Fbetasig) < eps);
+  Fbetasig(ind) = eps .* sign(beta(ind));
+  Fbetasig = -log10(abs(Fbetasig)) .* sign(Fbetasig);
+  zbeta = fast_mat2vol(zbeta,[nr nc],1);
+
+  ymnstem = sprintf('%s/ymn',outdir);
+  fast_svbslice(ymn,ymnstem,slice-1,'',mristruct);
+  betastem = sprintf('%s/beta',outdir);
+  fast_svbslice(beta,betastem,slice-1,'',mristruct);
+  rvarstem = sprintf('%s/rvar',outdir);
+  fast_svbslice(rvar,rvarstem,slice-1,'',mristruct);
+  Fsigstem = sprintf('%s/omnibus/fsig',outdir);
+  fast_svbslice(Fsig,Fsigstem,slice-1,'',mristruct);
+  Fstem = sprintf('%s/omnibus/f',outdir);
+  fast_svbslice(F,Fstem,slice-1,'',mristruct);
+  ztaskstem = sprintf('%s/omnibus/zf',outdir);
+  fast_svbslice(ztaskstem,ztaskstem,slice-1,'',mristruct);
+
+  Fbetasigstem = sprintf('%s/omnibus/fbetasig',outdir);
+  fast_svbslice(Fbetasig,Fbetasigstem,slice-1,'',mristruct);
+  zbetastem = sprintf('%s/omnibus/zbeta',outdir);
+  fast_svbslice(zbeta,zbetastem,slice-1,'',mristruct);
+
+  doffile = sprintf('%s/dof',outdir);
+  fp = fopen(doffile,'w');
+  fprintf(fp,'%g\n',vdof);
+  fclose(fp);
+
+  if(synth)
+    rar1mn = mean(racf(2,:),2);
+    fprintf('  Synth: %d  ar1r = %g, exp=%g\n',nthy,rar1mn,synth_ar1r);
+  end
+
+  r    = fast_mat2vol(r,[nr nc],1);
+  rstem = sprintf('%s/resid/r',outdir);
+  fast_svbslice(r,rstem,slice-1,'',mristruct);
+
+  racf = fast_mat2vol(racf,[nr nc],1);
+  racfstem = sprintf('%s/racf/racf',outdir);
+  fast_svbslice(racf,racfstem,slice-1,'',mristruct);
+
+end % slice loop
+
+xmatoutfile = sprintf('%s/X.mat',outdir);
+save(xmatoutfile,'X','ntask','ystem','nacfstem','outdir',...
+     'synth','synth_std','synth_ar1','synth_amp');
+
+
+fprintf('fsf-glmfit: matlab: done (t=%g)\n',toc);
+
+EOF
+#----------------------------------------------#
+
+if(! $monly) then
+  cat $MLF | matlab -display iconic
+  rm -f $MLF
+endif
+
+
+echo "Started at $StartTime" 
+echo "Ended   at `date`"     
+
+echo "fsf-glmfit done"
+
+
+exit 0
+
+##############################################################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "--y":
+      if ( $#argv == 0) goto arg1err;
+      set ystem = $argv[1]; shift;
+      breaksw
+
+    case "--X":
+      if ( $#argv == 0) goto arg1err;
+      set xmatfile = $argv[1]; shift;
+      if(! -e $xmatfile) then
+        echo "ERROR: cannot find $xmatfile"
+        exit 1;
+      endif
+      breaksw
+
+    case "--nacf":
+      if ( $#argv == 0) goto arg1err;
+      set nacfstem = $argv[1]; shift;
+      breaksw
+
+    case "--o":
+      if ( $#argv == 0) goto arg1err;
+      set outdir = $argv[1]; shift;
+      breaksw
+
+    case "--nskip":
+      if ( $#argv == 0) goto arg1err;
+      set nskip = $argv[1]; shift;
+      breaksw
+
+    case "--monly":
+      if ( $#argv == 0) goto arg1err;
+      set MLF = $argv[1]; shift;
+      set monly = 1;
+      breaksw
+
+    case "--keepresid":
+      set keepresid = 1;
+      breaksw
+
+    case "--synth-std":
+      if ( $#argv == 0) goto arg1err;
+      set synth_std  = $argv[1]; shift;
+      set synth = 1;
+      breaksw
+
+    case "--synth-ar1":
+      if ( $#argv == 0) goto arg1err;
+      set synth_ar1  = $argv[1]; shift;
+      set synth = 1;
+      breaksw
+
+    case "--synth-amp":
+      if ( $#argv == 0) goto arg1err;
+      set synth_amp  = $argv[1]; shift;
+      set synth = 1;
+      breaksw
+
+    case "--debug":
+      set verbose = 1;
+      set echo = 1; # turns on terminal echoing
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#ystem == 0) then
+    echo "ERROR: no input specified"    
+    exit 1;
+  endif
+
+  if($#xmatfile == 0) then
+    echo "ERROR: no design matrix specified"    
+    exit 1;
+  endif
+
+  if($#outdir == 0) then
+    echo "ERROR: no output directory specified"    
+    exit 1;
+  endif
+
+  mkdir -p $outdir
+  mkdir -p $outdir/resid
+  mkdir -p $outdir/racf
+  mkdir -p $outdir/ixtx
+  mkdir -p $outdir/omnibus
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: fsf-glmfit"
+  echo ""
+  echo "  --y ystem "
+  echo "  --X X"
+  echo "  --nacf nacf"
+  echo "  --o outdir"
+  echo "  --nskip nskip : skip the first nskip time points"
+  echo "  --keepresid"
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP

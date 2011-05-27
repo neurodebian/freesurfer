@@ -1,0 +1,324 @@
+#! /bin/csh -f
+
+#
+# fsf-kmnacf
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2007/01/09 22:41:17 $
+#    $Revision: 1.3 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: fsf-kmnacf,v 1.3 2007/01/09 22:41:17 nicks Exp $'
+set inputargs = ($argv);
+set kmracfmatfile = ();
+set arorder = 2;
+set initmethod = ();
+set residstem  = ();
+set WeightExp  = 1;
+set UseWhite = 1;
+set outmatfile = ();
+
+set monly = 0;
+set MLF = ();
+
+## If there are no arguments, just print useage and exit ##
+set PrintHelp = 0;
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+set n = `echo $argv | grep -e -version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+set StartTime = `date`;
+
+#----------------------------------------------#
+if($#MLF == 0) set MLF = $outdir/fsf_glmfit_tmp.m
+rm -f $MLF
+tee $MLF > /dev/null <<EOF
+
+tic;
+kmracfmatfile = '$kmracfmatfile';
+arorder    =  $arorder;
+initmethod = '$initmethod';
+residstem  = '$residstem';
+WeightExp  =  $WeightExp;
+UseWhite   =  $UseWhite;
+outmatfile = '$outmatfile';
+
+kmr = load(kmracfmatfile);
+if(isempty(kmr)) return; end
+
+nf = size(kmr.kmracf,1);
+nn = 1:nf;
+
+if(WeightExp > 0) w = (1./[1:nf]').^WeightExp; 
+else              w = [];
+end
+
+if(strcmp(initmethod,'arburg'))
+  fprintf('Loading residuals\n');
+  r = fast_ldbslice(residstem);
+  if(isempty(r)) return; end
+  r = fast_vol2mat(r);
+  if(~isempty(kmr.mask))
+    indmask = find(kmr.mask);
+    r = r(:,indmask);
+  end
+  for c = 1:kmr.nclasses
+    ind = find(kmr.kmap==c);
+    rmn(:,c) = mean(r(:,ind),2);
+  end
+else
+  rmn = [];
+end
+
+
+p0   = zeros(kmr.nclasses,arorder+UseWhite);
+popt = zeros(kmr.nclasses,arorder+UseWhite);
+
+fprintf('Starting loop through classes\n');
+for c = 1:kmr.nclasses
+
+   switch(initmethod)
+     case 'ar1'
+       phi = zeros(1,arorder);
+       phi(1) = kmr.kmracf(2,c);
+       alpha = 0;
+     case 'arburg'
+       arbtmp = arburg(rmn(:,c),arorder);
+       phi = -arbtmp(2:end);
+       alpha = 0.5;
+     case 'ar1w'
+       %phi = zeros(1,arorder);
+       phi = .1*ones(1,arorder);
+       [alpha phi1] = fast_ar1w_fit(kmr.kmracf(1:4,c));
+       if(alpha < 0) alpha = .01; end
+       phi(1) = phi1;
+     case 'rand'
+       phi = 1.9*(rand(1,2)-.5);
+       while(max(abs(roots([1 -phi])))>.95)
+         phi = 1.9*(rand(1,2)-.5);
+       end
+       alpha = rand;
+   end
+
+   if(UseWhite) p0(c,:) = [phi alpha];
+   else         p0(c,:) = phi;
+   end
+
+   maxroot(c) = max(abs(roots([1 -phi])));
+   if(maxroot(c) > .95)
+     fprintf('Warning: init AR model is close to unstable\n');
+   end
+   if(maxroot(c) > 1)
+     fprintf('Error: init AR model is unstable\n');
+     return;
+   end
+
+   fiterr0(c) = fast_arnw_fiterr(p0(c,:),kmr.kmracf(:,c),kmr.R,w,~UseWhite);
+
+   tstartopt = toc;
+   [popt(c,:) fiterr(c) exitflag(c) optstr(c)] = ...
+      fminsearch('fast_arnw_fiterr',p0(c,:),[],kmr.kmracf(:,c),kmr.R,w,~UseWhite);
+   tendopt = toc;
+   topt(c) = tendopt-tstartopt;
+   niters(c) = optstr(c).iterations;
+
+   fprintf('C = %2d,  niters = %4d,  topt = %3.2f\n',c,niters(c),topt(c));
+
+   [tmp racfopt(:,c)] = fast_arnw_fiterr(popt(c,:),kmr.kmracf(:,c),kmr.R,w,~UseWhite);
+
+   if(UseWhite)
+     nacfopt(:,c) = fast_arnw_acf(popt(c,1:end-1),nf,popt(c,end));
+   else
+     nacfopt(:,c) = fast_arnw_acf(popt(c,:),nf);
+   end
+
+end
+
+save(outmatfile,'kmracfmatfile','arorder','initmethod','residstem','WeightExp',...
+     'UseWhite','kmr','nf','w','p0','popt','maxroot','fiterr0','fiterr',...
+     'exitflag','optstr','nacfopt','racfopt','niters','topt','rmn');
+
+fprintf('fsf-kmnacf: matlab: done (t=%g)\n',toc);
+
+EOF
+#----------------------------------------------#
+
+if(! $monly) then
+  cat $MLF | matlab -display iconic
+  rm -f $MLF
+endif
+
+echo "Started at $StartTime" 
+echo "Ended   at `date`"     
+
+echo "fsf-kmracf done"
+
+
+exit 0
+
+##############################################################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "--kmracf":
+      if ( $#argv == 0) goto arg1err;
+      set kmracfmatfile = $argv[1]; shift;
+      if(! -e $kmracfmatfile) then
+        echo "ERROR: cannot find $kmracfmatfile"
+        exit 1;
+      endif 
+      breaksw
+
+    case "--order":
+      if ( $#argv == 0) goto arg1err;
+      set arorder = $argv[1]; shift;
+      breaksw
+
+    case "--init":
+      if ( $#argv == 0) goto arg1err;
+      set initmethod = $argv[1]; shift;
+      breaksw
+
+    case "--r":
+      if ( $#argv == 0) goto arg1err;
+      set residstem = $argv[1]; shift;
+      breaksw
+
+    case "--w":
+      if ( $#argv == 0) goto arg1err;
+      set WeightExp = $argv[1]; shift;
+      breaksw
+
+    case "--nowhite":
+       set UseWhite = 1;
+      breaksw
+
+    case "--o":
+      if ( $#argv == 0) goto arg1err;
+      set outmatfile = $argv[1]; shift;
+      breaksw
+
+    case "--monly":
+      if ( $#argv == 0) goto arg1err;
+      set MLF = $argv[1]; shift;
+      set monly = 1;
+      breaksw
+
+    case "--debug":
+      set verbose = 1;
+      set echo = 1; # turns on terminal echoing
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#kmracfmatfile == 0) then
+    echo "ERROR: no kmracf mat file specified"    
+    exit 1;
+  endif
+
+  if($#initmethod == 0) then
+    echo "ERROR: init method not specified"    
+    exit 1;
+  endif
+
+  if($initmethod != ar1  && $initmethod != ar1w &&\
+     $initmethod != rand && $initmethod != arburg) then
+    echo "ERROR: init method = $initmethod unrecognized"
+    exit 1;
+  endif
+
+  if($initmethod == 'arburg' && $#residstem == 0) then
+    echo "ERROR: resid needed with arburg init method"    
+    exit 1;
+  endif
+
+  if($#outmatfile == 0) then
+    echo "ERROR: out mat file not specified"    
+    exit 1;
+  endif
+
+  set outdir = `dirname $outmatfile`;
+  mkdir -p $outdir
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: fsf-kmnacf"
+  echo ""
+  echo "  --kmracf kmracf.mat : output of fsf-kmracf "
+  echo "  --order order : AR order <$arorder>"
+  echo "  --init method : ar1w, ar1, arburg, rand"
+  echo "  --r residstem : needed for arburg init"
+  echo "  --w exponent  : weight exponent <$WeightExp>"
+  echo "  --nowhite     : use pure AR (no white component)"
+  echo ""
+  echo "  --o outmatfile"
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP

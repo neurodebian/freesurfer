@@ -1,0 +1,480 @@
+#! /bin/csh -f
+
+#
+# plot-twf-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2010/08/05 15:44:16 $
+#    $Revision: 1.13 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: plot-twf-sess,v 1.13 2010/08/05 15:44:16 greve Exp $';
+
+set inputargs = ($argv);
+set DateStr = "`date '+%y%m%d%H%M'`"
+
+set debug = 0;
+set funcstem = fmcpr;
+set datfile = ();
+set datcolx = ();
+set xlabel  = ();
+set xmin = ();
+set xmax = ();
+set ymin = ();
+set ymax = ();
+set datcoly = 10;
+set title   = ();
+set fsd = (bold);
+set runlistfile = ();
+set RunList = ();
+set PrintHelp = 0;
+set corner = tr;
+set nolog = 0;
+set UseXV = 0;
+
+if($#argv == 0)  goto usage_exit;
+
+set n = `echo $argv | grep version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;  
+  goto usage_exit;
+endif
+
+set PWD = `getpwdcmd`;
+if($status) exit 1;
+
+set GNUPLOT = gnuplot
+#echo $GNUPLOT
+
+which $GNUPLOT > /dev/null
+if($status) then
+  echo "ERROR: cannot find $GNUPLOT"
+  exit 1;
+endif
+
+which display > /dev/null
+if($status) then
+  echo "ERROR: cannot find display"
+  exit 1;
+endif
+
+set SessList = `getsesspath $argv`;
+if($status || $#SessList == 0) then
+  getsesspath $argv 
+  exit 1;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+##### Create a log file ######
+set logdir = `pwd`/log;
+mkdir -p $logdir
+if(! -e $logdir || $nolog) then
+  echo "WARNING: could not create $logdir"
+  set LF = /dev/null
+else
+  set LF = $logdir/pltmc.log
+  if(-e $LF) mv $LF $LF.old
+endif
+echo "--------------------------------------------------------------"
+echo "plot-twf-sess logfile is $LF"
+echo "--------------------------------------------------------------"
+
+echo "plot-twf-sess log file" >> $LF
+echo $VERSION >> $LF
+id            >> $LF
+pwd           >> $LF
+echo $0         >> $LF
+echo $inputargs >> $LF
+uname -a        >> $LF
+date            >> $LF
+
+### Go through each session ###
+set StartTime = `date`;
+foreach sess ($SessList)
+
+  set sessbase = `basename $sess`;
+  echo "-------------------------------------------" |& tee -a $LF
+  echo "$sess " |& tee -a $LF
+  date |& tee -a $LF
+
+  cd $sess/$fsd
+
+  if($#RunList == 0) then
+    if($#runlistfile == 0) then
+      set RunListUse = `getrunlist .`;
+      if($status || $#RunListUse == 0) then
+        echo "ERROR: $sess/$fsd has no runs"  |& tee -a $LF
+        exit 1;
+      endif
+    else
+      if(! -e $runlistfile) then
+        echo "ERROR: ($sessbase) could not find runlistfile $runlistfile"
+        exit 1;
+      endif
+      set RunListUse = (`cat $runlistfile`);
+    endif
+  else
+    set RunListUse = $RunList;
+  endif
+  echo "INFO ($sessbase): RunList = $RunListUse"
+
+  if(-w .) then
+    set imgfile = $datfile.png;
+  else
+    set imgfile = /tmp/$datfile.gif;
+  endif
+  rm -f $imgfile;
+  set gnpcmd = ();
+  set gnpcmd = ($gnpcmd set output "'"$imgfile"'" ;)
+  set gnpcmd = ($gnpcmd set key $keycorner;)
+  #set gnpcmd = ($gnpcmd set term jpeg transparent large size 640,480; )
+  set gnpcmd = ($gnpcmd set term png ;  )
+  set gnpcmd = ($gnpcmd set title '"'$sessbase $title '"';)
+  set gnpcmd = ($gnpcmd set xlabel '"'$xlabel'"';  )
+  if($#xmin && $#xmax && $#ymin && $#ymax) then
+    set gnpcmd = ($gnpcmd plot [$xmin : $xmax] [$ymin : $ymax] )
+  else
+    set gnpcmd = ($gnpcmd plot )
+  endif
+
+  set MCDatList = ();
+  foreach Run ($RunListUse)
+    set mcdat = $Run/$datfile
+    if(! -e $mcdat) then
+      echo "ERROR: cannot find $mcdat"
+      exit 1;
+    endif
+    set MCDatList = ($MCDatList $mcdat);
+    set c = ",";
+    if($Run == $RunListUse[$#RunListUse]) set c = "";
+    if($#datcolx) then
+      set gnpcmd = ($gnpcmd '"'$mcdat'"' u $datcolx : $datcoly t '"'$Run'"' $c)
+    else
+      set gnpcmd = ($gnpcmd '"'$mcdat'"' u $datcoly t '"'$Run'"' $c)
+    endif
+  end
+  if($debug) echo $gnpcmd
+  echo $gnpcmd | $GNUPLOT
+  if($status) then
+    echo "ERROR: $GNUPLOT returned with non-zero status"
+    exit 1;
+  endif
+  if( ! -e $imgfile) then
+    echo "ERROR: cannot find $imgfile"
+    exit 1;
+  endif
+
+  if($UseXV) then
+    echo "INFO: launching xv"
+    xv $imgfile &
+  else
+    echo "INFO: launching display"
+    display $imgfile &
+  endif
+
+end # End loop over sessions
+
+echo " "
+echo "plot-twf-sess Done"
+echo " "
+
+exit 0;
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-funcstem":
+      if ( $#argv == 0) goto arg1err;
+      set funcstem = $argv[1]; shift;
+      breaksw
+
+    case "-dat":
+      if ( $#argv == 0) goto arg1err;
+      set datfile = $argv[1]; shift;
+      breaksw
+
+    case "-xcol":
+      if ( $#argv == 0) goto arg1err;
+      set datcolx = $argv[1]; shift;
+      breaksw
+
+    case "-ycol":
+      if ( $#argv == 0) goto arg1err;
+      set datcoly = $argv[1]; shift;
+      breaksw
+
+    case "-xlabel":
+      if ( $#argv == 0) goto arg1err;
+      set xlabel = $argv[1]; shift;
+      breaksw
+
+    case "-title":
+      if ( $#argv == 0) goto arg1err;
+      set title = $argv[1]; shift;
+      breaksw
+
+    case "-xmin":
+      if ( $#argv == 0) goto arg1err;
+      set xmin = $argv[1]; shift;
+      breaksw
+
+    case "-xmax":
+      if ( $#argv == 0) goto arg1err;
+      set xmax = $argv[1]; shift;
+      breaksw
+
+    case "-ymin":
+      if ( $#argv == 0) goto arg1err;
+      set ymin = $argv[1]; shift;
+      breaksw
+
+    case "-ymax":
+      if ( $#argv == 0) goto arg1err;
+      set ymax = $argv[1]; shift;
+      breaksw
+
+    case "-corner":
+      if ( $#argv == 0) goto arg1err;
+      set corner = $argv[1]; shift;
+      if($corner != tl && $corner != tr && \
+         $corner != bl && $corner != br) then
+        echo "ERROR: -corner = $corner, must be tl, tr, bl, or br"
+        exit 1;
+      endif
+      breaksw
+
+    case "-rlf":
+      if ( $#argv == 0) goto arg1err;
+      set runlistfile = $argv[1]; shift;
+      breaksw
+
+    case "-run":
+      if ( $#argv < 1) goto arg1err;
+      set RunList = ($RunList $argv[1]); shift;
+      breaksw
+
+    case "-fsd":
+      if ( $#argv == 0) goto arg1err;
+      set fsd = $argv[1]; shift;
+      breaksw
+
+    case "-mc-per-run":
+    case "-mc":
+      set datfile = ($funcstem.mcdat);
+      set datcolx =  1;
+      set xlabel = "Time Point"
+      set datcoly = 10;
+      set title = "Vector Translation (mm)"
+      breaksw
+
+    case "-mc-per-sess":
+      set datfile = (fmc.mcdat);
+      set datcolx =  1;
+      set xlabel = "Time Point"
+      set datcoly = 10;
+      set title = "Vector Translation (mm)"
+      breaksw
+
+    case "-meantwf":
+      set datfile = (global.waveform.dat);
+      set xlabel = "Time Point"
+      set datcoly = 1;
+      set title = "Mean In-Brain Temporal Waveform"
+      breaksw
+
+    case "-xv":
+      set UseXV = 1;
+      breaksw
+
+    case "-nolog":
+      set nolog = 1;
+      breaksw
+
+    case "-verbose":
+      set verbose = 1;
+      breaksw
+
+    case "-echo":
+      set echo = 1;
+      breaksw
+
+    case "-debug":
+      set debug = 1;
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-g":
+    case "-s":
+    case "-sf":
+    case "-d":
+    case "-df":
+      shift;
+      # ignore getsesspath arguments 
+      breaksw
+
+    case "-cwd":
+      # ignore getsesspath arguments 
+      breaksw
+
+    case "-umask":
+      if ( $#argv == 0) goto arg1err;
+      umask $1; shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if ($#SessList == 0) then
+     echo "ERROR: no sessions specified"
+     exit 1
+  endif
+
+  if($#datfile == 0) then
+    echo "ERROR: -dat file not specified"
+    exit 1;
+  endif
+
+  if(0 && $#datcolx == 0) then
+    echo "ERROR: -xcol not specified"
+    exit 1;
+  endif
+
+  if($#datcoly == 0) then
+    echo "ERROR: -ycol not specified"
+    exit 1;
+  endif
+
+  if($corner == tl) set keycorner = (top left);
+  if($corner == tr) set keycorner = (top right);
+  if($corner == bl) set keycorner = (bottom left);
+  if($corner == br) set keycorner = (bottom right);
+
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: plot-twf-sess"
+  echo ""
+  echo "Basic Arguments (not needed with Presets):";
+  echo "   -dat    datfile (must exist in each run)"
+  echo "   -xcol   colno"
+  echo "   -xlabel label"
+  echo "   -ycol   colno"
+  echo "   -title  title"
+  echo ""
+  echo "   -xmin xmin"
+  echo "   -xmax xmax"
+  echo "   -ymin ymin"
+  echo "   -ymax ymax"
+  echo ""
+  echo "   -corner corner : <tr>, tl, bl, br"
+  echo ""
+  echo "Arguments for showing some standard waveforms";
+  echo "   -funcstem stem : put before -mc and -meantwf (default: fmc)"
+  echo "   -mc : show vector motion"
+  echo "   -meantwf : show mean in-brain temporal waveform"
+  echo ""
+  echo "Session Arguments (Required)"
+  echo "   -sf sessidfile  ..."
+  echo "   -df srchdirfile ..."
+  echo "   -s  sessid      ..."
+  echo "   -d  srchdir     ..."
+  echo ""
+  echo "Session Arguments (Optional)"
+  echo "   -fsd fsd : default bold"
+  echo "   -rlf runlistfile "
+  echo "   -run runid <-run runid>"
+  echo ""
+  echo "Session Arguments (Optional)"
+  echo "   -umask umask   : set unix file permission mask"
+  echo "   -version       : print version and exit"
+  echo ""
+
+  if(! $PrintHelp ) exit 1;
+
+  echo " "
+  echo "$VERSION "
+  echo " "
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+This program will display temporal waveforms associated with various
+levels of analysis, usually motion correction parameters.  The program
+goes to each run directory and looks for the datfile, which is an
+ASCII file with columns of data. It plots ycol vs xcol. The plot will
+have the xlabel as the label and title across the top. Note: the
+xlabel and title must be a single string -- no spaces are allowed. The
+title will automatically have the session id prepended to it.
+
+There are two waveforms that you can display without having to 
+specify the x and y columns: motion and average temporal waveform.
+
+To display the vector motion of the translation, 
+
+  plot-twf-sess -s session -mc
+
+To display the mean temporal waveform
+
+  plot-twf-sess -s session -meantwf
+

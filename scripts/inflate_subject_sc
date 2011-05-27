@@ -1,0 +1,39 @@
+#! /bin/tcsh -ef
+
+#
+# inflate_subject_sc
+#
+# REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+#
+# Original Author: REPLACE_WITH_FULL_NAME_OF_CREATING_AUTHOR
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.3 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+
+
+setenv DIAG 0x04040
+
+# -P allows the specification of a point in the brainstem at which
+# to cut horizontally. This must be a slice in which the brainstem
+# is not connected to cortex or cerebellum, etc...
+
+# mri_fill -P 0.4 -25.9 -17.2  ../mri/wm ../mri/filled
+cd  $SUBJECTS_DIR/$1/scripts
+mri_fill -segmentation ../mri/aseg ../mri/wm ../mri/filled
+inflate_subject-lh $1
+inflate_subject-rh $1
+

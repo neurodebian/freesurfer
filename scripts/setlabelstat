@@ -1,0 +1,167 @@
+#! /bin/tcsh -f
+
+#
+# setlabelstat
+#
+# REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+#
+# Original Author: REPLACE_WITH_FULL_NAME_OF_CREATING_AUTHOR
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:40 $
+#    $Revision: 1.5 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+
+# setlabelstat
+
+set inlabel = ();
+set outlabel = ();
+set statval = ();
+
+set VERSION = '$Id: setlabelstat,v 1.5 2011/03/02 20:16:40 nicks Exp $';
+set inputargs = ($argv);
+set PrintHelp = 0;
+
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | egrep -e -help | wc -l`
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+set n = `echo $argv | egrep -e -version | wc -l`
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+set PWD = `getpwdcmd`;
+if($status) exit 1;
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+set outdir = `dirname $outlabel`;
+mkdir -p $outdir
+
+cat $inlabel | awk -v stat=$statval '{if(FNR < 3) print $0; if(FNR > 2) print $1" "$2" "$3" "$4" "stat}' > $outlabel
+
+
+exit 0
+
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+
+  switch($flag)
+
+    case "-i":
+      if ( $#argv == 0) goto arg1err;
+      set inlabel = $argv[1]; shift;
+      if(! -e $inlabel) then
+        echo "ERROR: cannot find $inlabel"
+        exit 1;
+      endif
+      breaksw
+
+    case "-o":
+      if ( $#argv == 0) goto arg1err;
+      set outlabel = $argv[1]; shift;
+      breaksw
+
+    case "-s":
+      if ( $#argv == 0) goto arg1err;
+      set statval = $argv[1]; shift;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized.
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+if($#inlabel == 0) then
+  echo "ERROR: need input label"
+  exit 1;
+endif
+
+if($#outlabel == 0) then
+  echo "ERROR: no output label specified"
+  exit 1;
+endif
+
+if($#statval == 0) then
+  echo "ERROR: no stat value specified"
+  exit 1;
+endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: setlabelstat"
+  echo ""
+  echo "  -i inlabelfile "
+  echo "  -o outlabelfile"
+  echo "  -s statval"
+  echo ""
+  echo "  -help"
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+Replaces the stat values in a label file with the single stat value
+supplied on the command-line.
+
+

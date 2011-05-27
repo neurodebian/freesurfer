@@ -1,0 +1,36 @@
+#! /bin/tcsh -f
+
+#
+# morph_only_subject-rh
+#
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.4 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+pushd $SUBJECTS_DIR/$1/
+touch NOTES
+echo " " >> NOTES
+echo $0 $* >> NOTES
+whoami >> NOTES
+date >> NOTES
+hostname >> NOTES
+popd
+
+pushd $SUBJECTS_DIR/$1/scripts
+#mris_sphere -w 0 ../surf/rh.inflated ../surf/rh.sphere
+mris_register -w 0 -curv ../surf/rh.sphere $FREESURFER_HOME/average/rh.average.tif ../surf/rh.sphere.reg
+mris_register -w 0 ../surf/rh.sphere $FREESURFER_HOME/average/rh.average.tif ../surf/rh.sphere.dist_new
+popd

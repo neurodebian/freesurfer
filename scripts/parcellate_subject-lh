@@ -1,0 +1,27 @@
+#! /bin/tcsh -ef
+
+#
+# parcellate_subject-lh
+#
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.5 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+setenv hemi lh
+set subject=$1
+mris_ca_label -t $FREESURFER_HOME/Simple_surface_labels2002.txt $subject $hemi sphere.reg ${FREESURFER_HOME}/average/${hemi}.atlas2002_simple.gcs $SUBJECTS_DIR/$subject/label/${hemi}.aparc.annot
+#mris_ca_label $1 $hemi sphere.reg $FREESURFER_HOME/average/${hemi}_trans_toSulc.gcs ${hemi}_aparc.annot
+

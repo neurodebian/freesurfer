@@ -1,0 +1,577 @@
+#! /bin/csh -f
+
+#
+# mkcontrast-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2011/03/15 16:50:48 $
+#    $Revision: 1.17 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: mkcontrast-sess,v 1.17 2011/03/15 16:50:48 greve Exp $'
+set cmdargs = ($argv);
+
+set contrast   = ();
+set analname   = ();
+set ScriptOnly = 0;
+set fsd        = "bold";
+set umaskarg = ();
+set actcond = ();
+set ctrlcond = ();
+set setwcond = 0;
+set ncond = ();
+set wcond = ();
+set setwdelay = 0;
+set sumdelays = ();
+set showcmtx = ();
+set nircorr = 0;
+set deltarange = ();
+set taurange   = (1.25 1.25);
+set sumconds = (-sumconds);
+set rmprestim = ();
+set CNorm = 1;
+set UseSXADat = 0;
+set PrintHelp = 0;
+set mfile = ();
+
+set UseOctave = 0;
+if($?FS_USE_OCTAVE) then
+  set UseOctave = $FS_USE_OCTAVE
+endif
+
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+set n = `echo $argv | grep version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+# Create a log file #
+if(-w .) then
+  set logdir = `pwd`/log;
+  mkdir -p $logdir
+  set LF = $logdir/mkcontrast-sess.log
+  rm -f $LF
+else
+  set LF = /dev/null
+endif
+
+echo "mkcontrast-sess log file" >> $LF
+echo $VERSION >> $LF
+echo '$0'     >> $LF
+uname -a      >> $LF
+date          >> $LF
+echo "$argv"  >> $LF
+which mkcontrast >> $LF
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+set iser = `getana -a $analname -t IsEventRelated`;
+if(! $iser) then
+  echo "ERROR: analysis $analname is not event-related or blocked"
+  exit 1;
+endif
+
+set Nc  = `getana -a $analname -t nconditions`;
+set Nh  = `getana -a $analname -t npercond`;
+echo "INFO: Found $Nc Non-Null Conditions"
+echo "INFO: Found $Nh Delays"
+
+set NDeriv = 0;
+set IsGamma = `getana -a $analname -t IsGamma`;
+if($IsGamma) then
+  set GammaPars = `getana -a $analname -t gamma`;
+  set NDeriv = $GammaPars[4];
+endif
+set IsSPMHRF = `getana -a $analname -t IsSPMHRF`;
+if($IsSPMHRF) then
+  set SPMHRFPars = `getana -a $analname -t spmhrf`;
+  set NDeriv = $SPMHRFPars[1];
+endif
+
+if($#ncond != 0) then
+  if($ncond != $Nc) then
+    echo "ERROR: number of conditions specfied with -ncond ($ncond) does not"
+         "       match number in analysis ($Nc)"
+    exit 1;
+  endif
+endif
+
+## Check that the conditions are within range ##
+foreach c ($actcond $ctrlcond)
+  if($c > $Nc || $c < 0) then
+    echo "ERROR: Condition ID $c out of range (0:$Nc)"
+    exit 1;
+  endif
+end
+
+## Set the weight of the active and control conditions ##
+if($#sumconds) then
+  set wact  = `echo 1/$#actcond  | bc -l`;
+  set wctrl = `echo -1/$#ctrlcond | bc -l`;
+else
+  set wact  = +1;
+  set wctrl = -1;
+endif
+
+if($#wcond == 0) then
+  ## Preset the condition weights to zero ##
+  @ c = 1;
+  while($c <= $Nc)
+    set wcond = ($wcond 0);
+    @ c = $c + 1;
+  end
+
+  ## Set the active condition weights ##
+  foreach c ($actcond)
+    if($c != 0) set wcond[$c] = $wact;
+  end
+  ## Set the control condition weights ##
+  foreach c ($ctrlcond)
+    if($c != 0) set wcond[$c] = $wctrl;
+  end
+endif
+
+echo "Condition Weights: $wcond" | tee -a $LF
+
+## Set the delay weights ###
+if($nircorr == 0) then
+  if($setwdelay == 0) then
+    set wdelay = (1);
+    set wdval = 1;
+    if($NDeriv != 0) set wdval = 0;
+    @ d = 1;
+    while($d < $Nh)
+      set wdelay = ($wdelay $wdval);
+      @ d = $d + 1;
+    end
+  else 
+    echo "###################################"
+    echo "### Enter $Nh Delay Weights (Return)"
+    set wdelay = ($<)
+    if($#wdelay != $Nh) then
+      echo "ERROR: entered $#wdelay weights, needed $Nh"
+      exit 1;
+    endif
+  endif
+endif
+
+set cmtxfile = $analname/$contrast
+
+# Make sure there is a .mat at the end
+set tmp = `basename $contrast .mat`
+if($tmp == $contrast) set cmtxfile = $cmtxfile.mat
+
+set cmd = (mkcontrast)
+set cmd = ($cmd -anadir $analname)
+set cmd = ($cmd -wcond $wcond $sumconds -o $cmtxfile)
+
+set cmd = ($cmd  $sumdelays $showcmtx $rmprestim)
+if($nircorr != 0) then
+  set cmd = ($cmd -ircorr $nircorr -deltarange $deltarange -taurange $taurange)
+else
+  set cmd = ($cmd -wdelay $wdelay )
+endif
+if($CNorm == 0) set cmd = ($cmd -nocnorm);
+
+# These are just flags to indicate that they were set manually
+if($setwcond)  set cmd = ($cmd -setwcond);
+if($setwdelay) set cmd = ($cmd -setwdelay);
+
+if($#mfile) set cmd = ($cmd -monly $mfile);
+
+if($UseOctave)   set cmd = ($cmd -octave);
+if(! $UseOctave) set cmd = ($cmd -no-octave);
+
+## Prepare the script, if need be ##
+if($ScriptOnly) then
+  mkdir -p $analname/scripts
+  set scriptfile = $analname/scripts/run-mkcontrast-$analname-$contrast
+  rm -f $scriptfile
+  touch $scriptfile
+  echo "#\!/bin/csh -f" >> $scriptfile
+  echo "cd `pwd`" >> $scriptfile
+  echo $cmd >> $scriptfile
+  echo " " >> $scriptfile
+  echo " " >> $scriptfile
+  chmod a+x $scriptfile
+else
+  echo $cmd
+  $cmd
+  if($status) then
+    echo "ERROR running mkcontrast"
+    echo "$cmd"
+  endif
+endif
+
+
+
+date | tee -a $LF
+
+exit 0;
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = "$argv";
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-a": # Active Condition (not analysis)
+      if ( $#argv == 0) goto arg1err;
+      set actcond = ($actcond $argv[1]); shift;
+      breaksw
+
+    case "-c": # Control Condition (not contrast)
+      if ( $#argv == 0) goto arg1err;
+      set ctrlcond = ($ctrlcond $argv[1]); shift;
+      breaksw
+
+    case "-setwdelay":
+      set setwdelay = 1;
+      set sumdelays = "-sumdelays";
+      breaksw
+
+    case "-ncond":
+      if ( $#argv == 0) goto arg1err;
+      set ncond = $argv[1]; shift;
+      breaksw
+
+    case "-wcond":
+      if($#ncond == 0) then
+        echo "ERROR: must specify -ncond before -wcond"
+        exit 1;
+      endif
+      if( $#argv < $ncond) then
+        echo "ERROR: need $ncond arguments for -wcond"
+        exit 1;
+      endif
+      set wcond = ($argv[1-$ncond]); 
+      foreach tmp ($wcond)
+        shift;
+      end
+      set CNorm = 0; # keep condition weights, dont norm
+      set setwcond = 1
+      breaksw
+
+    case "-nosumconds":
+      set sumconds = ();
+      breaksw
+
+    case "-sumdelays":
+      set sumdelays = "-sumdelays";
+      breaksw
+
+    case "-no-sumdelays":
+      set sumdelays = ();
+      breaksw
+
+    case "-ircorr":
+      if ( $#argv == 0) goto arg1err;
+      set nircorr =  $argv[1]; shift;
+      set sumdelays = "-sumdelays";
+      breaksw
+
+    case "-deltarange":
+    case "-dr":
+      if( $#argv == < 2) then
+        echo "ERROR: -deltarange option requires 2 arguments"
+        exit 1;
+      endif
+      set deltarange = ($argv[1] $argv[2]); shift;shift;
+      breaksw
+
+    case "-taurange":
+    case "-tr":
+      if( $#argv == < 2) then
+        echo "ERROR: -taurange option requires 2 arguments"
+        exit 1;
+      endif
+      set taurange = ($argv[1] $argv[2]); shift;shift;
+      breaksw
+
+
+    case "-rmprestim":
+      set rmprestim = "-rmprestim";
+      breaksw
+
+    case "-showcmtx":
+      set showcmtx = "-showcmtx";
+      breaksw
+
+    case "-contrast":
+    case "-co":
+      if ( $#argv == 0) goto arg1err;
+      set contrast = $argv[1]; shift;
+      breaksw
+
+    case "-analysis":
+    case "-an":
+      if ( $#argv == 0) goto arg1err;
+      set analname = $argv[1]; shift;
+      breaksw
+
+    case "-nocnorm":
+      set CNorm = 0;
+      breaksw;
+
+    case "-ssd":
+    case "-fsd":
+      if ( $#argv == 0) goto arg1err;
+      set fsd = $argv[1]; shift;
+      breaksw
+
+    case "--version":
+    case "-version":
+      echo $VERSION
+      exit 0;
+      breaksw
+
+    case "-umask":
+      if ( $#argv == 0) goto arg1err;
+      set umaskarg = "-umask $argv[1]";
+      umask $argv[1]; shift;
+      breaksw
+
+    case "-monly":
+      if($#argv == 0) goto arg1err;
+      set mfile = $argv[1]; shift;
+      breaksw
+
+    case "-octave":
+      set UseOctave = 1
+      breaksw
+
+    case "-no-octave":
+    case "-matlab":
+      set UseOctave = 0;
+      breaksw
+
+    case "-verbose":
+      set verbose = 1;
+      breaksw
+
+    case "-echo":
+      set echo = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-scriptonly":
+      set ScriptOnly = 1;
+      breaksw
+
+    case "-s":
+    case "-sf":
+    case "-df":
+    case "-d":
+    case "-g":
+      # ignore getsesspath arguments 
+      shift;
+      breaksw
+
+    case "-cwd":
+      # ignore getsesspath arguments 
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if ($#contrast == 0) then
+     echo "ERROR: no contrast specified"
+     exit 1
+  endif
+
+  if ($#analname == 0) then
+     echo "ERROR: no analysis name specified"
+     exit 1
+  endif
+
+  if(! -d $analname ) then
+    echo "ERROR: analysis $analname does not exist"
+    exit 1;
+  endif
+
+  if($#wcond == 0) then
+    if($#actcond == 0) then
+      echo "ERROR: no active conditions or wcond specified"
+      exit 1;
+    endif
+    if($#ctrlcond == 0) set ctrlcond = 0;
+    foreach a ($actcond)
+      foreach c ($ctrlcond)
+        if($a == $c) then
+          echo "ERROR: cannot specify the same condition as control and active"
+          exit 1;
+        endif
+      end
+    end
+  else
+    # wcond set
+    if($#actcond != 0 || $#ctrlcond != 0) then
+      echo "ERROR: cannot specify -wcond with -a or -c"
+      exit 1;
+    endif
+  endif
+
+  if($nircorr != 0 && $setwdelay) then
+    echo "ERROR: cannot use -ircorr and -setwdelay at the same time";
+    exit 1;
+  endif
+
+  if($nircorr != 0 && $#deltarange != 2) then
+    echo "ERROR: must set delayrange with -ircorr"
+    exit 1;
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo "USAGE: mkcontrast-sess"
+  echo "Options:";
+  echo "   -contrast contrastname : contrast name"
+  echo "   -analysis analysisname : name of session-level functional analysis";
+  echo "   -a a1 <-a a2> ... : positive contrast conditions"
+  echo "   -c c1 <-c c2> ... : negative contrast conditions"
+  echo "   -ncond Nconditinos: specify number of conditions (needed with -wcond)"
+  echo "   -wcond w1 w2 ...  : set weights for each condition (needs -ncond)"
+  echo "   -setwdelay        : prompt for setting of delay weights (implies -sumdelays)"
+  echo "   -sumdelays        : sum weighted delays"
+  echo "   -no-sumdelays     : do not sum weighted delays"
+  echo "   -rmprestim        : subtract prestimulus baseline"
+  echo "   -nosumconds       : don't sum conditions (for f-test)"
+  echo "   -ircorr nircorr   : correlate with gamma function"
+  echo "   -deltarange dmin dmax : range of delta for gamma function"
+  echo "   -taurange   tmin tmax : range of tau for gamma function"
+  echo "   -umask umask      : set unix file permission mask"
+  echo "   -scriptonly       : don't run, just generate a script"
+  echo "   -version          : print version and exit"
+  echo ""
+  echo "   -help"
+  echo ""
+  if(! $PrintHelp) exit 1;
+  echo $VERSION
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+This program creates a contrast matrix that is then used as input to 
+test hypotheses. The actual voxel-by-voxel statistical test is performed
+by selxavg3-sess.
+
+-analysis analysisname (or use -an)
+
+Name of the analysis to create the contrast for. The analysis must
+have been defined by mkanalysis-sess. 
+
+-contrast contrastname (or use -co)
+
+The name of the contrast. This name is then used in later programs.
+mkcontrast-sess will create a matlab file in the study analysis
+directory. This file will be called contrastname.mat.  When
+selxavg3-sess is run, it will create a subdirectory called
+contrastname under the analysis directory for each session.
+
+-a a1 <-a a2 ...>
+-c c1 <-c c2 ...>
+
+These specify which conditions to use in the contrast, where a1, a2,
+c1, c2, etc, are the condition numbers as found in the paradigm
+file. The -a conditions will be weighted positively. The -c conditions
+will be weighted negatively. The positives and negative weights will
+be normalized to 1. Eg, -a 2 -c 1 -c 3 will weight conditions 1 and 3
+by -0.5 and condition 2 by +1.
+
+-ncond Nconditions
+-wcond w1 w2 w3 ...
+
+These two flags allow the user to specify weights for each condition.
+-ncond indicates the number non-null conditions. The weights for each
+condition can then be set with -wcond. This overrides the -a and -c
+flags. Eg: -ncond 3 -wcond 0.5 0.5
+
+
+-setwdelay
+
+For FIR designs and other models with multiple regressors for each
+event type, this allows the user to set the weight for each
+post-stimulus delay. When the program runs, it will prompt the user to
+enter the weights (eg, if there are 10 points in the FIR, then the
+user will enter a list of 10 numbers). If you do not want to include a
+point, set its weight to 0. Eg, if there are 10 points, but you only
+want to consider points 3-7, then enter 0 0 1 1 1 1 1 0 0 0. These
+weights are applied on a condition-by-condtion basis. This will turn
+on -sumdelays (so use -no-sumdelays to turn off if needed).
+
+-sumdelays
+
+For FIR (and other multivariate) designs, sum the points inside the
+FIR window so that each condition is represented by a single number
+(ie, the sum). If delay weights have been specified (see -setwdelay),
+then the weighted sum is computed. Automatic with -setwdelay.
+
+-no-sumdelays
+
+Turn off -sumdelays.
+
+-rmprestim
+
+For FIR designs, compute a contrast such that the average hemodynamic 
+response prior to stimulus on set is subtracted from the hemodynamic
+response waveform. This is good for removing baseline shifts.
+
+

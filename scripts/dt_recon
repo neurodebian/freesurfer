@@ -1,0 +1,541 @@
+#!/bin/tcsh -f
+#
+umask 002;
+
+set VERSION = '$Id: dt_recon,v 1.15 2011/01/25 21:53:04 greve Exp $';
+set ProgName = `basename $0`;
+
+set inputargs = ($argv);
+
+set InputVol = ();
+set DoEddyCorrect = 1;
+set ECRefTP = 0; # 0 for 1st frame
+set subject = ();
+set bvals = ();
+set bvecs = ();
+set DoRegistration = 1;
+set DoTalairach = 1;
+set SaveERes = 0;
+set EResPCA = 0;
+set PruneThr = ();
+set infodump = ();
+set OutDir = ();
+set reg = ();
+set mask = ();
+
+set PrintHelp = 0;
+set LF = ();
+
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | egrep -e -help | wc -l`
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+set n = `echo $argv | egrep -e -version | wc -l`
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+goto parse_args;
+parse_args_return:
+goto check_params;
+check_params_return:
+
+mkdir -p $OutDir
+if($status) then
+  echo "ERROR: creating $OutDir"
+  exit 1;
+endif
+
+# Get full path to output dir
+pushd $OutDir > /dev/null
+set OutDir = `pwd`;
+popd > /dev/null
+
+set LF = $OutDir/dt_recon.log
+if(-e $LF) mv $LF $LF.bak
+echo "dt_recon logfile" | tee -a $LF
+date                    | tee -a $LF
+echo "VERSION $VERSION"  | tee -a $LF
+if($DoRegistration) then
+  echo "setenv SUBJECTS_DIR $SUBJECTS_DIR" | tee -a $LF
+endif
+echo "cd `pwd`"          | tee -a $LF
+echo $0 $inputargs       | tee -a $LF
+hostname                 | tee -a $LF
+whoami                   | tee -a $LF
+which eddy_correct       | tee -a $LF
+echo "ECRefTP $ECRefTP"  | tee -a $LF
+
+# Force FSL to use nifti
+setenv FSLOUTPUTTYPE NIFTI
+
+# Convert the input to nifti
+echo "#@#-------------------------------" |  tee -a $LF
+echo "Converting input" |  tee -a $LF
+date |  tee -a $LF
+set f = $OutDir/dwi.nii
+set cmd = (mri_convert $InputVol $f);
+echo "cd `pwd`" |  tee -a $LF
+echo $cmd       |  tee -a $LF
+$cmd            |& tee -a $LF
+if($status) exit 1;
+echo "" | tee -a $LF
+echo "" | tee -a $LF
+
+if($#bvals == 0) then
+  if($#infodump == 0) then
+    # Get info dump from dicom
+    set infodump = $OutDir/dwi-infodump.dat
+    set cmd = (mri_probedicom --i $InputVol);
+    echo "cd `pwd`" |  tee -a $LF
+    echo $cmd       |  tee -a $LF 
+    $cmd            |& tee -a $LF > $infodump
+    if($status) exit 1;
+    echo "" | tee -a $LF
+    echo "" | tee -a $LF
+  endif
+endif
+
+# Eddy/Motion Correct (needs its own tmp dir)
+set fec = $OutDir/dwi-ec.nii
+if($DoEddyCorrect) then
+  echo "#@#-------------------------------" |  tee -a $LF
+  echo "Eddy/Motion Correct" |  tee -a $LF
+  date |  tee -a $LF
+  set ectmp = $OutDir/ectmp
+  mkdir -p $ectmp
+  pushd $ectmp > /dev/null
+  set cmd = (eddy_correct $f $fec $ECRefTP) 
+  #set cmd = (cp $f $fec)
+  echo "cd `pwd`" |  tee -a $LF
+  echo $cmd       |  tee -a $LF 
+  $cmd            |& tee -a $LF
+  if($status) exit 1;
+  if(! -e $fec) then
+    echo "ERROR: when running eddy_correct" | tee -a $LF 
+    exit 1;
+  endif
+  popd > /dev/null
+  rm -r $ectmp
+  echo "" | tee -a $LF
+  echo "" | tee -a $LF
+else
+  echo "#@#-------------------------------" |  tee -a $LF
+  echo "Skipping Eddy/Motion Correct" |  tee -a $LF
+  set fec = $f
+endif
+
+# Fit tensors
+echo "#@#-------------------------------" |  tee -a $LF
+echo "Fitting Tensors" |  tee -a $LF
+date |  tee -a $LF
+
+set cmd = (mri_glmfit --y $fec --glmdir $OutDir);
+if($#bvals == 0) then 
+  set cmd = ($cmd --dti $infodump)
+else
+  set cmd = ($cmd --dti $bvals $bvecs)
+endif
+if($SaveERes) set cmd = ($cmd --eres-save)
+if($EResPCA)  set cmd = ($cmd --pca)
+if($#PruneThr)  set cmd = ($cmd --prune_thr $PruneThr)
+if($#mask) set cmd = ($cmd --mask $mask);
+
+echo "cd `pwd`" |  tee -a $LF
+echo $cmd       |  tee -a $LF 
+$cmd            |& tee -a $LF
+if($status) exit 1;
+echo "" | tee -a $LF
+echo "" | tee -a $LF
+
+# Register to subject
+if($#reg == 0) then
+  set reg = $OutDir/register.dat
+  if($DoRegistration) then
+    echo "#@#-------------------------------" |  tee -a $LF
+    echo "Registration" |  tee -a $LF
+    date |  tee -a $LF
+    set cmd = (bbregister --s $subject --mov $OutDir/lowb.nii \
+       --init-fsl --reg $reg --bold)
+    if($subject == fsaverage) set cmd = ($cmd --12)
+    echo "setenv SUBJECTS_DIR $SUBJECTS_DIR" | tee -a $LF
+    echo "cd `pwd`" |  tee -a $LF
+    echo $cmd       |  tee -a $LF 
+    $cmd            |& tee -a $LF
+    if($status) exit 1;
+    echo "" | tee -a $LF
+    echo "" | tee -a $LF
+  endif
+else
+  cp $reg $OutDir/register.dat
+  set reg = $OutDir/register.dat
+endif
+
+if($DoTalairach) then
+  # Map Mask to talairach space
+  echo "#@#-------------------------------" |  tee -a $LF
+  echo "Reslicing to Tal" |  tee -a $LF
+  if(! -e $reg) then
+    echo "ERROR: cannot find $reg"
+    exit 1;
+  endif
+  date |  tee -a $LF
+  set mask = $OutDir/mask.nii
+  set masktal = $OutDir/mask-tal.nii
+  set cmd = (mri_vol2vol --reg $reg --tal --interp nearest\
+              --mov $mask --o $masktal)
+  echo "cd `pwd`" |  tee -a $LF
+  echo $cmd       |  tee -a $LF 
+  $cmd            |& tee -a $LF
+  if($status) exit 1;
+  echo "" | tee -a $LF
+  echo "" | tee -a $LF
+
+  # Map FA to talairach space
+  set fa = $OutDir/fa.nii
+  set fatal = $OutDir/fa-tal.nii
+  set cmd = (mri_vol2vol --reg $reg --tal --mov $fa --o $fatal)
+  echo "cd `pwd`" |  tee -a $LF
+  echo $cmd       |  tee -a $LF 
+  $cmd            |& tee -a $LF
+  if($status) exit 1;
+  echo "" | tee -a $LF
+  echo "" | tee -a $LF
+endif
+
+echo "dt_recon finished without error at `date`" |& tee -a $LF
+
+exit 0
+#############------------------------------------#######################
+##################>>>>>>>>>>>>>.<<<<<<<<<<<<<<<<<#######################
+#############------------------------------------#######################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+
+  switch($flag)
+
+    case "--subject":
+    case "--s":
+      if ( $#argv < 1) goto arg1err;
+      set subject = $argv[1]; shift;
+      set subject = `basename $subject`; # removes trailing /
+      breaksw
+
+    case "--sd":
+      if ( $#argv < 1) goto arg1err;
+      setenv  SUBJECTS_DIR $argv[1]; shift;
+      breaksw
+
+    case "--b":
+      if ($#argv < 2) goto arg2err;
+      set bvals = $argv[1]; shift;
+      set bvecs = $argv[1]; shift;
+      if(! -e $bvals) then
+        echo "ERROR: cannot find $bvals"
+        exit 1;
+      endif
+      if(! -e $bvecs) then
+        echo "ERROR: cannot find $bvecs"
+        exit 1;
+      endif
+      breaksw
+
+    case "--info-dump":
+      if($#argv < 1) goto arg1err;
+      set infodump = $argv[1]; shift;
+      breaksw
+
+    case "--i"
+      if( $#argv < 1) goto arg1err;
+      set InputVol = "$argv[1]"; shift;
+      if(! -e "$InputVol") then
+        echo "ERROR: cannot find $InputVol"
+        goto error_exit;
+      endif
+      if(! -r "$InputVol") then
+        echo "ERROR: $InputVol exists but is not readable"
+        goto error_exit;
+      endif
+      set InVolDir  = `dirname  "$InputVol"`;
+      set InVolBase = `basename "$InputVol"`;
+      pushd $InVolDir > /dev/null
+      set InVolDir = `pwd`;
+      popd > /dev/null
+      set InputVol = "$InVolDir/$InVolBase";
+      set DoConvertInput = 1;
+      breaksw
+
+    case "--o":
+      if ( $#argv < 1) goto arg1err;
+      set OutDir = $argv[1]; shift;
+      breaksw
+
+    case "--reg":
+      if ( $#argv < 1) goto arg1err;
+      set reg = $argv[1]; shift;
+      set subject = `head -n 1 $reg`
+      breaksw
+
+    case "--mask":
+      if ( $#argv < 1) goto arg1err;
+      set mask = $argv[1]; shift;
+      if(! -e $mask) then
+        echo "ERROR: cannot find $mask"
+        exit 1;
+      endif 
+      breaksw
+
+    case "--ecref":
+      if($#argv < 1) goto arg1err;
+      set ECRefTP = $argv[1]; shift;
+      breaksw
+
+    case "--prune_thr":
+      if($#argv < 1) goto arg1err;
+      set PruneThr = $argv[1]; shift;
+      breaksw
+
+    case "--no-ec":
+      set DoEddyCorrect = 0;
+      breaksw
+
+    case "--no-reg":
+      set DoRegistration = 0;
+      set DoTalairach = 0;
+      breaksw
+
+    case "--no-tal":
+      set DoTalairach = 0;
+      breaksw
+
+    case "--eres-save":
+      set SaveERes = 1;
+      breaksw
+
+    case "--no-eres-save":
+      set SaveERes = 0;
+      breaksw
+
+    case "--pca":
+      set EResPCA = 1;
+      breaksw
+
+    case "--verbose":
+      set verbose = 1;
+      breaksw
+
+    case "--echo":
+      set echo = 1;
+      breaksw
+
+    case "--debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized.
+      echo $cmdline
+      goto error_exit;
+      breaksw
+  endsw
+end
+
+goto parse_args_return;
+############--------------##################
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+############--------------##################
+arg2err:
+  echo "ERROR: flag $flag requires two arguments"
+  exit 1
+############--------------##################
+############--------------##################
+arg3err:
+  echo "ERROR: flag $flag requires three arguments"
+  exit 1
+############--------------##################
+
+
+############--------------##################
+check_params:
+  if($#InputVol == 0) then
+    echo "ERROR: must specify input volume"
+    exit 1;
+  endif
+  if(! -e $InputVol) then
+    echo "ERROR: cannot find $InputVol"
+    exit 1;
+  endif
+  if($#OutDir == 0) then
+    echo "ERROR: must specify output dir"
+    exit 1;
+  endif
+
+  if($DoRegistration) then
+    if($#subject == 0) then
+      echo "ERROR: must specify a subject"
+      exit 1;
+    endif
+
+    if(! $?SUBJECTS_DIR ) then
+      echo "ERROR: environment variable SUBJECTS_DIR not set"
+      echo "  this can be done by setting it in the shell before"
+      echo "  executing recon-all or by using the -sd flag"
+      exit 1;
+    endif
+    if(! -e $SUBJECTS_DIR ) then
+      echo "ERROR: SUBJECTS_DIR $SUBJECTS_DIR does not exist."
+      exit 1;
+    endif
+    # Get the full path #
+    echo "INFO: SUBJECTS_DIR is $SUBJECTS_DIR"
+    set subjdir = $SUBJECTS_DIR/$subject
+    if(! -e $subjdir) then
+      echo "ERROR: $subjdir does not exist"
+      exit 1;
+    endif
+  endif
+ 
+  if(! $?FREESURFER_HOME ) then
+    echo "ERROR: environment variable FREESURFER_HOME not set."
+    exit 1;
+  endif
+
+  which eddy_correct > /dev/null
+  if($status) then
+    echo "ERROR: cannot find eddy_correct. Make sure"
+    echo "       FSL is installed"
+    exit 1;
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+error_exit:
+  uname -a | tee -a $LF 
+  echo "" |& tee -a $LF 
+  echo "dt_recon exited with ERRORS at `date`" |& tee -a $LF 
+  echo "" |& tee -a $LF 
+  exit 1;
+############--------------##################
+
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: $ProgName"
+  echo ""
+  echo " Required Aruments:";
+  echo "   --i invol"
+  echo "   --b bvals bvecs"
+  echo "   --s subjectid"
+  echo "   --o outputdir"
+  echo ""
+  echo " Other Arguments (Optional)"
+  echo "  --info-dump infodump.dat : use info dump created by unpacksdcmdir or dcmunpack"
+  echo "  --ecref TP       : Use TP as 0-based reference time points for EC"
+  echo "  --no-ec          : turn off eddy/motion correction"
+  echo "  --no-reg         : do not register to subject or resample to talairach"
+  echo "  --reg  reg.dat   : supply a register.dat file instead of registering"
+  echo "  --no-tal         : do not resample FA to talairch space"
+  echo "  --sd subjectsdir : specify subjects dir (default env SUBJECTS_DIR)"
+  echo "  --eres-save      : save resdidual error (dwires and eres)"
+  echo "  --pca            : run PCA/SVD analysis on eres (saves in pca-eres dir)"
+  echo "  --prune_thr thr  : set threshold for masking (default is FLT_MIN)"
+  echo "  --debug          : print out lots of info"
+  echo "  --version        : print version of this script and exit"
+  echo "  --help           : voluminous bits of wisdom"
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+  echo ""
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0;if($1 == "BEGINHELP") prt=1}'
+
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+Performs DTI reconstruction from the raw DWI in the input file. If
+bvalues and bvectors are not specified with --b, it is assumed that
+the input is a Siemens dicom file, and gets gradient directions and
+bvalues from based on values found in the dicom file. See
+$FREESURFER_HOME/diffusion/mgh-dti-seqpack/README. If the bvalues 
+and bvectors are specified, then the input volume can be anything.
+
+The bvalues are in a simple text file, one for each direction
+(including b=0). The bvectors (gradient directions) are also in a
+simple text file with three components on each row. These also include
+the b=0 values. There must be as many rows in the bvals/bvecs
+as there are frames in the input.
+
+Stages:
+1. Convert input to nifti (creates dwi.nii)
+2. Eddy current and motion correction using FSLs eddy_correct,
+   creates dwi-ec.nii. Can take 1-2 hours.
+3. DTI GLM Fit and tensor construction. Includes creation of:
+   tensor.nii -- maps of the tensor (9 frames)
+   eigvals.nii -- maps of the eigenvalues
+   eigvec?.nii -- maps of the eigenvectors
+   adc.nii -- apparent diffusion coefficient
+   fa.nii -- fractional anisotropy
+   ra.nii -- relative anisotropy
+   vr.nii -- volume ratio
+   ivc.nii -- intervoxel correlation
+   lowb.nii -- Low B 
+   bvals.dat -- bvalues
+   bvecs.dat -- directions
+   Also creates glm-related images: 
+     beta.nii - regression coefficients
+     eres.nii - residual error (log of dwi intensity)
+     rvar.nii - residual variance (log)
+     rstd.nii - residual stddev (log)
+     dwires.nii - residual error (dwi intensity)
+     dwirvar.nii - residual variance (dwi intensity)
+4. Registration of lowb to same-subject anatomical using
+   FSLs flirt (creates mask.nii and register.dat)
+5. Map FA to talairach space (creates fa-tal.nii)
+
+Example usage:
+
+dt_recon --i 6-1025.dcm --s M87102113 --o dti
+dt_recon --i f.nii --b f.bvals f.bvecs --s M87102113 --o dti
+
+# Check registration
+tkregister2 --mov dti/lowb.nii --reg dti/register.dat \
+  --surf orig --tag
+
+# View FA on the subject's anat:
+tkmedit  M87102113 orig.mgz -overlay dti/fa.nii \
+   -overlay-reg dti/register.dat
+
+# View FA on fsaverage
+tkmedit fsaverage orig.mgz -overlay dti/fa-tal.nii
+
+# Group/Higher level GLM analysis:
+# Concatenate fa from individuals into one file
+#  Make sure the order agrees with the fsgd below
+mri_concat */fa-tal.nii --o group-fa-tal.nii
+# Create a mask:
+mri_concat */mask-tal.nii --o group-masksum-tal.nii --mean
+mri_binarize --i group-masksum-tal.nii --min .999 --o group-mask-tal.nii
+# GLM Fit
+mri_glmfit --y group-fa-tal.nii --mask group-mask-tal.nii\
+    --fsgd your.fsgd --C contrast --glmdir groupanadir
+

@@ -1,0 +1,440 @@
+#! /bin/tcsh -f
+
+#
+# mris_volsmooth
+#
+# Smooths a surface inside a volume
+#
+# Original Author: REPLACE_WITH_FULL_NAME_OF_CREATING_AUTHOR
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.10 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+
+set VERSION = '$Id: mris_volsmooth,v 1.10 2011/03/02 20:16:39 nicks Exp $'
+set invol  = ();
+set reg = ();
+set outvol = ();
+set fwhm   = ();
+set niters = ();
+set volfwhm = ();
+set projfrac = ();
+set pfa_min   = ();
+set pfa_max   = ();
+set pfa_delta = ();
+set surfout = ();
+set cleanup = 1;
+set LF = ();
+
+set PrintHelp = 0;
+set cmdargs = ($argv);
+if($#argv == 0)  goto usage_exit;
+set n = `echo $argv | egrep -e --version | wc -l`
+if($n != 0) then
+  echo $VERSION
+  exit 1;
+endif
+set n = `echo $argv | egrep -e --help | wc -l`
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+  exit 1;
+endif
+
+# Parse the command-line arguments
+goto parse_args;
+parse_args_return:
+
+# Check the command-line arguments
+goto check_params;
+check_params_return:
+
+set subj = `head -n 1 $reg`;
+echo $subj
+if(! -d $SUBJECTS_DIR/$subj) then
+  echo "ERROR: cannot find $subj in $SUBJECTS_DIR"
+  exit 1;
+endif
+
+set cid = ();
+if($cleanup) set cid = .$$
+
+set outdir = `dirname $outvol`;
+mkdir -p $outdir
+
+rm -f $outvol
+
+if($#LF == 0) then
+  set stem = `fname2stem $invol`
+  set LF = $stem.mris_volsmooth.log
+endif
+rm -f $LF
+
+echo "mris_volsmooth" | tee -a $LF
+date | tee -a $LF
+pwd | tee -a $LF
+echo $0 | tee -a $LF
+echo $cmdargs | tee -a $LF
+echo $VERSION | tee -a $LF
+echo setenv FREESURFER_HOME $FREESURFER_HOME | tee -a $LF
+echo setenv SUBJECTS_DIR $SUBJECTS_DIR | tee -a $LF
+uname -a | tee -a $LF
+
+set mergevol = $invol;
+set smvol = ();
+if($#volfwhm) then
+  # First, create a surface mask
+  foreach hemi (lh rh)
+    set surfmask = $outdir/tmp.$hemi.surfmask$cid.mgh
+    set vtxvol = $outdir/tmp.$hemi.vtxvol$cid.mgh
+    set cmd = (mri_surf2vol --hemi $hemi --mkmask --vtxvol $vtxvol\
+      --template $invol --volreg $reg --outvol $surfmask);
+    if($#projfrac) set cmd = ($cmd --projfrac $projfrac)
+    if($#pfa_min)  set cmd = ($cmd --projfrac 0.5) # Not really sure what to do here
+    echo "" | tee -a $LF
+    echo "" | tee -a $LF
+    date  | tee -a $LF
+    pwd | tee -a $LF
+    echo $cmd | tee -a $LF
+    $cmd | tee -a $LF
+    if($status) exit 1;
+  end
+
+  # Merge the lh and rh masks
+  set surfmasklh = $outdir/tmp.lh.surfmask$cid.mgh
+  set surfmaskrh = $outdir/tmp.rh.surfmask$cid.mgh
+  set surfmask = $outdir/tmp.surfmask$cid.mgh
+  set cmd = (mri_concat $surfmasklh $surfmaskrh --o $surfmask --sum)
+  echo "" | tee -a $LF
+  echo "" | tee -a $LF
+  date  | tee -a $LF
+  pwd | tee -a $LF
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+
+  # Now smooth outside of the mask
+  set smvol = $outdir/tmp.volsmooth$cid.mgh
+  set cmd = (mri_fwhm --i $invol --o $smvol --fwhm $volfwhm \
+    --smooth-only --mask $surfmask --mask-inv)
+  echo "" | tee -a $LF
+  echo "" | tee -a $LF
+  date  | tee -a $LF
+  pwd | tee -a $LF
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+
+  set vtxvollh = $outdir/tmp.lh.vtxvol$cid.mgh
+  set vtxvolrh = $outdir/tmp.lh.vtxvol$cid.mgh
+  if($cleanup) rm -f $surfmasklh $surfmaskrh $surfmask $vtxvollh $vtxvolrh
+
+  set mergevol = $smvol;
+endif
+
+# Now smooth on the surface
+foreach hemi (lh rh)
+
+  if($#surfout == 0) then
+    set surfval = $outdir/tmp.$hemi.mris_volsmooth$cid.mgh
+  else
+    set surfval = $surfout.$hemi.mgh
+  endif
+
+  # sample volume to the surface
+  set cmd = (mri_vol2surf --src $invol --srcreg $reg --hemi $hemi \
+    --out $surfval --noreshape)
+  if($#projfrac) set cmd = ($cmd --projfrac $projfrac)
+  if($#pfa_min)  set cmd = ($cmd --projfrac-avg $pfa_min $pfa_max $pfa_delta)
+  echo "" | tee -a $LF
+  echo "" | tee -a $LF
+  date  | tee -a $LF
+  pwd | tee -a $LF
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+
+  # smooth on the surface (but only in cortex)
+  set cmd = (mri_surf2surf --s $subj --sval $surfval \
+    --tval $surfval --hemi $hemi --cortex)
+  if($#fwhm)   set cmd = ($cmd  --fwhm $fwhm)
+  if($#niters) set cmd = ($cmd  --nsmooth-in $niters)
+  echo "" | tee -a $LF
+  echo "" | tee -a $LF
+  date  | tee -a $LF
+  pwd | tee -a $LF
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+
+  # stuff it back into the volume
+  set cmd = (mri_surf2vol  --surfval $surfval --hemi $hemi \
+    --template $invol --volreg $reg --outvol $outvol);
+  if($#projfrac) set cmd = ($cmd --projfrac $projfrac)
+  if($#pfa_min)  set cmd = ($cmd --projfrac 0.5) # Not really sure what to do here
+  if(! -e $outvol) set cmd = ($cmd --merge $mergevol);
+  if(-e $outvol)   set cmd = ($cmd --merge $outvol);
+  echo "" | tee -a $LF
+  echo "" | tee -a $LF
+  date  | tee -a $LF
+  pwd | tee -a $LF
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+
+  if($cleanup) rm -f $surfval
+end
+
+if($#smvol && $cleanup) rm -f $smvol
+
+date | tee -a $LF
+echo "mris_volsmooth done" | tee -a $LF
+
+exit 0;
+###############################################
+
+
+############--------------##################
+parse_args:
+
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+
+  switch($flag)
+
+    case "--i":
+      if ( $#argv == 0) goto arg1err;
+      set invol = $argv[1]; shift;
+      breaksw
+
+    case "--o":
+      if ( $#argv == 0) goto arg1err;
+      set outvol = $argv[1]; shift;
+      breaksw
+
+    case "--reg":
+      if ( $#argv == 0) goto arg1err;
+      set reg = $argv[1]; shift;
+      breaksw
+
+    case "--fwhm":
+      if ( $#argv == 0) goto arg1err;
+      set fwhm = $argv[1]; shift;
+      breaksw
+
+    case "--niters":
+      if ( $#argv == 0) goto arg1err;
+      set niters = $argv[1]; shift;
+      breaksw
+
+    case "--vol-fwhm":
+      if ( $#argv == 0) goto arg1err;
+      set volfwhm = $argv[1]; shift;
+      breaksw
+
+    case "--projfrac":
+      if ( $#argv == 0) goto arg1err;
+      set projfrac = $argv[1]; shift;
+      breaksw
+
+    case "--projfrac-avg":
+      if ( $#argv < 3) goto arg3err;
+      set pfa_min   = $argv[1]; shift;
+      set pfa_max   = $argv[1]; shift;
+      set pfa_delta = $argv[1]; shift;
+      breaksw
+
+    case "--surf-out":
+      if ( $#argv == 0) goto arg1err;
+      set surfout = $argv[1]; shift;
+      breaksw
+
+    case "--log":
+      if ( $#argv == 0) goto arg1err;
+      set LF = $argv[1]; shift;
+      breaksw
+
+    case "--tmpdir":
+      if ( $#argv == 0) goto arg1err;
+      set tmpdir = $argv[1]; shift;
+      set cleanup = 0;
+      breaksw
+
+    case "--no-cleanup":
+    case "--nocleanup":
+      set cleanup = 0;
+      breaksw
+
+    case "--debug":
+      set verbose = 1;
+      set echo = 1; # turns on terminal echoing
+      set debug = 1;
+      breaksw
+
+    default:
+      echo "ERROR: flag $flag not recognized"
+      exit 1;
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+if($#invol == 0) then
+  echo "ERROR: must specify input volume"
+  exit 1;
+endif
+if(! -e $invol) then
+  echo "ERROR: cannot find $invol"
+  exit 1;
+endif
+if($#outvol == 0) then
+  echo "ERROR: must specify output volume"
+  exit 1;
+endif
+if($outvol == $invol) then
+  echo "ERROR: invol cannot be the same as outvol"
+  exit 1;
+endif
+if($#reg == 0) then
+  echo "ERROR: must specify registration"
+  exit 1;
+endif
+if(! -e $reg) then
+  echo "ERROR: cannot find $reg"
+  exit 1;
+endif
+if($#niters && $#fwhm) then
+  echo "ERROR: cannot specify fwhm and niters"
+  exit 1;
+endif
+if($#projfrac && $#pfa_min) then
+  echo "ERROR: cannot specify both --projfrac and --projfrac-avg"
+  exit 1;
+endif
+if($#projfrac == 0 && $#pfa_min == 0) set projfrac = 0.5;
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+arg3err:
+  echo "ERROR: flag $flag requires three arguments"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: mris_volsmooth"
+  echo ""
+  echo " --i invol       : source volume"
+  echo " --o outvol      : output volume"
+  echo " --reg volreg    : registers vol to surface anatomical"
+  echo " --projfrac frac : project frac of thickness along surface normal"
+  echo " --projfrac-avg min max delta : average along normal"
+  echo " --surf-out basename : save smoothed surfaces as basename.?h.mgh"
+  echo " "
+  echo " --fwhm fwhm     : suface FWHM in mm"
+  echo " --niters niters  : specify smoothing with niters instead of fwhm"
+  echo " "
+  echo " --vol-fwhm volfwm : volume smoothing outside of surface"
+  echo " "
+  echo " --log logfile    : explicity set log file"
+  echo " --nocleanup      : do not delete temporary files"
+  echo " --version        : print version and exit"
+  echo " --help           : print help and exit"
+  echo " --debug          : turn on debugging"
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+Performs surface-based smoothing inside a volume. This is just a
+front-end for a series of programs which will sample a volume to a
+surface, smooth on the surface, then replace the surface voxels in the
+volume with values that were smoothed on the surface. This can make it
+convenient for interfacing volume-based functional analysis tools with
+surface-based smoothing. When complete, values not on the surface will
+be the same as in the input volume. Both hemispheres are
+smoothed. Areas outside of the ?h.cortex.label are not smoothed.  One
+can optionally smooth non-surface voxels in the volume with
+
+--i invol
+
+Input volume with values that will be smoothed on the surface.
+
+--o outvol
+
+Duh.
+
+--reg volreg
+
+tkregister-style registration matrix that maps between the input/output
+volumes and the FreeSurfer surface anatomical. See tkregister2.
+
+--projfrac frac
+
+When sampling to/from the surface, project along the surface normal
+an amount equal to frac*thickeness at each vertex. See mri_vol2surf.
+Default is 0.5 (ie, half way into the ribbon).
+
+--projfrac-avg min max delta
+
+Same idea as --projfrac, but sample at each of the points between min
+and max at a spacing of delta. The samples are then averaged
+together. The idea here is to average along the normal. Eg,
+--projfrac-avg 0 1 .1 will sample along the normal between the white
+(0) and pial (1) every 10% for a total of 11 samples. These will then
+be averaged together. The values are then projected back into the
+surface with --projfrac 0.5.
+
+--fwhm fwhm
+
+Smooth on the surface by full-width/half-max in mm. See also --niters.
+
+--niters niters
+
+Specify surface smoothing by number of nearest neighbor smoothing
+iterations instead of fwhm.
+
+--vol-fwhm volfwhm
+
+Smooth in the volume. In this case, the surface voxels and non-surface 
+voxels are smoothed entirely seprately (ie, surface voxels are only 
+smoothed with other surface voxels and non-surface voxels are only 
+smoothed with other non-surface voxels).

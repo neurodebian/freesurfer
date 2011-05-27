@@ -1,0 +1,294 @@
+#! /bin/csh -f
+
+#
+# stc-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2011/02/24 20:19:03 $
+#    $Revision: 1.10 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: stc-sess,v 1.10 2011/02/24 20:19:03 greve Exp $';
+
+set cmdargs = ($argv);
+
+set instem = f;
+set outstem = ();
+set infmt  = bhdr;
+set outfmt = bhdr;
+set RunListFile = ();
+set fsd = bold;
+set SliceOrder = siemens
+set UpdateOnly = 0;
+set nolog     = 0;
+set PrintHelp = 0;
+
+if($#argv == 0)  goto usage_exit;
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+  exit 1;
+endif
+
+set SessList = `getsesspath $argv`;
+if($status || $#SessList == 0) then
+  getsesspath $argv 
+  exit 1;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+if(! $nolog) then
+  set logdir = log
+  mkdir -p $logdir
+  if($#SessList > 1) then
+    set LF = $logdir/stc-sess.$$.log
+  else
+    set sb = `basename $SessList`
+    set LF = $logdir/stc-sess.$sb.log
+  endif
+  if(-e $LF) mv $LF $LF.bak
+else
+  set LF = /dev/null
+endif
+
+date | tee -a $LF
+pwd  | tee -a $LF
+echo $0  | tee -a $LF
+echo $cmdargs | tee -a $LF
+echo $VERSION | tee -a $LF
+hostname  | tee -a $LF
+
+set outfmtext = bhdr;
+if($?FSF_OUTPUT_FORMAT) then
+  set outfmtext = $FSF_OUTPUT_FORMAT;
+endif
+
+#------------------------------------------------------------------#
+set StartTime = `date`;
+foreach sess ($SessList)
+  set sessid = `basename $sess`;
+  echo "$sessid -----------------" | tee -a $LF
+  date | tee -a $LF
+
+  set RunPath = $sess/$fsd
+  set RunList = `getrunlist $RunPath $RunListFile`
+  if($#RunList == 0) then
+    echo "ERROR: cannot find any runs in $RunPath" | tee -a $LF
+    exit 1;
+  endif
+
+  foreach Run ($RunList)
+
+    set infuncstem = $RunPath/$Run/$instem
+    set infmtext = `getformat_from_stem $infuncstem`
+    if($status) then
+      echo "ERROR: cannot find $infuncstem"
+      exit 1;
+    endif
+    set infunc = $infuncstem.$infmtext
+    set outfunc = $RunPath/$Run/$outstem.$outfmtext
+
+    test $outfunc -nt $infunc
+    if($status || ! $UpdateOnly || ! -e $outfunc) then
+      set cmd = (stc.fsl --i $infunc --o $outfunc --$SliceOrder)
+      echo "---------------------------------------------"| tee -a $LF
+      pwd | tee -a $LF
+      echo $cmd | tee -a $LF
+      $cmd | tee -a $LF
+      if($status) exit 1;
+    else
+      ls -lt $outfunc $infunc | tee -a $LF
+      echo "Update not needed" | tee -a $LF
+    endif
+
+  end # Loop over Runs #
+end # Loop over sessions #
+
+echo "Started at $StartTime" | tee -a $LF
+echo "Ended   at `date`"     | tee -a $LF
+echo "stc-sess Done"    | tee -a $LF
+
+exit 0;
+###############################################
+
+
+############--------------##################
+parse_args:
+set cmdline = "$argv";
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-i":
+      if ( $#argv == 0) goto arg1err;
+      set instem = $argv[1]; shift;
+      breaksw
+
+    case "-o":
+      if ( $#argv == 0) goto arg1err;
+      set outstem = $argv[1]; shift;
+      breaksw
+
+    case "-fsd":
+      if( $#argv < 1) goto arg1err;
+      set fsd = $argv[1]; shift;
+      breaksw
+
+    case "-so":
+      if ( $#argv == 0) goto arg1err;
+      set SliceOrder = $argv[1]; shift;
+      breaksw
+
+    case "-infmt":
+      if ( $#argv == 0) goto arg1err;
+      set infmt = $argv[1]; shift;
+      breaksw
+
+    case "-outfmt":
+      if ( $#argv == 0) goto arg1err;
+      set infmt = $argv[1]; shift;
+      breaksw
+
+    case "-rlf":
+      if ( $#argv == 0) goto arg1err;
+      set RunListFile = $argv[1]; shift;
+      breaksw
+
+    case "-update":
+      set UpdateOnly = 1;
+      breaksw
+
+    case "-nolog":
+      set nolog = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-g":
+    case "-s":
+    case "-sf":
+    case "-d":
+    case "-df":
+      shift;
+      # ignore getsesspath arguments 
+      breaksw
+
+    case "-cwd":
+      # ignore getsesspath arguments 
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo "USAGE: stc-sess"
+  echo ""
+  echo "   -i instem "
+  echo "   -o outstem "
+  echo "   -so sliceorder : <siemens>, up, down, odd, even"
+  echo "   -infmt  fmt : input  format ($infmt)"
+  echo "   -outfmt fmt : output format ($outfmt)"
+  echo "   -update     : only stc if input is newer than output"
+  echo ""
+  echo "Session Arguments (Required)"
+  echo "   -sf sessidfile  "
+  echo "   -df srchdirfile "
+  echo "   -s  sessid      "
+  echo "   -d  srchdir     "
+  echo ""
+  echo "Other arguments"
+  echo "   -fsd fsdir"
+  echo "   -rlf runlistfile"
+  echo "   -debug"
+  echo "   -version        : print version and exit"
+  echo "   -help           : print help and exit"
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+  echo "------------------------------------------------------------"
+
+  stc.fsl --help
+
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+Performs functional slice timing correction using the FSL slicetimer
+program.  This is actually a front-end for stc.fsl (which is a
+front-end for slicetimer).  Slice-timing correction should be run
+after motion correction.
+
+You of course must know the slice order of your acquisition. This is 
+not in the DICOM file. If you are using Siemens and have not done
+anything to change he slice order, you are probably safe with
+"-so siemens". 
+
+You must also adjust your stimulus timing because the slices are
+shifted in time such that time=0 occurs at the middle of the TR
+instead of the beginning of the TR. Thus, you must subtract half
+a TR from the stimulus onsets. This can be done during
+mkanalysis-sess with "-timeoffset -1.0" for TR=2s.
+
+Example:
+
+mc-sess  -fstem f -fmcstem fmc  ...
+stc-sess -i fmc -o fmcstc -so siemens ...
+spatialsmooth-sess -i fmcstc -o fmcstcsm5 -fwhm 5 ...
+inorm-sess -funcstem fmcstcsm5 ...
+mkanalysis-sess -timeoffset -1.0 -funcstem fmcstcsm5 ...
+
+

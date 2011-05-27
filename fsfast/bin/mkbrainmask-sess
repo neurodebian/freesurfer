@@ -1,0 +1,375 @@
+#! /bin/csh -f
+
+#
+# mkbrainmask-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2010/07/23 22:58:20 $
+#    $Revision: 1.20 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: mkbrainmask-sess,v 1.20 2010/07/23 22:58:20 greve Exp $'
+
+set cmdargs = ($argv);
+
+set fsd = "bold";
+set funcstem = f; # stem of functional volume
+set thresh = 0.1;
+set ndilations = 1;
+set nerodes = 0;
+set maskstem = brain;
+set maskdir = masks;
+set nolog     = 0;
+set nthrun = ();
+set debug = 0;
+set scratchdir = ();
+set PrintHelp = 0;
+set UpdateOnly = 0;
+set RunListFile = ();
+
+set infmt  = ();
+set outfmt = nii
+if($?FSF_OUTPUT_FORMAT) then
+  set outfmt = $FSF_OUTPUT_FORMAT;
+endif
+
+set StartTime = `date`;
+
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+  exit 1;
+endif
+set n = `echo $argv | grep -e -version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+set SessList = `getsesspath $argv`;
+if($status || $#SessList == 0) then
+  getsesspath $argv 
+  exit 1;
+endif
+
+goto parse_args;
+parse_args_return:
+goto check_params;
+check_params_return:
+
+set ProjectDir = `pwd`;
+mkdir -p $ProjectDir/log
+
+#---------------------------------------------------------------#
+foreach sess ($SessList)
+  set sessid = `basename $sess`;
+
+  # Create a log file #
+  set LF = /dev/null
+  if(! $nolog) then
+    mkdir -p $ProjectDir/log
+    set LF = $ProjectDir/log/mkbrainmask-$sessid-$fsd.log
+    rm -f $LF
+  endif
+  echo "mkbrainmask-sess" >> $LF
+  echo $sessid      >> $LF
+  echo $VERSION     >> $LF
+  uname -a          >> $LF
+  date              >> $LF
+  pwd               >> $LF
+  echo $0 $cmdargs  >> $LF
+  echo "ProjectDir $ProjectDir" >> $LF
+
+  echo "------------------------------------------------" |& tee -a $LF
+  echo "$sess " |& tee -a $LF
+  date |& tee -a $LF
+
+  ### Check that the target directory is there ###
+  if(! -d $sess/$fsd) then
+    echo "ERROR: $sess/$fsd does not exist"   |& tee -a $LF
+    exit 1;
+  endif
+  ### Goto the functional subdirectory ###
+  cd $sess/$fsd
+
+  ### Session-level mask ----------------------------------
+  set template = `stem2fname template`
+  if($status) then
+    echo "ERROR: cannot find template for $sess/$fsd"  |& tee -a $LF
+    echo "       run mktemplate-sess"  |& tee -a $LF
+    exit 1;
+  endif
+  set mask = $maskdir/$maskstem.$outfmt;
+
+  set UpdateNeeded = 0;
+  if(! $UpdateOnly) set UpdateNeeded = 1;
+  if(`UpdateNeeded $mask $template`) set UpdateNeeded = 1;
+
+  if($UpdateNeeded) then
+    set cmd = (mkbrainmask -i $template -o $mask -thresh $thresh)
+    set cmd = ($cmd -ndil $ndilations -nerode $nerodes)
+    echo $cmd | tee -a $LF
+    $cmd | tee -a $LF
+    if($status) exit 1;
+  else
+    echo "$sessid Update not needed for session-level mask"| tee -a $LF
+  endif
+
+  ### Run-level masks --------------------------
+  set RunList = `getrunlist . $RunListFile`;
+  if($status || $#RunList == 0) then
+    echo "ERROR: $sess/$fsd has no runs"  |& tee -a $LF
+    exit 1;
+  endif
+
+  foreach Run ($RunList)
+
+    set template = `stem2fname $Run/template`
+    if($status) then
+      echo "ERROR: cannot find $template for $sess/$fsd/$Run" |& tee -a $LF
+      echo "       run mktemplate-sess"  |& tee -a $LF
+      exit 1;
+    endif
+    set mask = $Run/$maskdir/$maskstem.$outfmt;
+    set maske3 = $Run/$maskdir/$maskstem.e3.$outfmt;
+
+    set UpdateNeeded = 0;
+    if(! $UpdateOnly) set UpdateNeeded = 1;
+    if(`UpdateNeeded $mask   $template`) set UpdateNeeded = 1;
+    if(`UpdateNeeded $maske3 $template`) set UpdateNeeded = 1;
+
+    if($UpdateNeeded) then
+      set cmd = (mkbrainmask -i $template -o $mask -thresh $thresh );
+      set cmd = ($cmd -ndil $ndilations -nerode $nerodes)
+      echo $cmd | tee -a $LF
+      $cmd | tee -a $LF
+      if($status) exit 1;
+      # Create a second mask eroded by 3 to compute the mean
+      set cmd = (mri_binarize --i $mask --min 0.5 \
+       --zero-edges --erode 3 --o $maske3)
+      echo $cmd | tee -a $LF
+      $cmd | tee -a $LF
+      if($status) exit 1;
+    else
+      echo "$sessid Update not needed for run $Run mask" | tee -a $LF
+    endif
+
+    # Compute the global mean in the eroded mask from the 4D volume
+    set meanval = $Run/global.meanval.dat
+    set avgwf   = $Run/global.waveform.dat
+    set fstem = `cat $Run/template.log | grep FUNCSTEM | awk '{print $2}'`
+    set ffile = `stem2fname $Run/$fstem`;
+    set UpdateNeeded = 0;
+    if(! $UpdateOnly)   set UpdateNeeded = 1;
+    if(! $UpdateNeeded) set UpdateNeeded = `UpdateNeeded $meanval $maske3 $ffile`
+    if(! $UpdateNeeded) set UpdateNeeded = `UpdateNeeded $avgwf   $maske3 $ffile`
+    if($UpdateNeeded) then
+      set cmd = (meanval --i $ffile --m $maske3 --o $meanval --avgwf $avgwf);
+      echo $cmd | tee -a $LF
+      $cmd | tee -a $LF
+      if($status) exit 1;
+    else
+      echo "$sessid Update not needed for run $Run meanval" | tee -a $LF
+    endif
+
+  end # Run
+
+end # Session
+
+date |& tee -a $LF
+echo "mkbrainmask-sess done" |& tee -a $LF
+
+exit 0;
+###############################################
+
+
+############--------------##################
+parse_args:
+set cmdline = "$argv";
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-fsd":
+      set fsd = $argv[1]; shift;
+      breaksw
+
+    case "-maskstem":
+    case "-mask":
+    case "-o":
+      if ( $#argv == 0) goto arg1err;
+      set maskstem = $argv[1]; shift;
+      breaksw
+
+    case "-head":
+      set maskstem = head;
+      set thresh = .05;
+      set ndilations = 3;
+      breaksw
+
+    case "-thresh":
+      if ( $#argv == 0) goto arg1err;
+      set thresh = $argv[1]; shift;
+      breaksw
+
+    case "-ndil":
+      if ( $#argv == 0) goto arg1err;
+      set ndilations = $argv[1]; shift;
+      breaksw
+
+    case "-nero":
+      if ( $#argv == 0) goto arg1err;
+      set nerodes = $argv[1]; shift;
+      breaksw
+
+    case "-fmt":
+    case "-outfmt":
+      if ( $#argv == 0) goto arg1err;
+      set outfmt = $argv[1]; shift;
+      breaksw
+
+    case "-runlistfile":
+    case "-rlf":
+      if ( $#argv == 0) goto arg1err;
+      set RunListFile = $argv[1]; shift;
+      breaksw
+
+    case "-update":
+      set UpdateOnly = 1;
+      breaksw
+
+    case "-nolog":
+      set nolog = 1;
+      breaksw
+
+    case "-debug":
+      set debug = 1;
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-umask":
+      if ( $#argv == 0) goto arg1err;
+      umask $1; shift;
+      breaksw
+
+    case "-g":
+    case "-s":
+    case "-sf":
+    case "-d":
+    case "-df":
+      shift;
+      # ignore getsesspath arguments 
+      breaksw
+
+    case "-cwd":
+      # ignore getsesspath arguments 
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+if($#SessList == 0) then
+  echo "ERROR: no sessions specified"
+  exit 1
+endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: mkbrainmask-sess"
+  echo ""
+  echo "Session Arguments (Required)"
+  echo "   -sf sessidfile  "
+  echo "   -df sessdirfile "
+  echo "   -s  sessid      "
+  echo "   -d  sessdir     "
+  echo ""
+  echo "Optional Arguments"
+  echo "   -thresh  threshold : fraction of global mean to separate ($thresh)"
+  echo "                        brain and air (default is .1)"
+  echo "   -fsd   funcsubdir  : functional subdirectory (default: bold)"
+  echo "   -ndil ndialations  : dialate (ie, expand) the mask (def is 1)"
+  echo "   -nero nerodes      : erodes (ie, contracts) the mask"
+  echo "   -maskstem stem     : stem of binary mask (stored in fsd/masks/stem)"
+  echo "                        default is brain"
+  echo "   -head : flag to set parameters to cover the whole head instead"
+  echo "           of just the brain. thresh=0.05, ndil=3, stem=head"
+  echo ""
+  echo ""
+  echo "Other Options"
+  echo "   -update            : only run if input is newer than output"
+  echo "   -help              : print help and exit"
+  echo "   -version           : print version and exit"
+  echo ""
+
+  if(! $PrintHelp ) exit 1;
+  echo " "
+  echo "$VERSION "
+  echo " "
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+This program creates a binary mask of the brain from the template
+created by mktemplate-sess.  It uses the FSL (www.fmrib.ox.ac.uk/fsl)
+Brain Extraction Tool (BET). This BET mask is dilated by one voxel to
+make sure that it gets all tissue. A second mask is created that is
+eroded by 3 voxels. This is used to compute the global mean intensity,
+which can then be used for global intensity normalization. The mean
+intensity is stored in each run in the global.mean.dat file. A
+waveform called global.waveform.dat is also created.  This is the mean
+waveform across this eroded mask. This script creates a session-level
+mask based on the session-level template as well as a mask for each
+run.
+
+The only real parameter is the threshold (controlled with the -thresh
+option). The absolute threshold is set to thresh times the global
+mean. -ndil N will expand the mask by approximatedly N voxels.
+
+Those using this program should cite: Smith, S. (2000).  Robust
+automated brain extraction.  NeuroImage.  Submitted.
+
+exit 1;

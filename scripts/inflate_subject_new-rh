@@ -1,0 +1,39 @@
+#! /bin/tcsh -f
+
+#
+# inflate_subject_new-rh
+#
+# REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+#
+# Original Author: REPLACE_WITH_FULL_NAME_OF_CREATING_AUTHOR
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.3 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+pushd $SUBJECTS_DIR/$1/
+touch NOTES
+echo " " >> NOTES
+echo $0 $* >> NOTES
+whoami >> NOTES
+date >> NOTES
+hostname >> NOTES
+popd
+
+pushd $SUBJECTS_DIR/$1/scripts
+mri_tessellate ../mri/filled 127 ../surf/rh.orig_$2
+mris_smooth ../surf/rh.orig_$2 ../surf/rh.smoothwm_$2
+mris_inflate ../surf/rh.smoothwm_$2 ../surf/rh.inflated_$2
+popd

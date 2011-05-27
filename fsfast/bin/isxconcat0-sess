@@ -1,0 +1,628 @@
+#! /bin/csh -f
+
+#
+# isxconcat0-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2011/01/24 18:19:26 $
+#    $Revision: 1.24 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: isxconcat0-sess,v 1.24 2011/01/24 18:19:26 greve Exp $';
+
+set inputargs = ($argv);
+
+set outvol = ();
+set analysis = ();
+set flac = ();
+set fsd  = ();
+set contrast = ();
+set mapname = ces
+set RegDOF = 6;
+set regfile = ()
+set interp = trilin
+set fwhm = ();
+set paireddiff = 0;
+set pairedavg  = 0;
+set pairedsum  = 0;
+set mean = 0;
+set ToVol = 0;
+set ToSurf = 0;
+set DoLogFile = 0;
+set DoSplit = 0;
+set gmean = (); # Number in group for group mean
+set fsgd = ();
+set SrcAnatSurf = 0;
+set SrcAnatVol = 0;
+set DoResample = 1;
+
+# for volume-based only
+set talres = 2;
+set talxfm = ();
+set DoMorph = 0;
+
+# for surface-based only
+set hemi = ();
+set projfrac = 0.5; # changed from 0 on july 21, 2010
+set DoProjFracAvg = 0
+set trgsubject = fsaverage; 
+
+set tmpdir = ();
+set cleanup = 1;
+set PrintHelp = 0;
+
+if($#argv == 0)  goto usage_exit;
+set n = `echo $argv | grep -e -version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;  
+  goto usage_exit;
+endif
+set SessList = `getsesspath $inputargs`;
+if($status || $#SessList == 0) then
+  echo "       $SessList" 
+  exit 1;
+endif
+set nSessions = $#SessList;
+goto parse_args;
+parse_args_return:
+goto check_params;
+check_params_return:
+
+if($#fsgd) then
+  set subjlist = (`cat $fsgd | awk '{if($1 == "Input") print $2}'`)
+  if($#subjlist != $#SessList) then
+    echo "ERROR: number of session ($#SessList) does not equal the "
+    echo "       number of subjects ($#subjlist) in fsgd $fsgd"
+    exit 1;
+  endif
+endif
+
+##### Create a log file ######
+if($DoLogFile) then
+  set LF = $outvol.log
+  if(-e $LF) mv $LF $LF.old
+  echo logfile is $LF
+else
+  set LF = /dev/null
+endif
+
+echo "isxconcat0-sess log file" >> $LF
+echo $VERSION >> $LF
+date          >> $LF
+uname -a      >> $LF
+pwd           >> $LF
+echo $0     >> $LF
+echo $inputargs  >> $LF
+id            >> $LF
+
+# ------------------------------------------------------------
+set StartTime = `date`;
+set maplist = ();
+set nframes0 = -1;
+@ nthsess = 0;
+foreach sess ($SessList)
+  @ nthsess = $nthsess + 1;
+  set sessid = `basename $sess`;
+  set subject = `cat $sess/subjectname`
+
+  if($#fsgd) then
+    if("$subject" != "$subjlist[$nthsess]") then
+      echo "ERROR: $sessid  subject mismatch with fsgd $fsgd" |& tee -a $LF
+      echo "  $subject vs $subjlist[$nthsess]" |& tee -a $LF
+      exit 1;
+    endif
+  endif
+
+  if($SrcAnatSurf == 0 && $SrcAnatVol == 0) then
+    # Use functional data
+    set condir = $sess/$fsd/$analysis/$contrast
+    if(! -e $condir) then
+      echo "ERROR: cannot find $condir"|& tee -a $LF
+      exit 1;
+    endif
+    set mapstem = $condir/$mapname
+    set ext = `fast_getext $mapstem`
+    if($status) then
+      echo "$ext"|& tee -a $LF
+      exit 1;
+    endif
+    set map = $mapstem.$ext
+  endif
+  if($SrcAnatSurf) then
+    # Use anatomical surface data
+    set map = $tmpdir/$hemi.$mapname.$subject.mgh
+    set srcanatmap = $SUBJECTS_DIR/$subject/surf/$hemi.$mapname
+    set cmd = (mri_surf2surf --hemi $hemi --srcsubject $subject \
+      --trgsubject $trgsubject --sval $srcanatmap --tval $map)
+    echo $cmd
+    $cmd | tee -a $LF
+    if($status) exit 1;
+  endif
+  if($SrcAnatVol) then
+    # Use anatomical volume data
+    set srcanatmap = $SUBJECTS_DIR/$subject/mri/$mapname.mgz
+    set map = $tmpdir/$mapname.$subject.mgh
+    set cmd = (mri_vol2vol --mov $srcanatmap --out $map \
+      --s $subject --tal --talres $talres --no-save-reg)
+    echo $cmd
+    $cmd | tee -a $LF
+    if($status) exit 1;
+  endif
+
+  # Get nframes
+  set tmpfile = /tmp/isxconcat0-sess.$$.nframes
+  mri_info --o $tmpfile --nframes $map
+  set nframes = (`cat $tmpfile`);
+  rm $tmpfile
+  if($nframes0 == -1) set nframes0 = $nframes;
+  if($nframes != $nframes0) then
+    echo "ERROR: session $sess has $nframes frames, expecting $nframes0 frames."
+    exit 1;
+  endif
+
+  if($DoResample) then
+    set reg = $sess/$fsd/$regfile
+    if(! -e $reg) then
+      echo "ERROR: cannot find $reg"|& tee -a $LF
+      exit 1;
+    endif
+    if($#hemi != 0) then
+      set mapout = $tmpdir/$sessid-$analysis-$contrast-$mapname-$hemi.mgh
+      set cmd = (mri_vol2surf --mov $map --reg $reg --trgsubject $trgsubject)
+      set cmd = ($cmd --hemi $hemi --interp $interp --noreshape)
+      if($#projfrac) set cmd = ($cmd --projfrac $projfrac)
+      if($DoProjFracAvg) set cmd = ($cmd --projfrac-avg 0 1 .2)
+      set cmd = ($cmd --o $mapout)
+    else
+      set mapout = $tmpdir/$sessid-$analysis-$contrast-$mapname-mni305.mgh
+      set cmd = (mri_vol2vol --mov $map --reg $reg)
+      set cmd = ($cmd --o $mapout --no-save-reg --interp $interp)
+      if(! $DoMorph) set cmd = ($cmd --tal --talres $talres)
+      if($DoMorph)   set cmd = ($cmd --morph)
+      if($#talxfm)   set cmd = ($cmd --talxfm $talxfm)
+    endif
+    echo "------------------------------------" |& tee -a $LF
+    pwd |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+  else
+    set mapout = $map
+  endif
+  set maplist = ($maplist $mapout);
+
+end # Loop over sessions
+
+echo "------------------------------------" |& tee -a $LF
+set cmd = (mri_concat $maplist --o $outvol)
+if($paireddiff) set cmd = ($cmd --paired-diff --prune)
+if($pairedavg)  set cmd = ($cmd --paired-avg --prune)
+if($pairedsum)  set cmd = ($cmd --paired-sum --prune)
+if($mean)       set cmd = ($cmd --mean --prune)
+if($#gmean)     set cmd = ($cmd --gmean $gmean); # dont prune
+pwd |& tee -a $LF
+echo $cmd |& tee -a $LF
+$cmd |& tee -a $LF
+if($status) exit 1;
+
+if($cleanup) rm -r $tmpdir
+
+# Smooth
+if($#fwhm && ! $DoResample) then
+  if($ToVol) then
+    set cmd = (mri_fwhm --i $outvol --o $outvol --fwhm $fwhm --smooth-only)
+  endif
+  if($ToSurf) then
+    set cmd = (mris_fwhm --i $outvol --o $outvol --fwhm $fwhm \
+      --subject $trgsubject --hemi $hemi --no-detrend)
+  endif
+  echo "------------------------------------" |& tee -a $LF
+  pwd |& tee -a $LF
+  echo $cmd |& tee -a $LF
+  $cmd |& tee -a $LF
+  if($status) exit 1;
+endif
+
+if($nframes > 1 && $DoSplit) then
+  echo "Splitting multivariate input." | tee -a $LF
+  echo "nframes   = $nframes" | tee -a $LF
+  echo "nSessions = $nSessions" | tee -a $LF
+  set outstem = (`fname2stem $outvol`);
+  set ext = `fast_getext $outstem`
+  @ nthframe = 0
+  while($nthframe < $nframes)
+    set frmid = `printf %03d $nthframe`;
+    set frmoutvol = $outstem.$frmid.$ext
+    set cmd = (mri_convert $outvol $frmoutvol \
+      --fsubsample $nthframe $nframes -1)
+    echo $cmd | tee -a $LF
+    $cmd | tee -a $LF
+    if($status) then
+      echo "Making $outvol unreadable/unwritable" | tee -a $LF
+      chmod a-rw $outvol
+      exit 1; 
+    endif
+    @ nthframe = $nthframe + 1;
+  end
+  rm $outvol
+endif
+
+echo "" | tee -a $LF
+echo "" | tee -a $LF
+echo "Started at $StartTime" | tee -a $LF
+echo "Ended   at `date`"     | tee -a $LF
+echo "isxconcat0-sess completed" | tee -a $LF
+echo " "
+echo " "
+
+exit 0;
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-o":
+      if($#argv == 0) goto arg1err;
+      set outvol = $argv[1]; shift;
+      breaksw
+
+    case "-a":
+    case "-analysis":
+      if ( $#argv == 0) goto arg1err;
+      set analysis = $argv[1]; shift;
+      breaksw
+
+    case "-f":
+    case "-flac":
+      if ( $#argv == 0) goto arg1err;
+      set flac = $argv[1]; shift;
+      breaksw
+
+    case "-fsd":
+      if ( $#argv == 0) goto arg1err;
+      set fsd = $argv[1]; shift;
+      breaksw
+
+    case "-reg":
+      if ( $#argv == 0) goto arg1err;
+      set regfile = $argv[1]; shift;
+      breaksw
+
+    case "-c":
+    case "-contrast":
+      if ( $#argv == 0) goto arg1err;
+      set contrast = $argv[1]; shift;
+      breaksw
+
+    case "-m":
+    case "-map":
+      if ( $#argv == 0) goto arg1err;
+      set mapname = $argv[1]; shift;
+      breaksw
+
+    case "-interp":
+      if ( $#argv == 0) goto arg1err;
+      set interp = $argv[1]; shift;
+      breaksw
+
+    case "-fwhm":
+      if ( $#argv == 0) goto arg1err;
+      set fwhm = $argv[1]; shift;
+      breaksw
+
+    case "-talres":
+      if ( $#argv == 0) goto arg1err;
+      set talres = $argv[1]; shift;
+      set ToVol = 1;
+      breaksw
+
+    case "-talxfm":
+      if ( $#argv == 0) goto arg1err;
+      set talxfm = $argv[1]; shift;
+      set ToVol = 1;
+      breaksw
+
+    case "-morph":
+      set DoMorph = 1;
+      set ToVol = 1;
+      breaksw
+
+    case "-space":
+      if($#argv < 1) goto arg1err;
+      set space = $argv[1]; shift;
+      if($space == tal) set ToVol = 1;
+      if($space == mni305) set ToVol = 1;
+      if($space == lh || $space == rh) then
+        set ToSurf = 1;
+        set hemi = $space;
+      endif
+      breaksw
+
+    case "-hemi":
+    case "-h":
+      if ( $#argv == 0) goto arg1err;
+      set hemi = $argv[1]; shift;
+      set ToSurf = 1;
+      breaksw
+
+    case "-projfrac":
+      if ( $#argv == 0) goto arg1err;
+      set projfrac = $argv[1]; shift;
+      set ToSurf = 1;
+      breaksw
+
+    case "-projfrac-avg":
+      set DoProjFracAvg = 1;
+      set ToSurf = 1;
+      breaksw
+
+    case "-trgsubject":
+    case "-subject":
+      if( $#argv == 0) goto arg1err;
+      set trgsubject = $argv[1]; shift;
+      set ToSurf = 1;
+      breaksw
+
+    case "-surf-anat":
+      if( $#argv < 1) goto arg1err;
+      set mapname = $argv[1]; shift;
+      set SrcAnatSurf = 1;
+      set ToSurf = 1;
+      breaksw
+
+    case "-vol-anat":
+      if( $#argv < 1) goto arg1err;
+      set mapname = $argv[1]; shift;
+      set SrcAnatVol = 1;
+      set ToVol = 1;
+      breaksw
+
+    case "-fsgd":
+      if($#argv == 0) goto arg1err;
+      set fsgd = $argv[1]; shift;
+      if(! -e $fsgd) then
+        echo "ERROR: cannot find $fsgd"
+        exit 0;
+      endif
+      breaksw
+
+    case "-tmpdir":
+      if ( $#argv == 0) goto arg1err;
+      set tmpdir = $argv[1]; shift;
+      set cleanup = 0;
+      breaksw
+
+    case "-paired-diff"
+      set paireddiff = 1;
+      breaksw
+
+    case "-paired-avg"
+      set pairedavg = 1;
+      breaksw
+
+    case "-paired-sum"
+      set pairedsum = 1;
+      breaksw
+
+    case "-mean"
+      set mean = 1;
+      breaksw
+
+    case "-gmean"
+      if($#argv < 1) goto arg1err;
+      set gmean = $argv[1];shift
+      breaksw
+
+    case "-split"
+      set DoSplit = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-cwd":
+      breaksw
+
+    case "-g":
+    case "-s":
+    case "-sf":
+    case "-df":
+    case "-d":
+      # ignore getsesspath arguments 
+      shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#analysis == 0 && $#flac == 0) then
+    echo "ERROR: no analysis specified"
+    exit 1;
+  endif
+
+  if($#analysis != 0 && $#flac != 0) then
+    echo "ERROR: cannot specify flac and analysis"
+    exit 1;
+  endif
+
+  if($#analysis) then
+    set IsNative = `getana -a $analysis -t IsNative`    
+    if(! $IsNative) set DoResample = 0;
+    set fsd = `getana -a $analysis -t fsd`;
+  endif
+
+  if($#flac) then
+    set analysis = `basename $flac .flac`
+    if($#fsd == 0) then
+      echo "ERROR: need fsd with flac" 
+      exit 1;
+    endif
+  endif
+
+  if($#outvol == 0) then
+    echo "ERROR: no output  specified"
+    exit 1;
+  endif
+  if(-e $outvol) then
+    if(! -w $outvol) then
+      echo "ERROR: $outvol is not writable"
+      exit 1;
+    endif
+  endif
+  set outdir = `dirname $outvol`;
+  mkdir -p $outdir
+  if($status) then
+    echo "ERROR: making $outdir";
+    exit 1;
+  endif
+
+  if($#tmpdir == 0) set tmpdir = $outdir/tmp-isxconcat0.$$-sess
+  mkdir -p $tmpdir
+
+  @ tmp = $paireddiff + $pairedavg + $pairedsum
+  if($tmp > 1) then
+    echo "ERROR: cannot combos of --paired-diff, --paired-avg,  --paired-sum";
+    exit 1;
+  endif
+
+  # This stuff is irrelevant unless resampling
+  if($ToSurf == 0 && $ToVol == 0) set ToVol = 1;
+  if($ToSurf && $ToVol) then
+    echo "ERROR: cannot convert to surface and volume"
+    exit 1;
+  endif
+  if("$interp" != "trilin" && "$interp" != "nearest") then
+    echo "ERROR: interp is $interp, must be trilinear or nearest"
+    exit 1;
+  endif
+  if($talres != 1 && $talres != 2) then
+    echo "ERROR: talres = $talres, must be 1 or 2"
+    exit 1;
+  endif
+  if($#hemi) then
+    if($hemi != lh && $hemi != rh) then
+      echo "ERROR: hemi = $hemi, must be rh or lh"
+      exit 1;
+    endif
+  endif
+  if($#projfrac && $DoProjFracAvg) then
+    echo "ERROR: cannot --projfrac and --projfrac-avg"
+    exit 1
+  endif
+  if($#projfrac == 0 && $DoProjFracAvg == 0) set projfrac = 0.5;
+
+  if($#regfile == 0) set regfile = register.dof$RegDOF.dat 
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo " "
+  echo "USAGE: isxconcat0-sess"
+  echo ""
+  echo "   -a analysisname  : session-level functional analysis name"
+  echo "   -c contrast     : contrast (optional)"
+  echo "   -m mapname      : stem (def is ces)"
+  echo "   -o outvol"
+  echo ""
+  echo "   -interp method  : trilinear (def) or nearest"
+  echo "   -fwhm fwhm      : smooth by fwhm"
+  echo "   -paired-diff    : compute 1-2, 3-4, etc"
+  echo "   -paired-avg     : compute avg 1+2, 3+4, etc"
+  echo "   -paired-sum     : compute avg 1+2, 3+4, etc"
+  echo "   -mean           : mean over all frames"
+  echo "   -split          : split multivariate inputs"
+  echo "   -reg regfile    : default is register.dat"
+  echo ""
+  echo "  Volume-based options:"
+  echo "   -talres res     : 1 or 2 mm (def is 2)"
+  echo "   -talxfm xfmfile : use xfmfile instead of talairach.xfm"
+  echo "   -vol-anat vol   : eg, norm"
+  echo ""
+  echo "  Surface-based options:"
+  echo "   -hemi hemisphere : for surface-based analysis (lh or rh)";
+  echo "   -projfrac frac   : sample frac into surface (def is 0.5)"
+  echo "   -projfrac-avg    : average over cortex"
+  echo "   -trgsubject subject : sample to subject's surface (def fsaverage)"
+  echo "   -surf-anat surfmeas  : eg, thickness or curv"
+  echo ""
+  echo "   -space spacename : tal, lh. rh"
+  echo ""
+  echo "   -sf sessidfile  ..."
+  echo "   -df srchdirfile ..."
+  echo "   -s  sessid      ..."
+  echo "   -d  srchdir     ..."
+  echo ""
+  echo "   -fsgd fsgdfile : for comparing subject order"
+  echo ""
+  echo "   -help"
+  echo "   -debug"
+  echo "   -tmpdir dir    : use this dir for temporary storage (implies -nocleanup)"
+  echo "   -nocleanup     : do not delete tmpdir"
+  echo "   -version       : print version and exit"
+  echo " "
+
+  if(! $PrintHelp ) exit 1;
+
+  echo " "
+  echo "$VERSION "
+  echo " "
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+Resamples a group of FS-FAST first-level analyses into a common space,
+either volume- or surface-based, and concatenates all the sessions
+together into one multi-frame file suitable for use with mri_glmfit.
+This is a backend for isxconcat-sess.  This script is partially
+redundant with mris_preproc.

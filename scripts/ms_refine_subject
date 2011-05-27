@@ -1,0 +1,37 @@
+#! /bin/tcsh -ef
+
+#
+# ms_refine_subject
+#
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.3 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+setenv subject  $1
+setenv hemi $2
+setenv FDIR $SUBJECTS_DIR/$subject/mri/flash/parameter_maps
+echo SUBJECTS_DIR=$SUBJECTS_DIR
+
+set dest_dir = $SUBJECTS_DIR/$subject/mri/flash/parameter_maps
+pushd $dest_dir
+#setenv VOL_LIST "`ls -1 vol*_orig.mgh`"
+setenv VOL_LIST "`ls -1 vol*.mgh`"
+popd
+set echo=1
+mris_ms_refine -sdir $SUBJECTS_DIR $subject $hemi vol1.lta $VOL_LIST
+
+
+

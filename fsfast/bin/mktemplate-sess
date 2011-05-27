@@ -1,0 +1,392 @@
+#! /bin/csh -f
+
+#
+# mktemplate-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2011/03/08 03:37:59 $
+#    $Revision: 1.10 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+set VERSION = '$Id: mktemplate-sess,v 1.10 2011/03/08 03:37:59 greve Exp $';
+set inputargs = ($argv);
+
+set fsd          = bold;
+set nolog        = 0;
+set NthRun       = ();
+set NthFrame     = ();
+set DoMidFrame   = 0;
+set RunListFile  = ();
+set funcstem     = f;
+set tempstem     = template;
+set UpdateOnly = 0;
+set DoView = 0;
+set DoConcat = 0;
+set PrintHelp = 0;
+
+if($?FSF_OUTPUT_FORMAT == 0) then
+  setenv FSF_OUTPUT_FORMAT nii
+endif
+
+## If there are no options, just print the usage ##
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep -e  -version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;  
+  goto usage_exit;
+endif
+
+goto parse_args;
+parse_args_return:
+
+set SessList = `getsesspath $inputargs`;
+if($status || $#SessList == 0) then
+  getsesspath $inputargs 
+  echo "ERROR: cannot find any sessions"
+  exit 1;
+endif
+
+goto check_params;
+check_params_return:
+
+set ProjectDir = `pwd`;
+
+## Loop through each session ##
+set concatlist = ();
+foreach sess ($SessList)
+  set sessid = `basename $sess`
+
+  ##### Create a log file ######
+  set LF = /dev/null
+  if(! $nolog) then
+    set logdir = $ProjectDir/log;
+    mkdir -p $logdir
+    set LF = $logdir/mktemplate-sess.$sessid.$fsd.$funcstem.log
+    if(-e $LF) mv $LF $LF.old
+  endif
+  echo "mktemplate-sess log file" >> $LF
+  echo $VERSION >> $LF
+  uname -a >> $LF
+  date >> $LF
+  pwd >> $LF
+  echo UpdateOnly $UpdateOnly >> $LF 
+  echo $0 $inputargs  >> $LF 
+
+  echo " " |& tee -a $LF
+  echo "Session: $sess ----------------" |& tee -a $LF
+  date  |& tee -a $LF
+
+  ## Make sure the functional subdirectory exists ##
+  if(! -e $sess/$fsd) then
+    echo "ERROR: $sess/$fsd does not exist" |& tee -a $LF
+    exit 1;
+  endif
+
+  set RunList = `getrunlist $sess/$fsd $RunListFile`;
+  if($status) then
+    echo "$RunList" |& tee -a $LF
+    exit 1;
+  endif
+  if($NthRun > $#RunList) then
+    echo "ERROR: $sess/$fsd only has $#RunList runs, NthRun = $NthRun"|& tee -a $LF
+    exit 1;
+  endif
+
+  # Make one template for all runs
+  set Run = $RunList[$NthRun];
+  set funcdir = $sess/$fsd/$Run
+
+  set ext = `stem2fmt $funcdir/$funcstem`
+  if($status) then
+    echo "$ext" |& tee -a $LF
+    exit 1;
+  endif
+  echo "Detected input format at $ext" |& tee -a $LF
+  set srcvol = $funcdir/$funcstem.$ext
+   
+  set templatevol = $sess/$fsd/template.$FSF_OUTPUT_FORMAT;
+
+  set UpdateNeeded = 1;
+  if(-e $templatevol && $UpdateOnly) then
+    test $srcvol -nt $templatevol
+    if($status) then
+      echo "$sessid Update not needed" | tee -a $LF
+      set UpdateNeeded = 0;
+    endif
+  endif
+
+  if($UpdateNeeded) then
+    set cmd = (mri_convert $srcvol $templatevol )
+    if($DoMidFrame) set cmd = ($cmd --mid-frame);
+    if($#NthFrame) set cmd = ($cmd --frame $NthFrame);
+    pwd  |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    $cmd  |& tee -a $LF
+    if($status) exit 1;
+    set llog = $sess/$fsd/template.log
+    rm -f $llog
+    echo "FUNCSTEM $funcstem" >> $llog
+    echo "NTHRUN $NthRun" >> $llog
+    echo "RUNUSE $Run" >> $llog
+    if($DoMidFrame) echo "FRAME mid" >> $llog
+    if($#NthFrame)  echo "FRAME $NthFrame" >> $llog
+  endif
+
+  if($DoView)  tkmedit -f $templatevol
+  if($DoConcat) set concatlist = ($concatlist $templatevol);
+
+  # --------------------------------------------------
+  # Now do separately for each run
+  foreach Run ($RunList)
+    echo "  Run: $Run ----------------" |& tee -a $LF
+    echo "  `date`"  |& tee -a $LF
+    set funcdir = $sess/$fsd/$Run
+
+    set ext = `stem2fmt $funcdir/$funcstem`
+    if($status) then
+      echo "$ext" |& tee -a $LF
+      exit 1;
+    endif
+    set srcvol = $funcdir/$funcstem.$ext
+    set templatevol = $funcdir/template.$FSF_OUTPUT_FORMAT;
+
+    set UpdateNeeded = 1;
+    if(-e $templatevol && $UpdateOnly) then
+      test $srcvol -nt $templatevol
+      if($status) then
+        echo "  $sessid $Run Update not needed" | tee -a $LF
+        set UpdateNeeded = 0;
+      endif
+    endif
+
+    if($UpdateNeeded) then
+      # Force to be mid-frame
+      set cmd = (mri_convert $srcvol $templatevol --mid-frame);
+      pwd  |& tee -a $LF
+      echo $cmd |& tee -a $LF
+      $cmd  |& tee -a $LF
+      if($status) exit 1;
+      # Create a local log
+      set llog = $sess/$fsd/$Run/template.log
+      rm -f $llog
+      echo "FUNCSTEM $funcstem" >> $llog
+      echo "FRAME mid" >> $llog
+    endif
+
+    if($DoView)  tkmedit -f $templatevol
+    if($DoConcat) set concatlist = ($concatlist $templatevol);
+  end  # Loop over runs
+
+end  # foreach sess ($SessList)
+
+if($DoConcat) then
+  set cmd = (mri_concat $concatlist --o $ConcatFile)
+  pwd |& tee -a $LF
+  echo $cmd |& tee -a $LF
+  $cmd |& tee -a $LF
+  if($status) exit 1;
+endif
+
+date |& tee -a $LF
+echo "mktemplate-sess completed " |& tee -a $LF
+
+exit 0;
+
+############--------------##################
+parse_args:
+set cmdline = "$argv";
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-funcstem":
+      if ( $#argv == 0) goto arg1err;
+      set funcstem = $argv[1]; shift;
+      breaksw
+
+    case "-fsd":
+      if ( $#argv == 0) goto arg1err;
+      set fsd = $argv[1]; shift;
+      breaksw
+
+    case "-nthrun":
+      # for cross-run template
+      if ( $#argv == 0) goto arg1err;
+      set NthRun = $argv[1]; shift;
+      breaksw
+
+    case "-rlf":
+      if ( $#argv == 0) goto arg1err;
+      set RunListFile = $argv[1]; shift;
+      breaksw
+
+    case "-frame":
+      # for cross-run template
+      if ( $#argv < 1) goto arg1err;
+      set NthFrame = $argv[1]; shift;
+      breaksw
+
+    case "-mid-frame":
+      # for cross-run template, perrun gets mid
+      set DoMidFrame = 1;
+      breaksw
+
+    case "-view":
+      set DoView = 1;
+      breaksw
+
+    case "-concat":
+      if ( $#argv < 1) goto arg1err;
+      set ConcatFile = $argv[1]; shift
+      set DoConcat = 1;
+      breaksw
+
+    case "-update":
+      set UpdateOnly = 1;
+      breaksw
+
+    case "-force":
+      set UpdateOnly = 0;
+      breaksw
+
+    case "-umask":
+      if ( $#argv == 0) goto arg1err;
+      umask $argv[1]; shift;
+      breaksw
+
+    case "-nolog":
+      set nolog = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-cwd":
+      breaksw
+
+    case "-s":
+    case "-sf":
+    case "-df":
+    case "-d":
+    case "-g":
+      shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#SessList == 0) then
+    echo "ERROR: no sessions specified" |& tee -a $LF
+    exit 1;
+  endif
+
+  if($#NthFrame && $DoMidFrame) then
+    echo "ERROR: cannot -frame and -mid-frame"
+    exit 1;
+  endif
+  if(! $#NthFrame && ! $DoMidFrame) set NthFrame = 0;
+
+  if($#NthRun == 0) set NthRun = 1;
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo "USAGE: mktemplate-sess"
+  echo ""
+  echo " Session Arguments (some required)"
+  echo "  -sf sessidfile  ..."
+  echo "  -df srchdirfile ..."
+  echo "  -s  sessid      ..."
+  echo "  -d  srchdir     ..."
+  echo ""
+  echo " Optional Arguments"
+  echo "  -nthrun nthrun   : 0-based run number (def 0)"
+  echo "  -frame  nthframe : 0-based frame number (def 0)"
+  echo "  -mid-frame  : use the middle time point"
+  echo ""
+  echo "  -fsd dir     : functional subdirectory ($fsd)"
+  echo "  -funcstem stem : default is f"
+  echo "  -rlf RLF       : run-list file"
+  echo ""
+  echo "  -update : only run if update is needed"
+  echo "  -force : force an update (default)"
+  #echo "  -view : dont create template, just view it"
+  #echo "  -concat concatfile : concatenate all templates into one file"
+  echo ""
+  echo "  -version       : print version and exit"
+  echo "  -debug"
+  echo ""
+  if(! $PrintHelp ) exit 1;
+
+  echo " "
+  echo "$VERSION "
+  echo " "
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+This creates a functional template which is used as the target for
+motion correction and registration and for mask creation. The output
+will be session/bold/template.nii. A template is created for each run
+separately as well for per-run operations.
+
+By default, the session level template is created from the first time
+point of the first run. The run can be changed with -nthrun.  The time
+point can be changed with -frame N or -mid-frame to use the middle
+time point.
+
+By default, the func stem is f (meaning it looks for f.nii or
+f.nii.gz). This can be changed with -funcstem.
+
+By default, it uses "bold". This can be changed with -fsd.
+
+By default, the template is created regardless of whether it needs to
+be or not.  To create it only if the source files have changed, add
+-update.
+

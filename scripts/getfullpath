@@ -1,0 +1,47 @@
+#! /bin/tcsh -f
+
+#
+# getfullpath
+#
+# Returns the full path name to the given file
+#
+# Original Author: REPLACE_WITH_FULL_NAME_OF_CREATING_AUTHOR
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.4 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+
+if($#argv < 1) then
+  echo "getfullpath filename"
+  exit 1;
+endif
+
+set fname = $argv[1];
+
+set dirname = `dirname $fname`;
+if(! -e $dirname) then
+  echo "ERROR: cannot find $dirname"
+  exit 1;
+endif
+
+pushd $dirname > /dev/null
+set dirname = `pwd`;
+
+set base = `basename $fname`;
+
+echo $dirname/$base
+
+exit 0

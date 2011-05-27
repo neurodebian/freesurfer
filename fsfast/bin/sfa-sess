@@ -1,0 +1,438 @@
+#! /bin/csh -f
+
+#
+# sfa-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2008/01/14 23:43:43 $
+#    $Revision: 1.9 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: sfa-sess,v 1.9 2008/01/14 23:43:43 greve Exp $'
+
+set inputargs = ($argv);
+set DateStr = "`date '+%y%m%d%H%M'`"
+
+set analysis  = ();
+set debugopt  = ();
+set debug = 0;
+set nolog     = 0;
+set SynthSeed = 0;
+set outdir    = ();
+set ext = $FSF_OUTPUT_FORMAT;
+
+if($#argv == 0) then
+  goto usage_exit;
+  exit 1;
+endif
+
+set n = `echo $argv | grep version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+set PWD = `getpwdcmd`;
+if($status) exit 1;
+
+set StudyDir = `$PWD`;
+
+set SessList = `getsesspath $argv`;
+if($status || $#SessList == 0) then
+  getsesspath $argv 
+  exit 1;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+# get full path for cfg and info files #
+pushd $analysis > /dev/null;
+set analysisdir = `pwd`;
+popd > /dev/null;
+set cfgfile  = $analysisdir/analysis.cfg
+set infofile = $analysisdir/analysis.info
+if(! -e $infofile) then
+  echo "ERROR: cannot find $infofile"
+  exit 1;
+endif
+
+## Get parameters from the info file ##
+set fsd       = `cat $infofile | awk '{if($1 == "fsd") print $2}'`;
+set funcstem  = `cat $infofile | awk '{if($1 == "funcstem") print $2}'`;
+set parname   = `cat $infofile | awk '{if($1 == "parname") print $2}'`;
+set TRAnalysis = `cat $infofile | awk '{if($1 == "TR") print $2}'`;
+set tpexclude = `cat $infofile | awk '{if($1 == "tpexclude") print $2}'`;
+set runlistfile = `cat $infofile | awk '{if($1 == "runlistfile") print $2}'`;
+set designtype = `cat $infofile | awk '{if($1 == "designtype") print $2}'`;
+if($#designtype == 0) then
+  set designtype = `cat $infofile | awk '{if($1 == "avgtype") print $2}'`;
+endif
+
+if($designtype != retinotopy && $designtype != abblocked) then
+  echo "ERROR: type = $designtype, can only run sfa-sess "
+  echo "  on analysis types retinotopy and abblocked"
+  exit 1;
+endif
+
+if(! $nolog ) then
+  ##### Create a log file ######
+  set logdir = `pwd`/log;
+  mkdir -p $logdir
+  if(! -e $logdir) then
+    echo "WARNING: could not create $logdir"
+    set LF = /dev/null
+  else
+    set LF = $logdir/sfa-sess-$fsd-$analysis-$DateStr.log
+    if(-e $LF) mv $LF $LF.old
+  endif
+else
+  set LF = /dev/null
+endif
+
+echo "--------------------------------------------------------------"
+echo "sfa-sess logfile is $LF"
+echo "--------------------------------------------------------------"
+
+echo "sfa-sess log file" >> $LF
+echo $VERSION >> $LF
+id            >> $LF
+pwd           >> $LF
+echo $0     >> $LF
+echo $inputargs  >> $LF
+uname -a      >> $LF
+date          >> $LF
+
+### Go through each session ###
+foreach sess ($SessList)
+
+  set sessbase = `basename $sess`;
+  echo "-------------------------------------------" |& tee -a $LF
+  echo "$sess " |& tee -a $LF
+  date |& tee -a $LF
+
+  if(! -d $sess) then
+    echo "ERROR: $sess does not exist"   |& tee -a $LF
+    exit 1;
+  endif
+
+  cd $sess/$fsd
+  if($#runlistfile == 0) then
+    set RunList = `getrunlist .`;
+    if($status || $#RunList == 0) then
+      echo "ERROR: $sess/$fsd has no runs"  |& tee -a $LF
+      exit 1;
+    endif
+  else
+    if(! -e $runlistfile) then
+      echo "ERROR: ($sessbase) could not find runlistfile $runlistfile"
+      exit 1;
+    endif
+    set RunList = (`cat $runlistfile`);
+  endif
+
+
+  set TR = $TRAnalysis;
+  if($TR != $TRAnalysis) then
+    echo "ERROR: TR for $sessbase = $TR, Analysis TR = $TRAnalysis"
+    exit 1;
+  endif
+
+  # Create a local log file
+  mkdir -p $outdir$analysis
+  set LLF = $outdir$analysis/sfa-sess.log
+  if(-e $LLF) mv $LLF $LLF.bak
+
+  date | tee -a $LLF
+  uname -a | tee -a $LLF
+  echo "Sess $sess" | tee -a $LLF
+  echo "RunList $RunList" | tee -a $LLF
+
+  if($designtype == "abblocked") then
+    ##### ------------ AB-Blocked ----------------- #####
+    set instems = ();
+    foreach run ($RunList)  
+      set instem = $run/$funcstem
+      set instems = ($instems -i $instem);
+    end
+    set sfastem = $analysis/h;
+    if($#outdir) set sfastem = $outdir/$analysis/h;
+
+    # Build command line (need to do same for rtopy below)
+    set cmd = (selfreqavg)
+    set cmd = ($cmd -TR $TR -o $sfastem)
+    set cmd = ($cmd $instems -cfg $cfgfile)
+    if($parname != NONE) set cmd = ($cmd -parname $parname);
+    if($SynthSeed != 0)  set cmd = ($cmd -synth $SynthSeed);
+    echo "--------------------------------------------------" |& tee -a $LF
+    pwd |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    echo "--------------------------------------------------" |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) then
+      echo "ERROR: selfreqavg failed" |& tee -a $LF
+      exit 1;
+    endif
+    mkdir -p $analysis/avb
+    # Create the sig map #
+    #bfileconvert -i $sfastem -o $analysis/avb/sig -fp 0 -np 1 |& tee -a $LF
+    set cmd = (mri_convert $sfastem.$ext -o $outdir$analysis/avb/sig.$ext --frame 0)
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+    # Create the mean T2 image in the analysis directory #
+    # bfileconvert -i $sfastem -o $analysis/h-offset -fp 10 -np 1 |& tee -a $LF
+    set cmd = (mri_convert $sfastem.$ext -o $outdir$analysis/h-offset.$ext --frame 10)
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+    # Create the mag map #
+    set cmd = (mri_convert $sfastem.$ext -o $outdir$analysis/avb/mag.$ext --frame 12)
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+    # Create the phase map #
+    set cmd = (mri_convert $sfastem.$ext -o $outdir$analysis/avb/phase.$ext --frame  9)
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+  else
+    ##### ------------ Retinotopy ----------------- #####
+    set eccenstems = ();
+    set polarstems = ();
+    foreach run ($RunList)  
+      set instem = $run/$funcstem
+      set parfile = $run/$parname
+      if(! -e $parfile) then
+        echo "ERROR: cannot find $parfile" |& tee -a $LF | tee -a $LLF
+        exit 1;
+      endif
+      set stimtype = `cat $parfile | awk '{if($1 == "stimtype") print $2}'`;
+      if($stimtype != eccen && $stimtype != polar) then
+        echo "ERROR: $parfile appears to be incorrectly formatted"|& tee -a $LF | tee -a $LLF
+        exit 1;
+      endif
+      if($stimtype == eccen) then
+        set eccenstems = ($eccenstems -i $instem);
+      else
+        set polarstems = ($polarstems -i $instem);
+      endif
+    end
+
+    if($#eccenstems == 0) then
+      echo "ERROR: could not find any eccentricity runs" | tee -a $LLF
+      exit 1;
+    endif
+    if($#polarstems == 0) then
+      echo "ERROR: could not find any polar runs" | tee -a $LLF
+      exit 1;
+    endif
+
+    foreach type (eccen polar)
+      if($type == eccen) then
+        if($#eccenstems == 0) continue;
+        set instems = ($eccenstems);
+        set eccenflag = "-eccen";
+      else
+        if($#polarstems == 0) continue;
+        set instems = ($polarstems);
+        set eccenflag = ();
+      endif
+      set sfastem = $outdir$analysis/$type/h;
+
+      # Build command line (need to do same for abblocked above)
+      set cmd = (selfreqavg)
+      set cmd = ($cmd -TR $TR -o $sfastem $instems -cfg $cfgfile)
+      set cmd = ($cmd -parname $parname $eccenflag);
+      if($SynthSeed != 0)  set cmd = ($cmd -synth $SynthSeed);
+      echo "--------------------------------------------------" |& tee -a $LF | tee -a $LLF
+      pwd |& tee -a $LF | tee -a $LLF
+      echo $cmd |& tee -a $LF | tee -a $LLF
+      echo "--------------------------------------------------" |& tee -a $LF  | tee -a $LLF
+      $cmd |& tee -a $LF  | tee -a $LLF
+      if($status) then
+        echo "ERROR: selfreqavg failed" |& tee -a $LF  | tee -a $LLF
+        exit 1;
+      endif
+
+      # Create the mean T2 images in the eccen/polar directory #
+      set cmd = (mri_convert $sfastem.$ext -o $sfastem-offset.$ext --frame 10)
+      echo $cmd |& tee -a $LF  | tee -a $LLF
+      $cmd |& tee -a $LF | tee -a $LLF
+      if($status) exit 1;
+
+      # Extract the angle
+      set fname = $outdir$analysis/$type/angle.$ext
+      set cmd = (mri_convert $sfastem.$ext -o $fname --frame 9)
+      echo $cmd |& tee -a $LF  | tee -a $LLF
+      $cmd |& tee -a $LF | tee -a $LLF
+      if($status) exit 1;
+
+    end # type
+
+    # Create mean t2*-weighted vol in analysis directory #
+    set cmd = (mri_concat --mean \
+       $outdir$analysis/eccen/h-offset.$ext \
+       $outdir$analysis/polar/h-offset.$ext \
+       --o $outdir$analysis/h-offset.$ext)
+    $cmd |& tee -a $LF  | tee -a $LLF
+    if($status) then
+      echo "ERROR: mri_concat for mean image failed" |& tee -a $LF  | tee -a $LLF
+      echo $cmd |& tee -a $LF  | tee -a $LLF
+      pwd |& tee -a $LF  | tee -a $LLF
+      exit 1;
+    endif
+
+  endif  #------------- retinotopy ------------------#
+  echo "" >>  $LLF
+  date >>  $LLF
+  echo "done for this sessino" >>  $LLF
+
+
+end #--------- Loop over sessions ---------------#
+
+date |& tee -a $LF
+echo " "
+echo "sfa-sess COMPLETED" |& tee -a $LF
+echo " "
+
+exit 0;
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  if($debug) echo "flag $flag"
+  
+  switch($flag)
+
+    case "-a":
+    case "-analysis":
+      if ( $#argv == 0) goto arg1err;
+      set analysis = $argv[1]; shift;
+      breaksw
+
+    case "-synth":
+      if ( $#argv == 0) goto arg1err;
+      set SynthSeed = $argv[1]; shift;
+      breaksw
+
+    case "-outdir":
+      if ( $#argv == 0) goto arg1err;
+      set outdir = $argv[1]; shift;
+      mkdir -p $outdir
+      pushd $outdir > /dev/null
+      set outdir = `pwd`;
+      popd > /dev/null
+      set outdir = "$outdir/"
+      breaksw
+
+    case "-umask":
+      if ( $#argv == 0) goto arg1err;
+      umask $1; shift;
+      breaksw
+
+    case "-nolog":
+      set nolog = 1;
+      breaksw
+
+    case "-verbose":
+      set verbose = 1;
+      breaksw
+
+    case "-echo":
+      set echo = 1;
+      breaksw
+
+    case "-debug":
+      set debug = 1;
+      set debugopt = "-debug";
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-g":
+    case "-s":
+    case "-sf":
+    case "-d":
+    case "-df":
+      shift;
+      # ignore getsesspath arguments 
+      breaksw
+
+    case "-cwd":
+      # ignore getsesspath arguments 
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if ($#SessList == 0) then
+     echo "ERROR: no sessions specified"
+     exit 1
+  endif
+
+  if ($#analysis == 0) then
+     echo "ERROR: no analysis name specified"
+     exit 1
+  endif
+
+  if(! -d $analysis ) then
+    echo "ERROR: analysis $analysis does not exist, see mkanalysis-sess"
+    exit 1;
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo "USAGE: sfa-sess"
+  echo "Options:";
+  echo "   -analysis analysisname : name of session-level functional analysis"
+  echo "   -sf sessidfile  ..."
+  echo "   -df srchdirfile ..."
+  echo "   -s  sessid      ..."
+  echo "   -d  srchdir     ..."
+  echo "   -umask umask   : set unix file permission mask"
+  echo "   -version       : print version and exit"
+exit 1;

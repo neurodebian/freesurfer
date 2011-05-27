@@ -1,0 +1,403 @@
+#! /bin/csh -f
+
+#
+# spatialsmooth-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2010/04/10 00:12:20 $
+#    $Revision: 1.22 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: spatialsmooth-sess,v 1.22 2010/04/10 00:12:20 greve Exp $';
+
+set cmdargs = ($argv);
+
+set fsd     = "bold";
+set instem  = (); 
+set outstem = (); 
+set fwhm = ();
+set fwhm2d = ();
+set RunListFile = ();
+set UseMask = 1;
+set maskdir = masks
+set maskfile = brain
+set PerRun = 0; # only applies to mask
+
+set PrintHelp = 0;
+set UpdateOnly = 0;
+
+set infmt   = ();
+set outfmt  = nii
+if($?FSF_OUTPUT_FORMAT) then
+  set outfmt = $FSF_OUTPUT_FORMAT;
+endif
+
+set nolog = 0;
+set cleanup = 1;
+
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+  exit 1;
+endif
+
+set SessList = `getsesspath $argv`;
+if($status || $#SessList == 0) then
+  getsesspath $argv 
+  exit 1;
+endif
+
+goto parse_args;
+parse_args_return:
+goto check_params;
+check_params_return:
+
+set ProjectDir = `pwd`;
+
+#------------------------------------------------------------------#
+set StartTime = `date`;
+@ nthsess = 0;
+foreach sess ($SessList)
+  set sessid = `basename $sess`;
+  @ nthsess = $nthsess + 1;
+
+  # Create a log file #
+  if(-w . && ! $nolog) then
+    mkdir -p log
+    set LF = $ProjectDir/log/spatialsmooth-$sessid-$fsd.log
+    rm -f $LF
+  else
+    set LF = /dev/null
+  endif
+
+  echo "spatiallysmooth-sess" >> $LF
+  echo $VERSION   >> $LF
+  echo $sessid    >> $LF
+  uname -a        >> $LF
+  date            >> $LF
+  pwd             >> $LF
+  echo $0 $cmdargs >> $LF
+  echo "ProjectDir $ProjectDir" >> $LF
+
+  echo "------------------------------------------------" |& tee -a $LF
+  echo "------------------------------------------------" |& tee -a $LF
+  echo $sess |& tee -a $LF
+  date |& tee -a $LF
+
+  ### Check that the target directory is there ###
+  if(! -d $sess/$fsd) then
+    echo "ERROR: $sess/$fsd does not exist"   |& tee -a $LF
+    exit 1;
+  endif
+  pushd $sess/$fsd
+
+  set mask = ();
+  if(! $PerRun && $UseMask) then
+    set maskstem = $maskdir/$maskfile
+    set mask = `stem2fname $maskstem`      
+    if($status) then
+      echo "$mask"
+      echo "Try running mkbrainmask-sess"
+      exit 1;
+    endif
+  endif
+
+  if($#RunListFile == 0) then
+    set RunList = `getrunlist .`;
+    if($status || $#RunList == 0) then
+      echo "ERROR: $sess/$fsd has no runs"  |& tee -a $LF
+      exit 1;
+    endif
+  else  
+    if(! -e $RunListFile) then
+      echo "ERROR: cannot find $RunListFile"
+      exit 1;
+    endif
+    set RunList = (`cat $RunListFile`);
+  endif
+  echo "RunList $RunList" |& tee -a $LF
+
+  ## ---------- Go through each run ----------- ##
+  @ nthrun = 0;
+  foreach run ($RunList)
+    @ nthrun = $nthrun + 1;
+    echo "-------------------------------------------------"
+    echo "$nthsess/$#nthsess $sessid $nthrun/$#RunList $run `date`"
+    set infunc = `stem2fname $run/$instem`
+    if($status) then
+      echo "$infunc"
+      exit 1;
+    endif
+    if($UseMask && $PerRun) then
+      set maskstem = $run/$maskdir/$maskfile
+      set mask = `stem2fname $maskstem`      
+      if($status) then
+        echo "$mask" | tee -a $LF
+        echo "Try running mkbrainmask-sess with -per-run"
+        exit 1;
+      endif
+    endif
+    set outfunc = $run/$outstem.$outfmt
+
+    set UpdateNeeded = 0;
+    if(-e $outfunc && $UpdateOnly) then
+      test $infunc -nt $outfunc
+      if(! $status) set UpdateNeeded = 1;
+      if($UseMask) then
+        test $mask -nt $outfunc
+        if(! $status) set UpdateNeeded = 1;
+      endif
+    else
+      set UpdateNeeded = 1;
+    endif
+
+    if($UpdateNeeded == 0) then
+      echo "$sessid $run Update not needed" | tee -a $LF
+      continue
+    endif
+
+    set cmd = (mri_fwhm --i $infunc --o $outfunc --smooth-only) 
+    if($#fwhm)   set cmd = ($cmd --fwhm $fwhm); # 3D smoothing
+    if($#fwhm2d) set cmd = ($cmd --fwhmc $fwhm2d --fwhmr $fwhm2d);
+    if($UseMask) set cmd = ($cmd --mask $mask)
+    pwd   |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+
+  end # Loop over runs
+
+
+  popd > /dev/null
+
+end # Loop over sessions #
+
+echo "Started at $StartTime" |& tee -a $LF
+echo "Ended   at `date`"     |& tee -a $LF
+echo "spatiallysmooth-sess Done" |& tee -a $LF
+
+exit 0;
+###############################################
+
+
+############--------------##################
+parse_args:
+set cmdline = "$argv";
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-i":
+      if ( $#argv == 0) goto arg1err;
+      set instem = $argv[1]; shift;
+      breaksw
+
+    case "-o":
+      if ( $#argv == 0) goto arg1err;
+      set outstem = $argv[1]; shift;
+      breaksw
+
+    case "-fwhm":
+      if ( $#argv == 0) goto arg1err;
+      set fwhm = $argv[1]; shift;
+      breaksw
+
+    case "-fwhm2d":
+      if ( $#argv == 0) goto arg1err;
+      set fwhm2d = $argv[1]; shift;
+      breaksw
+
+    case "-fsd":
+      if ( $#argv == 0) goto arg1err;
+      set fsd = $argv[1]; shift;
+      breaksw
+
+    case "-rlf":
+      if ( $#argv == 0) goto arg1err;
+      set RunListFile = $argv[1]; shift;
+      breaksw
+
+    case "-fmt":
+    case "-outfmt":
+      if($#argv < 0) goto arg1err;
+      set outfmt = $argv[1]; shift;
+      breaksw
+
+    case "-mask":
+      set UseMask = 1;
+      breaksw
+
+    case "-no-mask":
+      set UseMask = 0;
+      breaksw
+
+    case "-per-run":
+    case "-perrun":
+      set PerRun = 1;
+      breaksw
+
+    case "-per-sess":
+    case "-per-session":
+    case "-no-per-run":
+    case "-noperrun":
+      set PerRun = 0;
+      breaksw
+
+    case "-update":
+      set UpdateOnly = 1;
+      breaksw
+
+    case "-nolog":
+      set nolog = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-g":
+    case "-s":
+    case "-sf":
+    case "-d":
+    case "-df":
+      shift;
+      # ignore getsesspath arguments 
+      breaksw
+
+    case "-cwd":
+      # ignore getsesspath arguments 
+      breaksw
+
+    case "-umask":
+      if ( $#argv == 0) goto arg1err;
+      setenv MRI_UMASK $1; shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#SessList == 0) then
+    echo "ERROR: no sessions specified"
+    exit 1
+  endif
+  if($#instem == 0) then
+    echo "ERROR: no input specified"
+    exit 1
+  endif
+  if($#outstem == 0) then
+    echo "ERROR: no output specified"
+    exit 1
+  endif
+
+  if($#fwhm == 0 && $#fwhm2d == 0) then
+    echo "ERROR: no FWHM specified"
+    exit 1
+  endif
+  if($#fwhm != 0 && $#fwhm2d != 0) then
+    echo "ERROR: cannot specify both -fwhm and -fwhm2d"
+    exit 1
+  endif
+
+  if($PerRun && ! $UseMask) then
+    echo "ERROR: -per-run only needed with -mask"
+    exit 1;
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: spatialsmooth-sess"
+  echo ""
+  echo "Required Arguments"
+  echo "   -i instem      : input  functional volume stem "
+  echo "   -o outstem     : output functional volume stem "
+  echo "   -fwhm          : gaussian fwhm (sigma = fwhm/2.36)"
+  echo "   -fwhm2d        : in-plane smoothing"
+  echo ""
+  echo "Session Arguments (Required)"
+  echo "   -sf sessidfile  "
+  echo "   -df srchdirfile "
+  echo "   -s  sessid      "
+  echo "   -d  srchdir     "
+  echo "   -fsd fsdir      (optional)"
+  echo ""
+  echo "Other Arguments"
+  echo "   -update         : only run if input is newer than output"
+  echo "   -no-mask        : do not mask smoothing"
+  echo "   -per-run        : use per-run mask (default is session-level)"
+  echo "   -outfmt format  : nii, mgh, nii.gz, etc. Default nii."
+  echo ""
+  echo "   -version        : print version and exit"
+  echo "   -nolog          : do create a log file"
+  echo "   -help           : print help and exit"
+  echo ""
+
+  if(! $PrintHelp ) exit 1;
+  echo " "
+  echo "$VERSION "
+  echo " "
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+This program performs 3D gaussian spatial smoothing. It will operate
+on the input volume in each run. The output volume will be placed in
+the same directory. FWHM is the full-width, half-maximum of the
+spatial filter.
+
+Example:
+
+spatialsmooth-sess -s sessid -d sessdir -i fmc -o fmcsm5 -fwhm 5
+
+This will smooth the motion corrected volume with a gaussian kernel
+with FWHM of 5 mm. The result will be placed in the volume
+fmcsm5. This is the stem that should be referenced when creating the
+anlysis. It will also automatically run intensity normalization (ie,
+inorm-sess) for the smoothed volume unless -noinorm is specified.
+
+
+
+exit 1;

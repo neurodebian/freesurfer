@@ -1,0 +1,363 @@
+#! /bin/csh -f
+
+#
+# func2tal-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2007/01/09 22:41:17 $
+#    $Revision: 1.5 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: func2tal-sess,v 1.5 2007/01/09 22:41:17 nicks Exp $';
+
+set res = ();
+set analysis    = ();
+set ScriptOnly = 0;
+set umaskarg = ();
+set spacedir = tal;
+set xfmfile = talairach.xfm
+set fixxfm = 1;
+set nolog = 0;
+
+if($#argv == 0) then
+  goto usage_exit;
+  exit 1;
+endif
+
+set n = `echo $argv | grep version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+set SessList = `getsesspath $argv`;
+if($status || $#SessList == 0) then
+  echo "ERROR: cannot find any sessions"
+  exit 1;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+##### Create a log file ######
+if($nolog) then
+  set LF = /dev/null
+else
+  set logdir = `pwd`/log;
+  mkdir -p $logdir
+  if(! -e $logdir) then
+    echo "INFO: Could not create $logdir"
+    set LF = /dev/null
+  else
+    set LF = $logdir/func2tal-sess.log
+    if(-e $LF) mv $LF $LF.old
+  endif
+endif
+
+echo "--------------------------------------------------------------"
+echo "func2tal-sess logfile is $LF"
+echo "--------------------------------------------------------------"
+
+
+echo "fucn2tal-sess log file" >> $LF
+echo $VERSION   >> $LF
+echo $0     >> $LF
+echo $argv  >> $LF
+pwd           >> $LF
+uname -a      >> $LF
+date          >> $LF
+id            >> $LF
+which func2tal >> $LF
+echo "xfmfile: $xfmfile" >> $LF
+
+## Get functional subdirectory from the info file ##
+set infofile = $analysis/analysis.info
+if(! -e $infofile) then
+  echo "ERROR: cannot find $infofile"
+  exit 1;
+endif
+set fsd = `cat $analysis/analysis.info | awk '{if($1 == "fsd") print $2}'`;
+set designtype = `cat $infofile | awk '{if($1 == "designtype") print $2}'`;
+if($#designtype == 0) then
+  set designtype = `cat $infofile | awk '{if($1 == "avgtype") print $2}'`;
+endif
+
+foreach sess ($SessList)
+
+  echo "-----------------------------------------------------" |& tee -a $LF
+  echo "-----------------------------------------------------" |& tee -a $LF
+  echo "Session: $sess " |& tee -a $LF
+  date |& tee -a $LF
+
+  # Make sure the Session Dir exists (redundant) ##
+  if(! -d $sess) then
+    echo "ERROR: $sess does not exist"   |& tee -a $LF
+    exit 1;
+  endif
+
+  ## Go to the functional subdirectory for the session ##
+  pushd $sess/$fsd > /dev/null
+  df . |& tee -a $LF  
+
+  ## Make sure there is a register.dat ##
+  set regfile = register.dat
+  if(! -e $regfile ) then
+    echo "ERROR ($sess): no $regfile file found" |& tee -a $LF
+    exit 1;
+  endif
+  echo "---------- register file -----------" |& tee -a $LF
+  echo $regfile |& tee -a $LF  
+  cat $regfile |& tee -a $LF
+  echo "------------------------------------" |& tee -a $LF
+
+  # If retinotopy, scroll through both eccen and polar #
+  if("$designtype" != "retinotopy") then
+    set list = (dummy)
+  else
+    set list = (eccen polar)
+  endif
+
+  foreach item ($list)
+    if("$designtype" != "retinotopy") then
+      set funcstem = $analysis/h
+      set talstem  = $analysis/$spacedir/h
+    else
+      set funcstem = $analysis/$item/h
+      set talstem  = $analysis/$spacedir/$item/h
+    endif
+
+    ## Create the command line ###
+    set cmd = (func2tal $umaskarg -funcstem $funcstem )
+    set cmd = ($cmd -talstem $talstem -res $res -reg $regfile)
+    set cmd = ($cmd -xfm $xfmfile);
+    if($fixxfm) set cmd = ($cmd -fixxfm);
+    pwd |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) then
+      echo "ERROR ($sess): func2tal" | tee -a $LF
+      exit 1;
+    endif
+
+    if("$designtype" == "abblocked") then
+      # Create the sig map #
+      bfileconvert -i $talstem -o $analysis/$spacedir/avb/sig -fp 0 -np 1 \
+          |& tee -a $LF
+      if($status) then
+        echo "ERROR: bfileconvert for sig map failed" |& tee -a $LF
+        exit 1;
+      endif
+      # Create the h-offset #
+      bfileconvert -i $talstem -o $talstem-offset -fp 10 -np 1 \
+          |& tee -a $LF
+      if($status) then
+        echo "ERROR: bfileconvert for hoffset failed" |& tee -a $LF
+        exit 1;
+      endif
+    endif
+
+  end
+
+  if("$designtype" == "retinotopy") then
+    # Create mean T2 in analysis directory #
+    meanimg -i $analysis/$spacedir/eccen/h-offset \
+            -i $analysis/$spacedir/polar/h-offset \
+            -o $analysis/$spacedir/h-offset   
+    if($status) then
+      echo "ERROR: meanimg for mean image failed" |& tee -a $LF
+      exit 1;
+    endif
+    cp $analysis/$spacedir/eccen/register.dat $analysis/$spacedir/register.dat
+  endif
+
+  popd > /dev/null
+  echo " " |& tee -a $LF
+  echo " "
+
+end
+echo "-----------------------------------------------------" |& tee -a $LF
+
+date | tee -a $LF
+echo "func2tal-sess completed SUCCESSFULLY" | tee -a $LF
+echo " "
+echo " "
+
+exit 0;
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = "$argv";
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-a":
+    case "-analysis":
+      if ( $#argv == 0) goto arg1err;
+      set analysis = $argv[1]; shift;
+      breaksw
+
+    case "-spacedir":
+      if ( $#argv == 0) goto arg1err;
+      set spacedir = $argv[1]; shift;
+      breaksw
+
+    case "-res":
+      if ( $#argv == 0) goto arg1err;
+      set res = $argv[1]; shift;
+      breaksw
+
+    case "-xfm":
+      if ( $#argv == 0) goto arg1err;
+      set xfmfile = $argv[1]; shift;
+      breaksw
+
+    case "-fixxfm":
+      set fixxfm = 1;
+      breaksw
+
+    case "-nofixxfm":
+      set fixxfm = 0;
+      breaksw
+
+    case "-sd":
+      if ( $#argv == 0) goto arg1err;
+      setenv SUBJECTS_DIR $argv[1]; shift;
+      if( ! -e $SUBJECTS_DIR) then
+        echo "ERROR: $SUBJECTS_DIR does not exist"
+        exit 1;
+      endif
+      breaksw
+
+    case "--version":
+    case "-version":
+      echo $VERSION
+      exit 0;
+      breaksw
+
+    case "-umask":
+      if ( $#argv == 0) goto arg1err;
+      set umaskarg = "-umask $argv[1]";
+      umask $argv[1]; shift;
+      breaksw
+
+    case "-nolog":
+      set nolog = 1;
+      umask 0; # probably want this with nolog
+      breaksw
+
+    case "-verbose":
+      set verbose = 1;
+      breaksw
+
+    case "-echo":
+      set echo = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-scriptonly":
+      set ScriptOnly = 1;
+      breaksw
+
+    case "-cwd":
+      breaksw
+
+    case "-g":
+    case "-sf":
+    case "-s":
+    case "-df":
+    case "-d":
+      # ignore getsesspath arguments 
+      shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if ($#SessList == 0) then
+     echo "ERROR: no sessions specified"
+     exit 1
+  endif
+
+  if ($#analysis == 0) then
+     echo "ERROR: no analysis name specified"
+     exit 1
+  endif
+
+  if($#res == 0) then
+    echo "ERROR: no talairach resolution specified"
+    exit 1;
+  endif
+  if($res != 1 && $res != 2 && $res != 4 && $res != 8) then
+    echo "ERROR: res = $res, must be either 1, 2, 4, 8";
+    exit 1;
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: func2tal-sess"
+  echo ""
+  echo "Required Arguments:";
+  echo "   -res mm : talairach resolution in mm (1,2,4,8)"
+  echo "   -analysis analysisname : name of session-level functional analysis"
+  echo ""
+  echo "Optional Arguments:";
+  echo "   -spacedir dir  : default is tal"
+  echo "   -xfm xfmfile   : xfm file relative to subjid/mri/transforms"
+  echo "   -umask umask   : set unix file permission mask"
+  echo "   -version       : print version and exit"
+  echo ""
+  echo "Session Arguments (Required):";
+  echo "   -sf sessidfile  "
+  echo "   -df srchdirfile "
+  echo "   -s  sessid      "
+  echo "   -d  srchdir     "
+  echo ""
+exit 1;

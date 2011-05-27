@@ -1,0 +1,529 @@
+#! /bin/tcsh -f
+
+#
+# grad_unwarp - convert, unwarp, and resample dicom files
+#
+# Original Author: REPLACE_WITH_FULL_NAME_OF_CREATING_AUTHOR
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.14 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+
+set VERSION = '$Id: grad_unwarp,v 1.14 2011/03/02 20:16:39 nicks Exp $';
+
+set inputargs = ($argv);
+
+#set matlab = "/usr/pubsw/bin/matlab6.5"
+#set matlab = "/space/lyon/6/pubsw/common/matlab/6.5/bin/matlab"
+set matlab = matlab
+
+set infile = ();
+set seriesno = 0;
+set corfovflag = 0;
+set unwarpflag = 0;
+set jacflag = 1;
+set outfile = ();
+set unwarptype = ();
+set outcor = 0;
+set noscaleflag = 0;
+set interp_method = "cubic";
+set ebethdev = 0;
+set mydev = 0;
+
+set PrintHelp = 0;
+set MLF = ();
+set monly = 0;
+
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | egrep -e -version | wc -l`
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+set n = `echo $argv | egrep -e -help | wc -l`
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+##### Create a log file ######
+set logdir = $outdir;
+mkdir -p $logdir
+if(! -e $logdir) then
+  echo "WARNING: could not create $logdir"
+  set LF = /dev/null
+else
+  set LF = $logdir/grad_unwarp.log
+  if(-e $LF) mv $LF $LF.old
+endif
+echo "--------------------------------------------------------------"
+echo "grad_unwarp logfile is $LF"
+echo "--------------------------------------------------------------"
+
+echo "grad_unwarp log file" >> $LF
+echo $VERSION >> $LF
+id            >> $LF
+pwd           >> $LF
+echo $0         >> $LF
+echo $inputargs >> $LF
+uname -a        >> $LF
+date            >> $LF
+
+set StartTime = `date`;
+
+if($#MLF == 0) set MLF = /tmp/grad_unwarp_$$.m
+rm -f $MLF
+echo "INFO: matlab file is $MLF"
+
+if($outcor) then
+  set outfileuse = $outdir/grad_unwarp_$$.mgh
+else
+  set outfileuse = $outfile
+endif
+
+if($ebethdev) then
+  setenv DEV /space/lyon/1/fsdev/work/ebeth/dev
+  echo "INFO: using DEV = $DEV"
+else if($mydev) then
+  echo "INFO: using DEV = $DEV"
+else
+  setenv DEV $FREESURFER_HOME
+  echo "INFO: using DEV = $DEV"
+endif
+
+#-----------------------------------------------------------#
+tee $MLF <<EOF
+
+addpath $DEV/matlab
+
+infile     = '$infile';
+seriesno   = [$seriesno];
+outfile    = '$outfileuse';
+
+unwarpflag = [$unwarpflag];
+jacflag    = [$jacflag];
+corfovflag = [$corfovflag];
+
+interp_method = '$interp_method';
+unwarptype = '$unwarptype';
+
+QuitOnError = [~$monly];
+
+convert_unwarp_resample(infile,seriesno,outfile,corfovflag,unwarpflag,jacflag,interp_method,unwarptype,QuitOnError); % 1 = run from script, for qoe
+
+EOF
+#-----------------------------------------------------------#
+
+if(! $monly ) then
+  if( -e $outfileuse) then
+    echo "INFO: $outfileuse exists ... deleting"
+    rm -f $outfileuse
+  endif
+  echo "INFO: using matlab installation $matlab"
+  cat $MLF | $matlab -display iconic | tee -a $LF
+  rm $MLF
+  if(! -e $outfileuse) then
+    echo "ERROR: output file not created"
+    exit 1;
+  endif
+  if($outcor) then
+    set cmd = (mri_convert --no_scale $noscaleflag $outfileuse $outdir)
+    $cmd
+    if($status) then
+      echo "ERROR: $cmd " | tee -a $LF
+      exit 1;
+    endif
+    rm -f $outfileuse
+  endif
+endif
+
+echo " " | tee -a $LF
+echo "Started at $StartTime " | tee -a $LF
+echo "Ended   at `date`" | tee -a $LF
+echo " " | tee -a $LF
+
+
+echo "grad_unwarp Done"
+echo " "
+
+exit 0;
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+
+  switch($flag)
+
+    case "-i":
+      if ( $#argv == 0) goto arg1err;
+      set infile = $argv[1]; shift;
+      breaksw
+
+    case "-s":
+      if ( $#argv == 0) goto arg1err;
+      set seriesno = $argv[1]; shift;
+      breaksw
+
+    case "-interp":
+      if ( $#argv == 0) goto arg1err;
+      set interp_method = $argv[1]; shift;
+##       if($interp_method != "cubic"   && $interp_method != "linear" &&\
+##          $interp_method != "nearest" && $interp_method != "spline" &&\
+##          $interp_method != "sinc" &&\
+## 	 $interp_method != "*cubic"   && $interp_method != "*linear" &&\
+##          $interp_method != "*nearest" && $interp_method != "*spline" &&\
+##          $interp_method != "*sinc") then
+##          echo "ERROR: interp = $interp_method, must be "
+##          echo "   cubic, nearest, linear, spline, or sinc"
+##          exit 1;
+##       endif
+      breaksw
+
+    case "-unwarp":
+      set unwarpflag = 1;
+      # did user supply an unwarp type? check for '-' on next arg:
+      if ( $#argv == 0) breaksw;
+      set isarg = `perl -e "print ('$argv[1]' =~ /^[^-]/)"`;
+      if ( $isarg ) then
+        set unwarptype = $argv[1]; shift;
+      endif
+      breaksw
+
+    case "-jac":
+      set jacflag = 1;
+      breaksw
+
+    case "-nojac":
+      set jacflag = 0;
+      breaksw
+
+    case "-corfov":
+      set corfovflag = 1;
+      breaksw
+
+    case "-cor":
+      set outcor = 1;
+      breaksw
+
+    case "-noscale":
+      set noscaleflag = "1 --no_conform";
+      # Minor kludge - want to invoke mri_convert --no_scale 1 --no_conform
+      # so that out_data_type = in_data_type - conform itself is redundant.
+      breaksw
+
+    case "-ebethdev":
+      set ebethdev = 1;
+      breaksw
+
+    case "-mydev":
+      set mydev = 1;
+      breaksw
+
+    case "-o":
+      if ( $#argv == 0) goto arg1err;
+      set outfile = $argv[1]; shift;
+      breaksw
+
+    case "-monly":
+      if ( $#argv == 0) goto arg1err;
+      set MLF = $argv[1]; shift;
+      set monly = 1;
+      breaksw
+
+    case "-matlab":
+      if ( $#argv == 0) goto arg1err;
+      set matlab = $argv[1]; shift;
+      breaksw
+
+    case "-verbose":
+      set verbose = 1;
+      breaksw
+
+    case "-echo":
+      set echo = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-umask":
+      if ( $#argv == 0) goto arg1err;
+      umask $1; shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized.
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#infile == 0) then
+    echo "ERROR: must specify infile (dcmdir, dcmfile, mghfile)"
+    exit 1;
+  endif
+
+  if(! -e $infile) then
+    echo "ERROR: cannot find $infile"
+    exit 1;
+  endif
+
+  if($#outfile == 0) then
+    echo "ERROR: must specify an output "
+    exit 1;
+  endif
+
+  if($outcor) then
+    set outdir = $outfile
+  else
+    set outdir = `dirname $outfile`;
+  endif
+
+  mkdir -p $outdir
+  if(! -e $outdir) then
+    echo "ERROR: could not create $outdir"
+    exit 1;
+  endif
+
+# matlab code checks for:
+# -i dcmdir and no -s seriesno,
+# -i foo.mgh -unwarp and no unwarptype
+# We don't here.
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: grad_unwarp"
+  echo ""
+  echo "   -i infile   : dcmdir or dcmfile or mghfile"
+  echo "   -s seriesno : dicom series - needed only if invoking -i dcmdir"
+  echo "   -unwarp <type>   : gradient unwarping"
+  echo "                    : Optional type is the gradient unwarping displacements"
+  echo "                    : map to use - supply either scanner gradient model (sonata,"
+  echo "                    : allegra, brm, crm) or map filename.  (BRM is GE like"
+  echo "                    : UCSD's 1.5T; CRM is GE like MGH Bay 1, BWH-GE, Duke-GE.)"
+  echo "                    : If unwarping an mgh volume, user _must_ supply a type."
+  echo "   -nojac   : don't do jacobian correction when unwarping"
+  echo "   -corfov  : resample to cor FOV (bug: recenters volume on (0,0,0))"
+  echo "   -cor     : save as COR format instead of mgh (you should use -corfov as well)"
+#   echo "   -noscale : if converting to COR format, this tells mri_convert to not"
+#   echo "            : scale output to 0-255 (invokes it --no_scale 1 --no_conform)"
+  echo "   -interp  : method (<cubic>,linear,nearest,spline)"
+  echo "   -o outfile  : MGH formatted by default (unless -cor is specified)"
+  echo "   -matlab matlab_binary  : default is /space/lyon/6/pubsw/common/matlab/6.5/bin/matlab"
+  echo "                          : grad_unwarp needs at least version 6.5 to handle the long."
+  echo "                          : filenames.  And this installation has crucial dicom patches."
+  echo "   -version : print version string"
+  echo "   -help    : print help text"
+  echo ""
+
+  if($PrintHelp) \
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+# deleted from help text because -noscale probably doesn't work:
+#
+# A COR-format volume is typically 256^3 1mm^3 uchar.  If for some
+# reason you wish to avoid the histogramming rescale-to-uchar
+# (intensity values 0-255), invoke grad_unwarp -cor -corfov -noscale,
+# which means the mri_convert --out_type cor will be invoked
+# --no_scale 1 --no_conform (since you ran -corfov, your volume is
+# already geometrically conformed; mri_convert will further "conform"
+# it to type uchar unless restrained).
+
+# deleted from help text because I FIXED convert_unwarp_resample.m!!
+#
+# Exception-to-the-exception: at the moment, -corfov resamples to the
+# 256^3 1mm^3 FOV centered on scanner isocenter (0,0,0) (understand,
+# voxel-in-scanner coordinates are still correct).  Therefore, if you
+# want to be able to do a voxel-by-voxel comparison of cor-format
+# dewarped and nondewarped versions of your volume, run both with
+# grad_unwarp -cor -corfov.  This way, they will both be in the same
+# space.  If they do not have to be in cor format, mri_convert (-zgez if
+# GE) to mgh (no interpolation takes place) and run the dewarper on
+# that.
+#
+#   This nonrecentering behavior is likely to change soon, i.e. in the
+#   next week or month.
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+grad_unwarp - convert, dewarp, and resample dicom files to mgh files and stuff.
+
+
+CONVERT
+
+As a dicom-to-mgh converter, grad_unwarp has serious disadvantages.
+Its engine is matlab code: each instance of it requires not only a
+license but also an Image Toolbox license.  In related news, it is
+much slower than mri_convert --in_type dicom --out_type mgh.
+
+The advantages of grad_unwarp re converting are minor.
+
+For GE volumes, grad_unwarp knows to correct for the GE-Z-offset bug
+(after the FOV is selected, all GE machines of which I am aware move
+the table to center the FOV along the Z axis; the dicom files reflect
+the old coordinates, whereas c_s should be set to 0.0).  As of version
+1.58 (2003/08/25), this behavior is not automatic in mri_convert, but
+can and should be forced by invoking it -zgez or --zero_ge_z_offset.
+Otherwise any dewarp done on that mgh file will be incorrect.
+
+Another advantage is that it is probably correct.  WARNING: when
+loading dicom volumes, grad_unwarp and mri_convert differ by
+half-voxels in the c_ras (and vox2ras transform matrix) they
+calculate.  It has yet to be determined which code is incorrect.  If
+you need to "match" mri_convert output in some way, by all means use
+mri_convert to convert from dicom to mgh and then do your dewarping
+(and cor resample if any) with grad_unwarp.
+
+grad_unwarp -i dicomfile -o mghfile
+grad_unwarp -i dicomdir -s series -o mghfile
+grad_unwarp -i dicomfile -cor -o cordir
+grad_unwarp -i dicomdir -s series -cor -o cordir
+
+grad_unwarp converts to cor by calling mri_convert at the end.  If you
+were running grad_unwarp -unwarp -cor, be sure to add -corfov to avoid
+having two interpolation stages.  (See RESAMPLE below for details.)
+
+
+DEWARP
+
+grad_unwarp is unsurpassed as a dewarper tool, in that it exists.
+
+There are four gradient-coil types supported at the moment: GE BRM, GE
+CRM, Siemens Sonata/Trio, Siemens Allegra.  For each of these, there
+is a large file somewhere that is an offsets table - for outvol voxel
+here, look there in invol.  Interpolation in the offsets table is
+trilinear; interpolation in the input volume may be specified by the
+user with -interp foo.  Default is cubic.
+
+There are three ways to use -unwarp <type>.
+
+  (1) If you are using dicom files from a machine we have met, no type
+  need be supplied: grad_unwarp works it out from the dicom headers.
+  For Siemens, it is sufficient to find ManufacturersModelName
+  "sonata" or "allegra" in the headers.  For GE, unfortunately, there
+  is no such notation about gradient system in the dicom headers, so
+  we resort to ScannerSerialNumber.  This is often not set, so we
+  check the (InstitutionName, StationName) pair.
+
+  For dewarping an mgh volume, the user must always specify an unwarp
+  <type>.
+
+  (2) FYI, one may also supply a full pathname to some offsets file of
+  choice.
+
+  (3) The specifically-supported choices are "sonata" "trio" "allegra"
+  "brm" and "crm" (case insensitive).  The 1.5T GE scanner at UCSD has
+  the BRM gradient coil.  The 1.5T GE scanners at BWH, Duke and
+  MGH-Bay1 have CRM.  MGH-Bay2 is a Sonata.
+
+  A MatLab routine works out a path and filename for the dewarping
+  table from this whatever it finds with getenv('DEV').  grad_unwarp
+  has setenv DEV to your current $FREESURFER_HOME directory.
+
+  (Note for developers: to have it use your personal $DEV directory
+  instead, invoke grad_unwarp -mydev.  The matlab session will be sent
+  "addpath $DEV/matlab" and your matlab routines will be called and
+  your gradwarp tables used - possibly depending on your cwd: in
+  matlab, dot may be in your path)
+
+A jacobian brightness correction is applied by default - areas of the
+image that spread out (increase in volume) should dim (decrease in
+intensity).  If for some reason you wish to skip that step, use the
+-nojac switch.
+
+
+RESAMPLE
+
+-cor invokes mri_convert to cor at the end.  If you are dewarping and
+you use -cor, you should also use -corfov.  This will ensure that the
+resampling to cor does not happen in a separate stage from the dewarp
+resampling.  If you are not dewarping, (you probably should not be
+using grad_unwarp in the first place, but) there is only one resample
+being done, so there is no reason not to let mri_convert do it.
+
+FYI, the time a dewarp and/or resample takes increases with number of
+voxels in the output volume, so in general when grad_unwarp is writing
+to COR, it takes about twice as long as mgh.  (mri_convert probably
+takes twice as long as well, but still quick.)
+
+Okay, here is the weirdest resampling behavior, although this is
+really a paragraph about mri_convert.  (1) When you use mri_convert to
+resample and convert to COR format (which involves a semimystical,
+ultraclever, histogramming resample to type uchar), you get a fine
+uchar COR output volume.  (2) When you use mri_convert in two stages -
+one to resample to COR FOV but save as e.g. float mgh and a second to
+do the conversion to COR format (with the histogramming resample to
+uchar) - this produces different results compared with (1), brighter
+by 5-15 out of 0-255.  Default interpolation, trilinear
+("interpolate"), was used.
+
+Path (1):
+ $ mri_convert -i infile.mgh -o outvol/
+
+Path (2):
+ $ mri_convert -odt float -oic 256 -ojc 256 -okc 256 -ois 1 -ojs 1 -oks 1 -oid -1 0 0 -ojd 0 0 -1 -okd 0 1 0 -i infile.mgh -o tmpfile.mgh
+ $ mri_convert -i tmpfile.mgh -o outvol/
+
+Since grad_unwarp -corfov -cor does the COR FOV resample in matlab and
+then calls mri_convert to do the COR format change and rescale, it is
+not too surprising that the results agree much more closely with path
+(2) above.  (Of voxels where the intensity value in both volumes was
+over 10, the nonmatching fraction was 4.9213e-04; all of those
+nonmatches were by +-1.)
+
+(In other news, cor-resample volume-centering is working as of
+convert_unwarp_resample.m version 1.6 (grad_unwarp version 1.7).  This
+means that the output volume will have the same c_ras as the input
+volume.  Previously, c_ras = (0,0,0) was used, so the volume was
+centered around scanner isocenter, and the brain was typically
+off-center (though I never saw one so off-center as to go at all out
+of the FOV).  The vox2ras matrix was _correct_, i.e. it told you where
+your voxel was with respect to the scanner, so this was no problem for
+gradient dewarping.)
+

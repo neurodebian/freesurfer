@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE help [
+<!ENTITY lt "#38;#60;">
+<!ENTITY gt "&#62;">
+<!ENTITY amp "&#38;#38;">
+<!ELEMENT help (name , synopsis , description , arguments+ , outputs* , example* , bugs* , reporting* , see-also*)*>
+<!ELEMENT name (#PCDATA)>
+<!ELEMENT synopsis (#PCDATA)>
+<!ELEMENT description (#PCDATA)>
+<!ELEMENT arguments (positional* , required-flagged* , optional-flagged*)*>
+<!ELEMENT positional (intro* , argument* , explanation*)*>
+<!ELEMENT required-flagged (intro* , argument* , explanation*)*>
+<!ELEMENT optional-flagged (intro* , argument* , explanation*)*>
+<!ELEMENT intro (#PCDATA)>
+<!ELEMENT argument (#PCDATA)>
+<!ELEMENT explanation (#PCDATA)>
+<!ELEMENT outputs (output* , explanation*)*>
+<!ELEMENT output (#PCDATA)>
+<!ELEMENT example (#PCDATA)>
+<!ELEMENT bugs (#PCDATA)>
+<!ELEMENT reporting (#PCDATA)>
+<!ELEMENT see-also (#PCDATA)>
+]>
+
+<help>
+	<name>mris_anatomical_stats</name>
+	<synopsis>mris_anatomical_stats [options] &lt;subjectname&gt; &lt;hemi&gt; [&lt;surfacename&gt;]</synopsis>
+	<description>This program computes a number of anatomical properties.</description>
+  <arguments>
+    <positional>
+      <argument>&lt;subjectname&gt;</argument>
+      <explanation>subject name</explanation>
+      <argument>&lt;hemi&gt;</argument>
+      <explanation>hemisphere</explanation>
+    </positional>
+    <required-flagged>
+      <intro>None.</intro>
+    </required-flagged>
+    <optional-flagged>
+      <argument>-i &lt;low thresh&gt; &lt;hi thresh&gt;</argument>
+      <explanation>only consider thicknesses in the specified range.</explanation>
+      <argument>-l &lt;label file&gt;</argument>
+      <explanation>limit calculations to specified label</explanation>
+      <argument>-t &lt;thickness file&gt;</argument>
+      <explanation>use specified file for computing thickness statistics</explanation>
+      <argument>-a &lt;annotation file&gt;</argument>
+      <explanation>compute properties for each label in the annotation file separately</explanation>
+      <argument>-b</argument>
+      <explanation>tabular output</explanation>
+      <argument>-f &lt;tablefile&gt;</argument>
+      <explanation>table output to tablefile (different format than -b). Must use -a or -l options to spec input.</explanation>
+      <argument>-log &lt;logfile&gt;</argument>
+      <explanation>Write stats to file named log</explanation>
+      <argument>-nsmooth &lt;#&gt;</argument>
+      <explanation>Smooth thicknessmap # of iterations before using it</explanation>
+      <argument>-c &lt;ctab file&gt;</argument>
+      <explanation>Output annotation files's colortable to text file</explanation>
+    </optional-flagged>
+  </arguments>
+  <outputs>
+    <output>Structure Name</output>
+    <output>Number of Vertices</output>
+    <explanation>unitless</explanation>
+    <output>Surface Area</output>
+    <explanation>mm^2, total surface area</explanation>
+    <output>Gray Matter</output>
+    <explanation>Volume mm, total gray matter volume</explanation>
+    <output>Average Thickness</output>
+    <explanation>mm, average cortical thickness</explanation>
+    <output>Thickness Std Dev</output>
+    <explanation>mm, +- standard error (mm)</explanation>
+    <output>Integrated Rectified Mean Curvature</output>
+    <explanation>mm^-1</explanation>
+    <output>Integrated Rectified Gaussian Curvature</output>
+    <explanation>mm^-2</explanation>
+    <output>Folding Index</output>
+    <explanation>unitless, a la Van Essen</explanation>
+    <output>Intrinsic Curvature Index</output>
+    <explanation>unitless, a la Van Essen</explanation>
+  </outputs>
+	<example>mris_anatomical_stats -a subjid/label/lh.aparc.annot -b subjid lh</example>
+  <reporting>Report bugs to &lt;freesurfer@nmr.mgh.harvard.edu&gt;</reporting>
+	<see-also>mris_curvature_stats</see-also>
+</help>
+

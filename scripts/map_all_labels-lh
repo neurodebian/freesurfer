@@ -1,0 +1,28 @@
+#! /bin/tcsh -ef
+
+#
+# map_all_labels-lh
+#
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.3 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+set ddir=$SUBJECTS_DIR/$1/label
+foreach hemi (lh)
+		foreach label (avg_superior_temporal_sulcus avg_central_sulcus avg_calcarine_sulcus)
+				mris_spherical_average -o $1 label ${hemi}-${label} $hemi sphere.reg average7 $ddir/${hemi}-${label}
+		end
+end

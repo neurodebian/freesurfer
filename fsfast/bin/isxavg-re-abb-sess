@@ -1,0 +1,382 @@
+#! /bin/csh -f
+
+#
+# isxavg-re-abb-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2007/01/09 22:41:18 $
+#    $Revision: 1.5 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: isxavg-re-abb-sess,v 1.5 2007/01/09 22:41:18 nicks Exp $';
+
+set inputargs = ($argv);
+
+set analysis    = ();
+set grpname    = ();
+set space     = ();
+set spacedir  = ();
+set srcspacedir  = ();
+set umaskarg = ();
+set hemi = ();
+set logcode = ();
+set nolog = 0;
+#set contrastlist = ();
+set MLF = ();
+set monly = 0;
+set usepct = 0;
+set synth = 0;
+
+if($#argv == 0) then
+  goto usage_exit;
+  exit 1;
+endif
+set n = `echo $argv | grep version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+##### Create a log file ######
+set logdir = `pwd`/log;
+mkdir -p $logdir
+if(! -e $logdir | ! -w $logdir) then
+  echo "WARNING: could not create $logdir"
+  set LF = /dev/null
+else
+  if($nolog) then
+    set LF = /dev/null
+  else
+    set LF = $logdir/isxavg-re-abb-sess$logcode.log
+    if(-e $LF) mv $LF $LF.old
+  endif
+endif
+echo "--------------------------------------------------------------"
+echo "isxavg-re-abb-sess logfile is $LF"
+echo "--------------------------------------------------------------"
+
+echo "isxavg-re-abb-sess log file" >> $LF
+echo $VERSION >> $LF
+id            >> $LF
+pwd           >> $LF
+echo $0     >> $LF
+echo $inputargs  >> $LF
+uname -a      >> $LF
+date          >> $LF
+
+set SessList = `getsesspath $inputargs`;
+if($status || $#SessList == 0) then
+  echo "ERROR: finding sessions" |& tee -a $LF
+  echo "       $SessList" |& tee -a $LF
+  exit 1;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+## Get functional subdirectory from the info file ##
+set infofile = $analysis/analysis.info
+if(! -e $infofile) then
+  echo "ERROR: cannot find $infofile" |& tee -a $LF
+  exit 1;
+endif
+set fsd = `cat $infofile | awk '{if($1 == "fsd") print $2}'`;
+set designtype = `cat $infofile | awk '{if($1 == "designtype") print $2}'`;
+if($#designtype == 0) then
+  set designtype = `cat $infofile | awk '{if($1 == "avgtype") print $2}'`;
+endif
+if($designtype != abblocked) then
+  echo "ERROR: analysis design type is $designtype, must be abblocked"
+  exit 1;
+endif
+
+## Check that the subjects are correct for this group (or Create file) #
+mkdir -p $grpname
+set sessinfo = $grpname/session.info  
+if(-e $sessinfo) then
+  @ n1 = `cat $sessinfo | wc -l`;
+  @ n1 = $n1  - 1;
+  if($n1 != $#SessList) then
+    echo "ERROR: Current Session List is inconistent with previous group average"\
+         |& tee -a $LF
+    exit 1;
+  endif
+  foreach sess ($SessList)
+    set sessid = `basename $sess`
+    set n1 = `cat $sessinfo | grep -x $sessid | wc -l`;
+    if($n1 == 0) then
+      echo "ERROR: $sessid was not in original group average"
+      exit 1;
+    endif
+  end
+else
+  echo "SessionType: GroupAverage" > $sessinfo
+  foreach sess ($SessList)
+    set sessid = `basename $sess`
+    echo $sessid >> $sessinfo
+  end
+endif
+
+## Create output directory ##
+set outdir = $grpname/$fsd/$analysis/$spacedir-rfx
+mkdir -p $outdir
+if($status) then
+  echo "ERROR creating $outdir"
+  exit 1;
+endif
+foreach c (cos sin avb)
+  mkdir -p $outdir/$c
+end
+
+if($space == "tal") then
+  set regfile = $SessList[1]/$fsd/$analysis/$spacedir/register.dat
+  if(! -e $regfile) then
+    echo "ERROR: $regfile does not exist"
+    exit 1;
+  endif
+  cp $regfile $outdir
+endif
+if($space == "native") set space = ();
+
+if(! $monly) set MLF = /tmp/isxavg-re-abb-sess-$$.m
+echo MLF is $MLF
+rm -f $MLF
+
+#--------------------------------------------------------------#
+tee $MLF > /dev/null <<EOF
+
+SessList = splitstring('$SessList');
+fsd      = '$fsd';
+analysis = '$analysis';
+hemi = splitstring('$hemi');
+spacedir = '$spacedir';
+outdir = '$outdir';
+usepct = [$usepct];
+synth = [$synth];
+fast_isxavg_re_abb_sess;
+
+EOF
+#--------------------------------------------------------------#
+
+echo "-----------------------------------------------------"| tee -a $LF
+
+if(! $monly) then
+  cat $MLF | matlab -nojvm -nosplash -display iconic
+  rm -f $MLF
+endif
+
+date | tee -a $LF
+echo "isxavg-re-abb-sess completed" | tee -a $LF
+echo " "
+echo " "
+
+exit 0;
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-space":
+      if ( $#argv == 0) goto arg1err;
+      set space = $argv[1]; shift;
+      breaksw
+
+    case "-spacedir":
+      if ( $#argv == 0) goto arg1err;
+      set spacedir = $argv[1]; shift;
+      breaksw
+
+    case "-hemi":
+      if ( $#argv == 0) goto arg1err;
+      set hemi = ($hemi $argv[1]); shift;
+      breaksw
+
+    case "-a":
+    case "-analysis":
+      if ( $#argv == 0) goto arg1err;
+      set analysis = $argv[1]; shift;
+      breaksw
+
+    # this is not necessary #
+    case "-c":
+      if ( $#argv == 0) goto arg1err;
+      set c = $argv[1]; shift;
+      if("$c" != "avb" & "$c" != "sin" & "$c" != "cos") then
+         echo "ERROR: contrast = $c, must be avb, cos, or sin"
+         exit 1;
+      endif
+      set contrastlist = ($contrastlist $c);
+      breaksw
+
+    case "-grpname":
+    case "-group":
+      if ( $#argv == 0) goto arg1err;
+      set grpname = $argv[1]; shift;
+      breaksw
+
+    case "-monly":
+      if ( $#argv == 0) goto arg1err;
+      set MLF = $argv[1]; shift;
+      set monly = 1;
+      breaksw
+
+    case "-umask":
+      if ( $#argv == 0) goto arg1err;
+      set umaskarg = "-umask $argv[1]";
+      umask $argv[1]; shift;
+      breaksw
+
+    case "-pct":
+      set usepct = 1;
+      breaksw
+
+    case "-synth":
+      set synth = 1;
+      breaksw
+
+    case "-nopct":
+      set usepct = 0;
+      breaksw
+
+    case "-nolog":
+      set nolog = 1;
+      breaksw
+
+    case "-logcode":
+      set logcode = $$;
+      breaksw
+
+    case "-verbose":
+      set verbose = 1;
+      breaksw
+
+    case "-echo":
+      set echo = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-cwd":
+      breaksw
+
+    case "-g":
+    case "-s":
+    case "-sf":
+    case "-df":
+    case "-d":
+      # ignore getsesspath arguments 
+      shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  set errs = 0;
+
+  if($#analysis == 0) then
+    echo "ERROR: no analysis specified"|& tee -a $LF 
+    set errs = 1;
+  endif
+
+  if($#grpname == 0) then
+    echo "ERROR: no group name specified"|& tee -a $LF 
+    set errs = 1;
+  endif
+
+  if($#space == 0) then
+    echo "ERROR: must specify a sampling space"|& tee -a $LF 
+    set errs = 1;
+  endif
+
+  if($#hemi != 0 && $space != sph) then
+    echo "ERROR: -hemi can only be used with sph space"
+    set errs = 1;
+  endif
+  if($#hemi == 0 && $space == sph) set hemi = (lh rh);
+  foreach hs ($hemi)
+    if($hs != lh && $hs != rh) then
+      echo "ERROR: hemi must be either lh or rh ($hs)";
+      set errs = 1;
+    endif
+  end
+
+  if($errs) exit 1;
+
+  if($space != sph) set hemi = nohemi;
+  if($#spacedir == 0) set spacedir = $space;
+  if($space == native) then
+    set srcspacedir = ();
+  else
+    set srcspacedir = $spacedir;
+  endif
+
+
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo "USAGE: isxavg-re-abb-sess"
+  echo "Options:";
+  echo "   -analysis analysisname : session-level functional analysis name"
+  echo "   -group    groupname    : name of group"
+  echo "   -space    spacename    : space in which to average (native, tal, sph)"
+  echo "   -spacedir spacedir     : space directory (default spacename)"
+  echo "   -hemi     hemisphere   : with sph space <lh rh>";
+  #echo "   -c  contrast <-c contrast> : contrasts: avb, cos, sin"
+  echo "   -pct : use percent signal change"
+  echo "   -sf sessidfile  ..."
+  echo "   -df srchdirfile ..."
+  echo "   -s  sessid      ..."
+  echo "   -d  srchdir     ..."
+  echo "   -nolog : don't create a log file"
+  #echo "   -logcode       : add a unique suffix to log file"
+  echo "   -umask umask   : set unix file permission mask"
+  echo "   -version       : print version and exit"
+exit 1;

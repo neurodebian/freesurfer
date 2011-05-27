@@ -1,0 +1,210 @@
+#!/bin/tcsh -f
+
+# Register an image to an average subject  which 
+# itself has been registered to the MNI average_305 subject.
+# Code is from the 4dfp suite of image processing programs.
+
+# Original Author: Avi Snyder, Washington University, Copyright 2007
+
+#$Header: /usr/fscvsroot/dev/talairach_avi/mpr2mni305,v 1.4 2009/06/03 16:01:38 nicks Exp $
+#$Log: mpr2mni305,v $
+#Revision 1.4  2009/06/03 16:01:38  nicks
+#added --atlas to allow specifying an alternate target (namely SchwartzReactN32_as_orig)
+#
+#Revision 1.3  2007/08/04 02:23:35  nicks
+#improved debug output
+#
+#Revision 1.2  2007/06/18 16:57:15  fischl
+#
+#added -f to prevent pushing of new shell.
+#
+#Revision 1.1  2007/05/04 22:34:03  nicks
+#new talairach alignment utility, using Avi Snyders registration tools
+#
+
+set idstr = '$Id: mpr2mni305,v 1.4 2009/06/03 16:01:38 nicks Exp $'
+set program = $0; set program = $program:t
+
+if (${#argv} < 1) then
+	echo "Usage:	"$program" <mpr_anat>"
+	echo " e.g.,	"$program" 131"
+	exit
+endif
+
+date
+echo $0 $argv[1-]
+echo $idstr
+
+set modes	= (0 0 0 0 0 0)
+@ modes[1]	= 4096 + 256 + 3
+@ modes[2]	= 4096 + 256 + 3
+@ modes[3]	= 1024 + 256 + 3
+@ modes[4]	= 3072 + 256 + 7
+@ modes[5]	= 2048 + 256 + 7
+@ modes[6]	= 2048 + 256 + 7
+
+@ debug = 0
+@ useold = 0
+@ crossmodal = 0
+
+@ n = ${#argv}
+@ m = $n
+while ($m > 0)
+	switch ($argv[$m])
+	case setecho:
+		set echo;		breaksw;
+	case crossmodal:
+		@ crossmodal++;		breaksw;
+	case debug:
+		@ debug++;		breaksw;
+	case useold:			# use existing t4file
+		@ useold++;		breaksw;
+	endsw
+	@ m--
+end
+
+set date0 =	`date`
+set usr =	`whoami`
+
+echo "target="${MPR2MNI305_TARGET}
+if (! -e ${REFDIR}/${MPR2MNI305_TARGET}.4dfp.img ) then
+	echo "ERROR: ${REFDIR}/${MPR2MNI305_TARGET}.4dfp.img does not exist!"
+	exit -1
+endif
+if (! -e ${REFDIR}/${MPR2MNI305_TARGET}.4dfp.ifh) then
+	echo "ERROR: ${REFDIR}/${MPR2MNI305_TARGET}.4dfp.ifh does not exist!"
+	exit -1
+endif
+set tarmsk = 711-2B_as_mni_average_305_mask
+if (! -e ${REFDIR}/$tarmsk.4dfp.img || ! -e ${REFDIR}/$tarmsk.4dfp.ifh) then
+	echo "ERROR: mask for ${MPR2MNI305_TARGET} not found!"
+	exit -1
+endif
+
+set mpr = $1:t
+if ($mpr:e == "img") set mpr = $mpr:r
+if (! -e $mpr.img || ! -e $mpr.hdr) then
+	echo "ERROR: $mpr not found!"
+	exit -1
+endif
+
+# flip y to compensate for analyze<->4dfp flip in officially transverse image
+set cmd=(analyzeto4dfp $mpr -O0 -y)
+echo ""
+echo "---------------------------------------------------------------------"
+echo $cmd
+echo "---------------------------------------------------------------------"
+echo ""
+$cmd
+set ret_stat=$status
+if ($ret_stat) then
+  echo "ERROR: '$cmd' failed! status=$ret_stat"
+  goto ERR;
+endif
+
+@ ori = `awk '/orientation/{print $NF}' $mpr.4dfp.ifh`
+echo "ori="$ori
+if ($ori != 2) then
+	echo "ERROR: wrong $mpr.4dfp.ifh orientation"
+	exit -1
+endif
+
+set t4file = $mpr"_to_"${MPR2MNI305_TARGET}"_t4"
+
+if ($crossmodal) then
+	@ k = 1
+	while ($k <= ${#modes})
+		@ modes[$k] -= 256
+    @ k++
+	end
+endif
+
+if (! -e $mpr"_g11".4dfp.img || ! -e $mpr"_g11".4dfp.img.rec) then
+	set cmd=(gauss_4dfp $mpr 1.1)
+  echo ""
+  echo "---------------------------------------------------------------------"
+  echo $cmd
+  echo "---------------------------------------------------------------------"
+  echo ""
+  $cmd
+  set ret_stat=$status
+  if ($ret_stat) then
+    echo "ERROR: '$cmd' failed! status=$ret_stat"
+    goto ERR;
+  endif
+endif
+				
+if (0) then
+	foreach e (img img.rec ifh)
+		cp $mpr.4dfp.$e $mpr"_msk".4dfp.$e
+	end
+	set cmd=(zero_lt_4dfp 1 $mpr"_msk")
+  $cmd
+  set ret_stat=$status
+  if ($ret_stat) then
+    echo "ERROR: '$cmd' failed! status=$ret_stat"
+    goto ERR;
+  endif
+endif
+
+set usemsk = ("none" \
+    ${REFDIR}/$tarmsk \
+    ${REFDIR}/$tarmsk \
+    ${REFDIR}/$tarmsk \
+    ${REFDIR}/$tarmsk \
+    ${REFDIR}/$tarmsk)
+@ k = 1
+while ($k <= ${#modes})
+  sleep 1
+  set cmd=(imgreg_4dfp \
+        ${REFDIR}/${MPR2MNI305_TARGET} \
+        $usemsk[$k] \
+        $mpr"_g11" \
+        none \
+        $t4file \
+        $modes[$k])
+  echo ""
+  echo "---------------------------------------------------------------------"
+  echo $cmd
+  echo "---------------------------------------------------------------------"
+  echo ""
+  $cmd
+  set ret_stat=$status
+  if ($ret_stat) then
+    echo "ERROR: '$cmd' failed! status=$ret_stat"
+    goto ERR;
+  endif
+	@ k++
+end
+
+set cmd=(compute_vox2vox $mpr $t4file ${REFDIR}/${MPR2MNI305_TARGET})
+echo ""
+echo "---------------------------------------------------------------------"
+echo $cmd
+echo "---------------------------------------------------------------------"
+echo ""
+$cmd
+set ret_stat=$status
+if ($ret_stat) then
+  echo "ERROR: '$cmd' failed! status=$ret_stat"
+  goto ERR;
+endif
+				
+if ($debug) then
+ cat $t4file
+ t4img_4dfp $t4file $mpr $mpr"_on_"${MPR2MNI305_TARGET} -O${MPR2MNI305_TARGET}
+ ifh2hdr -r1500 $mpr"_on_"${MPR2MNI305_TARGET}
+endif
+
+echo ""
+echo "start time "$date0
+echo "end		time "`date`
+echo ""
+echo "$program success"
+echo ""
+
+exit 0
+
+ERR:
+echo "ERROR: $program execution aborted"
+exit -1

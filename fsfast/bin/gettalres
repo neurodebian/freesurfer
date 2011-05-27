@@ -1,0 +1,58 @@
+#! /bin/csh -f
+
+#
+# gettalres
+#
+# Gets the talairach resolution (in mm) based on the number of slices
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2007/01/09 22:41:17 $
+#    $Revision: 1.2 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+if($#argv != 1) then
+  echo "USAGE: gettalres instem"
+  exit 1;
+endif
+
+set instem = $argv[1];
+
+set nslices = `getnslices $instem`;
+if($status) then
+  echo "ERROR: getnlices: $nslices"
+  exit 1;
+endif
+
+switch ($nslices)
+  case  "32": 
+    set res = 8; breaksw;
+  case  "64": 
+    set res = 4; breaksw;
+  case "128": 
+    set res = 2; breaksw;
+  case "256": 
+    set res = 1; breaksw;
+  default:
+    echo "ERROR: $instem has $nslices slices, can determine tal res"
+    exit 1;
+    breaksw;
+endsw
+
+echo $res;
+
+exit 0;

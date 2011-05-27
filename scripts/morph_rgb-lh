@@ -1,0 +1,77 @@
+#! /bin/tcsh -f
+
+#
+# morph_rgb-lh
+#
+# REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+#
+# Original Author: REPLACE_WITH_FULL_NAME_OF_CREATING_AUTHOR
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.4 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+
+set hemi = lh;
+
+if($#argv != 1) then
+  echo "USAGE: morph_rgb-$hemi subjectid"
+  exit 1;
+endif
+set subjectid = $1;
+
+set SubjAnatDir = $SUBJECTS_DIR/$1;
+if(! -e $SubjAnatDir ) then
+  echo "ERROR: $SubjAnatDir does not exist"
+  exit 1;
+endif
+
+pushd $SUBJECTS_DIR/$1/
+touch NOTES
+echo "-----------------" >> NOTES
+echo $0 $* >> NOTES
+whoami >> NOTES
+date >> NOTES
+hostname >> NOTES
+popd
+
+setenv DISPLAY :0.0
+mkdir -p $SubjAnatDir/rgb
+
+# specify -tiff to write out tiff files intead of rgbs
+
+set cmd = "mris2rgb -o $1.reg -both -c $SubjAnatDir/surf/$hemi.sulc "
+set cmd = "$cmd -canon $SubjAnatDir/surf/$hemi.sphere.reg "
+set cmd = "$cmd  $SubjAnatDir/surf/$hemi.sphere.reg "
+set cmd = "$cmd  $SubjAnatDir/rgb"
+
+echo "-------------------------------------"
+pwd
+echo $cmd
+echo "-------------------------------------"
+$cmd
+if($status) then
+  echo "mris2rgb exited with errors"
+  exit 1;
+endif
+
+echo "morph_rgb-$hemi completed SUCCESSUFLLY"
+exit 0;
+
+
+#mris2rgb -o $1.dist_new -both -c $SubjAnatDir/surf/$hemi.sulc \
+#       -canon $SubjAnatDir/surf/$hemi.sphere.dist_new \
+#         $SubjAnatDir/surf/$hemi.sphere.dist_new \
+#         $SubjAnatDir/rgb

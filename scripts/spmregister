@@ -1,0 +1,751 @@
+#! /bin/tcsh -f
+
+#
+# spmregister
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:40 $
+#    $Revision: 1.39 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+#
+set VERSION = '$Id: spmregister,v 1.39 2011/03/02 20:16:40 nicks Exp $';
+set inputargs = ($argv);
+
+set subjid = ();
+set fsvol  = brainmask;
+set refvol = ();
+set movvol = ();
+set debug = 0;
+set tmpdir = ();
+set cleanup = 1;
+set monly = 0;
+set MLF = ();
+set PrintHelp = 0;
+set zero_center = 1;
+set frame = ();
+set midframe = 0;
+set templateout = ();
+set MGZ = ();
+set nolog = 0;
+set matlab = matlab
+set DoSegReg = 0;
+set segregfile = ();
+set OutVol = ();
+set BBRMask = 1;
+set fmt = img # Format for temporary volumes
+set UseSPMGetSpace = 1;
+set DNG = (); # For testing
+set DOF = 6;
+
+if($?FS_SPMREG_MATLAB) then
+  set matlab = $FS_SPMREG_MATLAB
+endif
+
+# To left-right reverse the input volume. Know what you are doing.
+set LeftRightReverse = 0; 
+
+set ForceRAS = 0;
+# zero_center forces mri_convert to set the coordinate
+# of the center to zero. This allows spm to register
+# two volumes when they do not overlap in the native
+# space. If the volumes are registered in the native
+# space, then this will cause the initial registration
+# to be shifted, but SPM should be able to handle it.
+
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | egrep -e -version | wc -l`
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+set n = `echo $argv | egrep -e -help | wc -l`
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+
+goto parse_args;
+parse_args_return:
+goto check_params;
+check_params_return:
+
+if($#frame == 0) set frame = 0;
+
+set movvoldir = `dirname $movvol`;
+if($#tmpdir == 0) set tmpdir = $movvoldir/tmp.spmreg.$$
+mkdir -p $tmpdir
+
+if(! $nolog) then
+  set LF = $movvoldir/spmregister.log
+  if(-e $LF) mv $LF $LF.old
+else
+  set LF = /dev/null
+endif
+
+echo "Log file is $LF"
+
+echo "Logfile for spmregister" >> $LF
+date |& tee -a $LF
+echo $inputargs |& tee -a $LF
+echo $VERSION |& tee -a $LF
+echo matlab $matlab |& tee -a $LF
+echo fmt $fmt |& tee -a $LF
+echo UseSPMGetSpace $UseSPMGetSpace  |& tee -a $LF
+
+set StartTime = `date`;
+set DateString = "`date '+%y%m%d%H%M'`"
+
+# Use the rawavg as input (for testing only)
+if($fsvol == rawavg.cor) then
+  set refvol = $SUBJECTS_DIR/$subjid/mri/$fsvol.mgz
+  if(! -e $refvol) then
+    # Does not exist, create
+    set orig = $SUBJECTS_DIR/$subjid/mri/orig.mgz
+    set rawavg = $SUBJECTS_DIR/$subjid/mri/rawavg.mgz
+    set cmd = (mri_vol2vol --mov $rawavg --targ $orig --o $refvol \
+     --no-save-reg --regheader)
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+    # Now mask it
+    set brain = $SUBJECTS_DIR/$subjid/mri/brainmask.mgz
+    set cmd = (mri_mask $refvol $brain $refvol)
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+  endif
+endif
+
+# Convert reference to analyze
+if ( $subjid != "" ) then
+  set refvol = $SUBJECTS_DIR/$subjid/mri/$fsvol
+  if(! -e $refvol/COR-.info) then
+    set MGZ = .mgz
+    set refvol = $SUBJECTS_DIR/$subjid/mri/$fsvol$MGZ
+    if(! -e $refvol) then
+      echo "ERROR: $refvol not found in either COR or MGZ formats"
+      exit 1;
+    endif
+  endif
+else
+  set refvol = $fsvol
+endif
+
+set refvolbase = $tmpdir/refvol.spmregister
+set refvolimg  = $refvolbase.$fmt
+set cmd = (mri_convert $refvol $refvolimg)
+if($zero_center) set cmd = ($cmd -ic 0 0 0)
+echo "--------------------------------------" |& tee -a $LF
+pwd        |& tee -a $LF
+echo $cmd  |& tee -a $LF
+$cmd       |& tee -a $LF
+if($status) exit 1;
+
+# Convert input to analyze #
+set movvolbase = $tmpdir/movvol.spmregister
+set movvolimg  = $movvolbase.$fmt
+set cmd = (mri_convert $movvol $movvolimg)
+if($zero_center) set cmd = ($cmd -ic 0 0 0)
+if($midframe) set cmd = ($cmd --mid-frame)
+if($#frame)   set cmd = ($cmd --frame $frame)
+if($ForceRAS) set cmd = ($cmd --in_orientation RAS) # for spm tal
+if($LeftRightReverse) set cmd = ($cmd --left-right-reverse)
+echo "--------------------------------------" |& tee -a $LF
+pwd        |& tee -a $LF
+echo $cmd  |& tee -a $LF
+
+$cmd       |& tee -a $LF
+if($status) exit 2;
+
+if($#MLF == 0) set MLF = $tmpdir/spmregister.$$.m
+rm -f $MLF
+echo "Matlab file is $MLF" |& tee -a $LF
+
+set errfile = $tmpdir/spmregister.$$.err
+rm -f $errfile
+
+if(-e $regfile) mv $regfile $regfile.$DateString
+
+set params = (0 0 0 0 0 0);
+
+# These are experimental
+if($DOF ==  9) set params = ($params 1 1 1);
+if($DOF == 12) set params = ($params 1 1 1 0 0 0);
+
+#--------------------------------------------------------#
+tee $MLF <<EOF
+
+monly   = $monly;
+targvol = '$refvolimg';
+srcvol  = '$movvolimg';
+errfile  = '$errfile';
+
+if(exist('spm_coreg') ~= 2)
+  fprintf('ERROR: cannot find spm_coreg.m. Make sure that the SPM\n');
+  fprintf('   package is in your matlab path (check ~/matlab/startup)\n');
+  fp = fopen(errfile,'w');
+  fprintf(fp,'ERROR: cannot find spm_coreg.m. Make sure that the SPM\n');
+  fprintf(fp,'   package is in your matlab path (check ~/matlab/startup)\n');
+  fclose(fp);
+  return; quit;
+end
+
+which spm_coreg
+
+global defaults
+spm_defaults			% load spm2's default fields
+
+fprintf('INFO: Assuming RAS coordinate system\n');
+defaults.analyze.flip = 0;
+
+%===========================================================================
+% coregistration  defaults
+%===========================================================================
+
+defaults.coreg.estimate.cost_fun = 'nmi';
+defaults.coreg.estimate.sep      = [4 2];
+defaults.coreg.estimate.tol      = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
+defaults.coreg.estimate.fwhm     = [7 7];
+defaults.coreg.estimate.params	 = [$params];
+defaults.coreg.estimate.graphics = 0; % dont crate ps file
+
+
+%===========================================================================
+% coregister files
+%===========================================================================
+
+disp(sprintf('using %s as the target image',targvol));
+disp(sprintf('using %s as the source image',srcvol));
+
+[pth1,nam1,ext1] = fileparts(deblank(targvol));
+[pth2,nam2,ext2] = fileparts(deblank(srcvol));
+
+%tmp = spm_get('Files',pth1,[nam1 ext1]);
+tmp = sprintf('%s/%s%s',pth1,nam1,ext1);
+VG	= spm_vol(tmp);	% target image
+if(isempty(VG))
+  fprintf('ERROR: loading target %s\n',targvol);
+  fp = fopen(errfile,'a');
+  fprintf(fp,'ERROR: loading target %s\n',targvol);
+  fclose(fp);
+  return; quit;
+end
+% tmp = spm_get('Files',pth2,[nam2 ext2])
+tmp = sprintf('%s/%s%s',pth2,nam2,ext2);
+VF	= spm_vol(tmp);	% source image
+if(isempty(VF))
+  fprintf('ERROR: loading source %s\n',srcvol);
+  fp = fopen(errfile,'a');
+  fprintf(fp,'ERROR: loading source %s\n',srcvol);
+  fclose(fp);
+  return; quit;
+end
+
+fprintf('\n\nINFO: ignore warnings about scalefactor\n\n');
+
+disp('determining coregistration parameters...')
+
+tic;
+try
+  x  = spm_coreg$DNG(VG.fname,VF.fname,defaults.coreg.estimate);
+catch
+  fprintf('ERROR: spm_coreg\n');
+  fp = fopen(errfile,'a');
+  fprintf(fp,'ERROR: spm_coreg\n');
+  fprintf(fp,'%s\n',which('spm_coreg'));
+  fclose(fp);
+  return; quit;
+end
+if(isempty(x))
+  fprintf('ERROR: spm_coreg\n');
+  if(~monly) 
+    fp = fopen(errfile,'a');
+    fprintf(fp,'ERROR: spm_coreg\n');
+    fclose(fp);
+    return; quit; 
+  end
+end
+fprintf('Finished after %g sec\n',toc);
+
+fprintf('Parameters ');
+fprintf('%g ',x);
+fprintf('\n');
+
+%---------write out the .mat file---see spm_coreg_ui.m line 283
+
+M  = inv(spm_matrix(x));
+
+if($UseSPMGetSpace)
+  fprintf('Using spm_get_space\n');
+  MM = zeros(4,4,1);
+  MM = spm_get_space(deblank(VF.fname));
+  spm_get_space(deblank(VF.fname), M*MM);
+  fprintf('\n\nINFO: ignore warnings about scalefactor\n\n');
+else
+  fprintf('Using MRIread/write instead of spm_get_space\n');
+  ff = MRIread(deblank(VF.fname));
+  ff.vox2ras1 = M*ff.vox2ras1;
+  ff.vox2ras0 = vox2ras_1to0(ff.vox2ras1);
+  ff.vox2ras = ff.vox2ras0;
+  MRIwrite(ff,deblank(VF.fname));
+end
+
+return;
+if(~monly) quit; end
+
+EOF
+#--------------------------------------------------------#
+
+if($monly) then
+  echo "Make sure to use proper version of matlab (eg, 7.1)"
+  if($?FS_SPMREG_MATLAB) then
+    echo "$FS_SPMREG_MATLAB"
+  endif
+  echo ""
+  exit 1;
+endif
+
+cat $MLF | $matlab -nosplash -display iconic -nodesktop |& tee -a $LF
+rm $MLF
+
+if(-e $errfile) then
+  echo "ERROR: matlab exited with errors" |& tee -a $LF
+  cat $errfile |& tee -a $LF
+  exit 1;
+endif
+
+# Computer the registration file #
+#set TKR2 = ~/sg1/build/tkregister2/tkregister2
+set TKR2 = tkregister2_cmdl
+set cmd = ($TKR2 --s $subjid --mov $movvolimg \
+           --regheader --noedit --reg $regfile \
+           --targ $refvolimg );
+if ($subjid == "") then
+   set cmd = ($TKR2 --mov $movvolimg \
+           --regheader --noedit --reg $regfile \
+           --targ $refvolimg );
+endif
+
+if($#MGZ) set cmd = ($cmd --mgz);
+echo "--------------------------------------------------" |& tee -a $LF
+pwd        |& tee -a $LF
+echo $cmd  |& tee -a $LF
+$cmd       |& tee -a $LF
+if($status) exit 1;
+
+if($#templateout) then
+  mri_convert $movvolimg $templateout
+  if($status) exit 1;
+endif
+
+if($LeftRightReverse) then
+  echo ""
+  echo "WARNING: input was left-right reversed prior to registration"
+  echo "because this is what you said you wanted. Make sure you"
+  echo "know what you are doing."
+  echo ""
+endif
+
+if($DoSegReg) then
+  set cmd = (mri_segreg --reg $regfile --mov $movvol \
+     --out-reg $segregfile --cost $segregfile.segreg.cost)
+  if($BBRMask == 0) set cmd = ($cmd --no-mask)
+  echo $cmd | tee -a $LF
+  $cmd |& tee -a $LF
+  if($status) then
+    echo "ERROR: mri_segreg failed" | tee -a $LF
+    exit 1;
+  endif
+endif
+
+if($#OutVol) then
+  set v2vreg = $regfile
+  if($DoSegReg) set v2vreg = $segregfile
+	if($subjid == "") then
+	  set cmd = (mri_vol2vol --mov $movvolimg --targ $refvolimg \
+		         --o $OutVol --reg $v2vreg --no-save-reg)
+	else
+      set cmd = (mri_vol2vol --mov $movvolimg --fstarg \
+                 --o $OutVol --reg $v2vreg --no-save-reg)
+	endif
+  echo $cmd | tee -a $LF
+  $cmd |& tee -a $LF
+  if($status) then
+    echo "ERROR: mri_vol2vol failed" | tee -a $LF
+    exit 1;
+  endif
+endif
+
+# Cleanup
+if($cleanup) then
+  echo "Cleaning up" |& tee -a $LF
+  rm -r $tmpdir
+endif
+
+echo " " |& tee -a $LF
+echo "Started at $StartTime " |& tee -a $LF
+echo "Ended   at `date`" |& tee -a $LF
+echo " " |& tee -a $LF
+echo "spmregister Done" |& tee -a $LF
+echo " "
+
+if(-e $SUBJECTS_DIR/$subjid/surf/lh.orig) then
+  set tmp = "--surf orig"
+else
+  set tmp = ""
+endif
+
+echo "To check results, run:"
+if($#templateout) then
+  echo "tkregister2 --mov $templateout --reg $regfile $tmp"
+else
+  echo "tkregister2 --mov $movvol --reg $regfile $tmp"
+endif
+echo " "
+
+
+exit 0;
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+
+  switch($flag)
+
+    case "--s":
+      if ( $#argv < 1) goto arg1err;
+      set subjid = $argv[1]; shift;
+      breaksw
+
+    case "--fsvol":
+      if ( $#argv < 1) goto arg1err;
+      set fsvol = $argv[1]; shift;
+      breaksw
+
+    case "--mov":
+      if ( $#argv < 1) goto arg1err;
+      set movvol = $argv[1]; shift;
+      breaksw
+
+    case "--template-out":
+      if ( $#argv < 1) goto arg1err;
+      set templateout = $argv[1]; shift;
+      breaksw
+
+    case "--frame":
+      if ( $#argv < 1) goto arg1err;
+      set frame = $argv[1]; shift;
+      breaksw
+
+    case "--mid-frame":
+      set midframe = 1;
+      breaksw
+
+    case "--reg":
+      if ( $#argv < 1) goto arg1err;
+      set regfile = $argv[1]; shift;
+      breaksw
+
+    case "--bbr":
+    case "--segreg":
+      if ( $#argv < 1) goto arg1err;
+      set segregfile = $argv[1]; shift;
+      set DoSegReg = 1;
+      breaksw
+    case "--bbr-mask":
+      set BBRMask = 1;
+      breaksw
+    case "--bbr-no-mask":
+      set BBRMask = 0;
+      breaksw
+
+    case "--o":
+      if ( $#argv < 1) goto arg1err;
+      set OutVol = $argv[1]; shift;
+      breaksw
+
+    case "--tmp":
+      if ( $#argv < 1) goto arg1err;
+      set tmpdir = $argv[1]; shift;
+      set cleanup = 0;
+      breaksw
+
+    case "--monly":
+      if ( $#argv < 1) goto arg1err;
+      set MLF = $argv[1]; shift;
+      set monly = 1;
+      breaksw
+
+    case "--matlab":
+      if ( $#argv < 1) goto arg1err;
+      set matlab = $argv[1]; shift;
+      if(! -e $matlab) then
+        echo "ERROR: cannot find $matlab"
+        exit 1;
+      endif
+      breaksw
+
+    case "--zero-center":
+      set zero_center = 1;
+      breaksw
+
+    case "--zero-nocenter":
+      set zero_center = 0;
+      breaksw
+
+    case "--force-ras":
+      set ForceRAS = 1;
+      breaksw
+
+    case "--left-right-reverse":
+      set LeftRightReverse = 1;
+      breaksw
+
+    case "--mgz":
+      set MGZ = .mgz;
+      breaksw
+
+    case "--verbose":
+      set verbose = 1;
+      breaksw
+
+    case "--nocleanup":
+      set cleanup = 0;
+      breaksw
+
+    case "--echo":
+      set echo = 1;
+      breaksw
+
+    case "--debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "--nolog":
+      set nolog = 1;
+      breaksw
+
+    case "--img":
+      set fmt = img;
+      breaksw
+    case "--nii":
+      set fmt = nii;
+      breaksw
+
+    case "--spm_get_space":
+      set UseSPMGetSpace = 1;
+      breaksw
+    case "--no-spm_get_space":
+      set UseSPMGetSpace = 0;
+      breaksw
+
+    case "--dng":
+      set DNG = "_dng";
+      breaksw
+
+    # Experimental
+    case "--9":
+      set DOF = 9;
+      set UseSPMGetSpace = 0;
+      breaksw
+    case "--12":
+      set DOF = 12;
+      set UseSPMGetSpace = 0;
+      breaksw
+
+    case "--umask":
+      if ( $#argv == 0) goto arg1err;
+      umask $1; shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized.
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+#  if($#subjid == 0) then
+#    echo "ERROR: must spec a subject id"
+#    exit 1;
+#  endif
+#  if(! -e $SUBJECTS_DIR/$subjid) then
+#    echo "ERROR: cannot find $subjid in $SUBJECTS_DIR"
+#    exit 1;
+#  endif
+
+  if($#movvol == 0) then
+    echo "ERROR: must spec an movput vol"
+    exit 1;
+  endif
+
+  if($#regfile == 0) then
+    echo "ERROR: must spec an output reg file"
+    exit 1;
+  endif
+
+  if($#frame && $midframe) then
+    echo "ERROR: cannot --frame AND --mid-frame"
+    exit 1;
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+arg2err:
+  echo "ERROR: flag $flag requires two arguments"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: spmregister"
+  echo ""
+  echo "Required Arguments:";
+  echo "   --s subjid   or  --fsvol full/path/to.mgz "
+  echo "   --mov volid  : input/movable volume"
+  echo "   --reg register.dat"
+  echo ""
+  echo "Optional Arguments"
+  echo "   --frame frameno : reg to frameno (default 0=1st)"
+  echo "   --mid-frame : reg to middle frame (not with --frame)"
+  echo "   --template-out template : save template (good with --frame)"
+  echo "   --fsvol volid : use FreeSurfer volid (default $fsvol)"
+  echo "   --force-ras : force input geometry to be RAS"
+  echo "   --o outvol : resample mov and save as outvol"
+  echo ""
+  echo "   --tmp tmpdir  : temporary dir (implies --nocleanup)"
+  echo "   --nocleanup  : do not delete temporary files"
+  echo "   --version : print version and exit"
+  echo "   --help    : print help and exit"
+  echo ""
+
+  if($PrintHelp) \
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+Registers a volume to its FreeSurfer anatomical using SPMs spm_coreg
+with Normalised Mutual Information and creates a FreeSurfer
+register.dat file. Does not resample. Requires matlab and SPM (should
+work with either spm2 or spm5). The registration is rigid (ie, 6 DOF).
+
+--s subjid
+
+Id of the subject as found in SUBJECTS_DIR. The reference volume is
+the mri/brain volume (this can be changed with --fsvol). This is
+converted to analyze using mri_convert.
+
+--mov volid
+
+Volume identifier of the movable volume. This must be specified in
+a way suitable for mri_convert. Uses first frame unless --frame
+is specified. For this to work correctly, the movable volume must
+have correct geometry information (eg, a valid SPM-style .mat file)
+otherwise the results may be unpredictable.
+
+--reg regfile
+
+Output registration file. This will map RAS in the reference to
+RAS in the movable. This file/matrix is in a format understood
+by freesurfer (see tkregister2 --help for docs). It will contain
+the subjectname.
+
+--frame frameno
+
+Use something other than the first frame. Eg, FSL uses the the middle
+frame (see --mid-frame). For SPM analyze, you should specify the file
+that corresonds to the frame you want because each file only has one
+frame.
+
+--mid-frame
+
+Use the middle frame of the mov volume as the template.
+
+--template-out template
+
+Save the mov template. Good when template is something other than
+the first frame of the mov volume.
+
+--force-ras
+
+Force input geometry to be RAS. This was designed to be used when
+registering SPM2 spatially normalized (affine) volumes. Eg, when
+data is registered to spm2/templates/EPI.mnc, SPM will not write
+a .mat file with the normalized volume (which will be RAS). But
+without a .mat file, the assumption is that the volume will be
+LAS.
+
+--matlab path-to-matlab-binary
+
+Use the given matlab binary instead of the PATH default. This can be
+handy if your default matlab version is incompatable with SPM. Note:
+you can also set the FS_SPMREG_MATLAB environment variable to point
+to path-to-matlab-binary. Eg: 
+
+    --matlab /usr/pubsw/common/matlab/7.0.1/bin/matlab
+    setenv FS_SPMREG_MATLAB /usr/pubsw/common/matlab/7.0.1/bin/matlab
+
+NOTES:
+
+Uses normalized mutual information.
+
+BUGS
+
+There may be a series of warnings of the form:
+"Warning: Assuming a scalefactor of 1 for refvol.spm_rigid_register.nii".
+This can be ignored.
+
+The movable volume needs to have "valid" geometry (eg, SPM-style .mat
+file). "Valid" means that the direction cosines roughly identify
+Right, Anterior, and Superior (though they do not need to be perfectly
+correct).
+
+This script executes matlab, and errors inside matlab are often hard
+to catch and report properly. If matlab fails with an error that is
+not caught, and registration file will still be created based on the
+header geometry information. This may look like a correct registration
+if the anatomical and functional were acquired during the same session.
+
+SEE ALSO: tkregister2, mri_vol2surf, mri_convert, mri_rigid_register,
+fsl_rigid_register, spm_coreg.m.
+
+

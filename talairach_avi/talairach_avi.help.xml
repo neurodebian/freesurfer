@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE help [
+<!ENTITY lt "#38;#60;">
+<!ENTITY gt "&#62;">
+<!ENTITY amp "&#38;#38;">
+<!ELEMENT help (name , synopsis , description , arguments+ , outputs* , example* , bugs* , reporting* , see-also*)*>
+<!ELEMENT name (#PCDATA)>
+<!ELEMENT synopsis (#PCDATA)>
+<!ELEMENT description (#PCDATA)>
+<!ELEMENT arguments (positional* , required-flagged* , optional-flagged*)*>
+<!ELEMENT positional (intro* , argument* , explanation*)*>
+<!ELEMENT required-flagged (intro* , argument* , explanation*)*>
+<!ELEMENT optional-flagged (intro* , argument* , explanation*)*>
+<!ELEMENT intro (#PCDATA)>
+<!ELEMENT argument (#PCDATA)>
+<!ELEMENT explanation (#PCDATA)>
+<!ELEMENT outputs (output* , explanation*)>
+<!ELEMENT output (#PCDATA)>
+<!ELEMENT example (#PCDATA)>
+<!ELEMENT bugs (#PCDATA)>
+<!ELEMENT reporting (#PCDATA)>
+<!ELEMENT see-also (#PCDATA)>
+]>
+
+<help>
+	<name>talairach_avi</name>
+	<synopsis>******************************************************************</synopsis>
+	<description>Front-end for Avi Snyders image registration tool. Computes the talairach transform that maps the input volume to the MNI average_305. This does not add the xfm to the header of the input file. When called by recon-all, the xfm is added to the header after the transform is computed.</description>
+  <arguments>
+    <positional>
+      <intro>*******************************************************************</intro>
+    </positional>
+    <required-flagged>
+      <argument>--i invol</argument>
+      <explanation>input volume</explanation>
+      <argument>--xfm outxfm</argument>
+      <explanation>output xfm file</explanation>
+ </required-flagged>
+    <optional-flagged>
+      <argument>--atlas</argument>
+      <explanation>alternate target atlas (in freesurfer/average dir)</explanation>
+      <argument>--log</argument>
+      <explanation>log file. default is outdir/talairach_avi.log</explanation>
+      <argument>--help</argument>
+      <explanation>print help and exit</explanation>
+      <argument>--debug</argument>
+      <explanation>turn on debugging</explanation>
+      <argument>--version</argument>
+      <explanation>print version and exit</explanation>
+ </optional-flagged>
+  </arguments>
+  <reporting>Report bugs to &lt;freesurfer@nmr.mgh.harvard.edu&gt;</reporting>
+	<see-also>mri_add_xform_to_header</see-also>
+</help>
+

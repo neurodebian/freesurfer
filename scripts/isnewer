@@ -1,0 +1,69 @@
+#! /bin/tcsh -f
+#
+# isnewer - takes two input files (A B) and returns 1 if A is newer
+#           than B (based on sort order of ls -ct )
+# Returns:   1 if A is newer then B
+#            0 if B is newer then A
+#
+# Original Author: REPLACE_WITH_FULL_NAME_OF_CREATING_AUTHOR
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.4 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+
+if($#argv != 2) then
+  echo "USAGE: isnewer AFile BFile"
+  echo "Returns:   1 if A is newer then B"
+  echo "           0 if B is newer then A"
+  exit 1;
+endif
+
+set A = $argv[1];
+set B = $argv[2];
+
+#### If neither exist then error ###########
+if(! -r $A && ! -r $B ) then
+  echo "ERROR: cannot find or read $A or $B"
+  exit 1;
+endif
+
+## if A does not exist, then B must be newer ##
+if(! -r $A ) then
+  echo 0;
+  exit 0;
+endif
+
+## if B does not exist, then A must be newer ##
+if(! -r $B ) then
+  echo 1;
+  exit 0;
+endif
+
+## Use ls to sort the two files based on date ##
+set ABSort = `ls -ct $A $B`;
+
+## Check the sort order ##
+set os = `uname -s`;
+if($ABSort[1] == $A) then
+  echo 1;
+  exit 0;
+else
+  echo 0;
+  exit 0;
+endif
+
+exit 1; # should never get here
+##########################################################################

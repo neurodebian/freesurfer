@@ -1,0 +1,39 @@
+#! /bin/tcsh -ef
+
+#
+# register_subject_flash
+#
+# REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+#
+# Original Author: Bruce Fischl
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:40 $
+#    $Revision: 1.4 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+
+setenv GCA $FREESURFER_HOME/average/mixed.gca
+setenv LTA talairach.lta
+
+setenv s $1
+
+set sdir = $SUBJECTS_DIR/$s/mri
+foreach d (fsamples norm transforms)
+	mkdir -p $sdir/$d ;\
+end
+
+
+mri_em_register -flash $FREESURFER_HOME/average/tissue_parms.txt -fsamples $sdir/fsamples -norm $sdir/norm $sdir/orig $GCA $sdir/transforms/$LTA
+

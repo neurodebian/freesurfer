@@ -1,0 +1,69 @@
+#!/bin/tcsh -f
+
+#
+# test_talairach_avi
+#
+# execute talairach_avi and check results against expected results
+#
+# Original Author: Nick Schmansky
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/03 04:04:39 $
+#    $Revision: 1.8 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+
+set VERSION='$Id: test_talairach_avi,v 1.8 2011/03/03 04:04:39 nicks Exp $'
+
+umask 002
+
+set path=(. ../mri_convert ../scripts ../mri_info ../mri_matrix_multiply $path)
+rehash
+
+# fake-out an installation:
+setenv SUBJECTS_DIR .
+setenv FREESURFER_HOME .
+rm -f average
+ln -s . average
+rm -f mni305.cor.mgz
+ln -s ../distribution/average/mni305.cor.mgz
+
+set cmd=(talairach_avi --i nu.mgz --xfm tal.xfm)
+echo "test_talairach_avi: output logged to test_talairach_avi.log..."
+$cmd >& test_talairach_avi.log
+if ($status != 0) then
+  echo "talairach_avi FAILED"
+  exit 1
+endif
+
+#
+# compare expected results with actual (produced) results
+# use lta_diff, since there will be small variations between platforms
+#
+set cmd=(../mri_robust_register/lta_diff tal.xfm reference-tal.xfm)
+echo ""
+echo $cmd
+set diffVal=(`$cmd`)  
+if ($status) then
+  echo "$cmd FAILED"
+  exit 1
+endif
+echo "rigid transform distance = $diffVal"
+set diffBool=(`echo "$diffVal > 0.025" | bc`)
+if ($diffBool) then
+  echo "$cmd FAILED: rigid transform distance = $diffVal > 0.025"
+  exit 1
+endif
+
+echo ""
+echo "test_talairach_avi passed tests"
+exit 0

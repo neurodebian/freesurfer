@@ -1,0 +1,300 @@
+#!/bin/csh -f
+# xhemireg
+
+# Create a new subject from an existing subject by left-right reversal
+# of the volumes. Should be enough to be able to include in 
+# make_average_subject. 
+#
+# surfaces: 
+#  Apply xfm: orig, white, pial, smoothwm, inflated
+#  Copy to contra hemi: area, area.pial, curv, curv.pial, avg_curv, 
+#     inflated.{H,K}, sulc, thickness, jacobian_white, aparc, aparc.a2005s
+#  Regenerate: qsphere, sphere, sphere.reg
+#  Not sure: before, after, defect, uncorrected, *.nofix
+#
+# volumes:
+#  Dont convert volumes in mri/orig
+#
+
+set VERSION = '$Id: xhemireg,v 1.12 2010/01/25 16:55:26 greve Exp $';
+
+set subject = ();
+set srchemilist = ();
+set surfreg = xhemi.reg
+set UseNoNeg = 0
+set NoRandomness = 1;
+set RngSeed = 1234
+set DoReg = 1;
+set PrintHelp = 0;
+set outdir = ();
+set DoAllVol = 0;
+set vollist = (orig aseg aparc+aseg T1 brain brainmask nu norm)
+set ovlist = (curv sulc area area.pial curv.pial avg_curv \
+       inflated.H inflated.K thickness)
+set surflist = (orig white pial smoothwm inflated sphere)
+
+# For cortical registration, as found in $AvgCurvTifPath/$hemi.$AvgCurvTif
+set AvgCurvTifPath = "$FREESURFER_HOME/average"
+set AvgCurvTif = average.curvature.filled.buckner40.tif
+
+set cmdargs = ($argv);
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | egrep -e -version | wc -l`
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+set n = `echo $argv | egrep -e -help | wc -l`
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+
+goto parse_args;
+parse_args_return:
+goto check_params;
+check_params_return:
+
+cd $SUBJECTS_DIR/$subject
+
+if($DoAllVol) then
+  # Get a list of all mgh and mgz volumes in mri
+  cd mri
+  set vollist = (`ls *.mgz *.mgh | sed 's/.mgz//g' | sed 's/.mgh//g'`);
+  cd ..
+endif
+
+if($#outdir == 0) then
+  set xsubject = $subject/xhemi
+  set outdir = $SUBJECTS_DIR/$xsubject
+endif
+echo "outdir is $outdir" 
+mkdir -p $outdir/mri $outdir/surf $outdir/label $outdir/scripts 
+
+@ nthhemi = 0;
+foreach srchemi ($srchemilist)
+  @ nthhemi = $nthhemi + 1;
+  if($srchemi == lh) set trghemi = rh;
+  if($srchemi == rh) set trghemi = lh;
+
+  set LF = $outdir/xhemireg.$srchemi.log
+  if(-e $LF) mv $LF $LF.bak
+  echo "Logfile is $LF"
+
+  echo $0 | tee -a $LF
+  echo $cmdargs | tee -a $LF
+  echo $VERSION | tee -a $LF
+  date | tee -a $LF
+  uname -a | tee -a $LF
+  pwd | tee -a $LF
+  echo "setenv SUBJECTS_DIR $SUBJECTS_DIR "| tee -a $LF
+
+  if($nthhemi == 1) then
+    #--------------------------------------------------------------
+    echo "" | tee -a $LF
+    echo "" | tee -a $LF
+    date | tee -a $LF
+    foreach vol ($vollist )
+      set invol = mri/$vol.mgz
+      if(! -e $invol) then
+        set invol = mri/$vol.mgh
+        if(! -e $invol) then
+           echo "ERROR: canot find $vol" | tee -a $LF
+           exit 1;
+        endif
+      endif
+      set cmd = (mri_convert $invol $outdir/mri/$vol.mgz \
+        --left-right-reverse)
+      echo $cmd  | tee -a $LF
+      $cmd | tee -a $LF
+      if($status) exit 1;
+    end
+
+    #--------------------------------------------------------------
+    echo ""| tee -a $LF
+    echo ""| tee -a $LF
+    date| tee -a $LF
+    set reg = $outdir/lrrev.register.dat
+    set cmd = (tkregister2_cmdl --targ mri/orig.mgz \
+           --mov $outdir/mri/orig.mgz \
+           --reg $reg --regheader --noedit)
+    echo $cmd | tee -a $LF
+    $cmd | tee -a $LF
+    if($status) exit 1;
+  endif
+
+  #--------------------------------------------------------------
+  foreach surf ($surflist)
+    echo "" | tee -a $LF
+    echo "" | tee -a $LF
+    date | tee -a $LF
+    set cmd = (mri_surf2surf --s $subject --sval-xyz $surf \
+     --hemi $srchemi --tval-xyz --tval $outdir/surf/$trghemi.$surf \
+     --reg $reg)
+    echo $cmd  | tee -a $LF
+    $cmd | tee -a $LF
+    if($status) exit 1;
+  end
+
+  #--------------------------------------------------------------
+  foreach ov ($ovlist )
+    if(! -e surf/$srchemi.$ov) continue;
+    echo "" | tee -a $LF
+    echo "" | tee -a $LF
+    date | tee -a $LF
+    set cmd = (cp surf/$srchemi.$ov $outdir/surf/$trghemi.$ov)
+    echo $cmd  | tee -a $LF
+    $cmd | tee -a $LF
+    if($status) exit 1;
+  end
+
+  if($DoReg) then
+    #------------------------------------------------------------------
+    set cmd = (recon-all -sb $xsubject -hemi $trghemi \
+                -surfreg -cortparc -cortparc2)
+    if($nthhemi == 1) set cmd = ($cmd -talairach)
+    echo "" | tee -a $LF
+    echo "" | tee -a $LF
+    date | tee -a $LF
+    echo $cmd  | tee -a $LF
+    $cmd | tee -a $LF
+    if($status) exit 1;
+
+    #--------------------------------------------------------------
+    cp $outdir/surf/$trghemi.sphere.reg \
+         surf/$srchemi.$trghemi.xhemi.reg |& tee -a $LF
+    if($status) exit 1;
+  endif
+
+end # Loop over srchemi
+
+#--------------------------------------------------------------
+echo "" | tee -a $LF
+echo "" | tee -a $LF
+date | tee -a $LF
+echo "xhemireg done"  | tee -a $LF
+
+exit 0
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+
+  switch($flag)
+
+    case "--s":
+      if ( $#argv < 1) goto arg1err;
+      set subject = $argv[1]; shift;
+      breaksw
+
+    case "--hemi":
+      if ( $#argv < 1) goto arg1err;
+      set srchemilist = $argv[1]; shift;
+      breaksw
+
+    case "--lh":
+      set srchemilist = lh;
+      breaksw
+
+    case "--rh":
+      set srchemilist = rh;
+      breaksw
+
+    case "--reg":
+      if ( $#argv < 1) goto arg1err;
+      set surfreg = $argv[1]; shift;
+      breaksw
+
+    case "--all-vol":
+      set DoAllVol = 1;
+      set DoReg = 0;
+      breaksw
+
+    case "--zilles":
+      set vollist = (orig T1 brain brainmask nu norm)
+      set DoReg = 0;
+      breaksw
+
+    case "--o":
+      if ( $#argv < 1) goto arg1err;
+      set outdir = $argv[1]; shift;
+      breaksw
+
+    case "--no-reg":
+      set DoReg = 0;
+      breaksw
+
+    case "--debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized.
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+if($#subject == 0) then
+  echo "ERROR: must spec a subject id"
+  exit 1;
+endif
+
+if(! -e $SUBJECTS_DIR/$subject) then
+  echo "ERROR: cannot find $subject"
+  exit 1;
+endif
+
+if($#srchemilist == 0) set srchemilist = (lh rh)
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+arg2err:
+  echo "ERROR: flag $flag requires two arguments"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "xhemireg"
+  echo ""
+  echo "   --s subject"
+  echo "   --lh : srchemi = lh (map from left to right) "
+  echo "   --rh : srchemi = rh (map from right to left) "
+  echo "   --reg surfreg : output will be srchemi.trghemi.surfreg (def xhemi.reg)"
+  echo ""
+  echo "   --o outdir  : output dir (subject/xhemireg.hemi by def)"
+  echo "   --noreg   : do not actually perform the reg, just set up dir"
+  echo "   --version : print version and exit"
+  echo "   --help    : print help and exit"
+  echo ""
+
+  if($PrintHelp) \
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+

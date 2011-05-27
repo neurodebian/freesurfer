@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE help [
+<!ENTITY lt "#38;#60;">
+<!ENTITY gt "&#62;">
+<!ENTITY amp "&#38;#38;">
+<!ELEMENT help (name , synopsis , description , arguments+ , outputs* , example* , bugs* , reporting* , see-also*)*>
+<!ELEMENT name (#PCDATA)>
+<!ELEMENT synopsis (#PCDATA)>
+<!ELEMENT description (#PCDATA)>
+<!ELEMENT arguments (positional* , required-flagged* , optional-flagged*)*>
+<!ELEMENT positional (intro* , argument* , explanation*)*>
+<!ELEMENT required-flagged (intro* , argument* , explanation*)*>
+<!ELEMENT optional-flagged (intro* , argument* , explanation*)*>
+<!ELEMENT intro (#PCDATA)>
+<!ELEMENT argument (#PCDATA)>
+<!ELEMENT explanation (#PCDATA)>
+<!ELEMENT outputs (output* , explanation*)>
+<!ELEMENT output (#PCDATA)>
+<!ELEMENT example (#PCDATA)>
+<!ELEMENT bugs (#PCDATA)>
+<!ELEMENT reporting (#PCDATA)>
+<!ELEMENT see-also (#PCDATA)>
+]>
+
+<help>
+	<name>mris_smooth</name>
+  <synopsis>mris_smooth [options] &lt;input surface&gt; &lt;output surface&gt;</synopsis>
+	<description>This program smooths the tessellation of a cortical surface and write out the first and second order properties after smoothing to the files $hemi.curv (mean curvature) and $hemi.area (area).</description>
+  <arguments>
+    <positional>
+      <argument>input surface</argument>
+      <argument>output surface</argument>
+    </positional>
+    <required-flagged>
+      <intro>None</intro>
+    </required-flagged>
+    <optional-flagged>
+      <argument>-a &lt;avgs&gt;</argument>
+      <explanation>specify # of curvature averaging iterations (def=10).</explanation>
+      <argument>-n &lt;niter&gt;</argument>
+      <explanation>specify # of smoothing iterations (def=10).</explanation>
+      <argument>-nw</argument>
+      <explanation>disable writing of curvature and area estimates</explanation>
+      <argument>-c curvname</argument>
+      <explanation>write curv to ?h.curvname (default 'curv')</explanation>
+      <argument>-b areaname</argument>
+      <explanation>write area to ?h.areaname (default 'area')</explanation>
+      <argument>-g &lt;norm&gt; &lt;steps&gt;</argument>
+      <explanation>use Gaussian curvature smoothing with norm &lt;norm&gt; and &lt;steps&gt; smoothing steps(-g 20 8 works well for hippo)</explanation>
+      <argument>-area</argument>
+      <explanation>normalize area after smoothing</explanation>
+      <argument>-m momentum</argument>
+      <argument>-w nwrite</argument>
+      <explanation>write snapshot every nwrite iterations</explanation>
+
+    </optional-flagged>
+  </arguments>
+  <reporting>Report bugs to &lt;freesurfer@nmr.mgh.harvard.edu&gt;</reporting>
+</help>

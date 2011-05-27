@@ -1,0 +1,91 @@
+#! /bin/csh -f
+
+#
+# parse-measasc
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2007/01/09 22:41:18 $
+#    $Revision: 1.4 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+if($#argv < 2) then
+  echo "parse-measasc meas.asc varname1 <varname2 ...>"
+  echo "   NOTE: many varnames may need quotes"
+  echo "   NOTE: use nslices as varname to get number of slices"
+  exit 1;
+endif
+
+# EPI
+# sRXSPEC.alDwellTime[0]          ns
+# m_alRegridRampupTime            us
+# m_alRegridFlattopTime           us
+# m_alRegridRampdownTime          us
+# m_alRegridDelaySamplesTime      us
+# m_lEchoSpacing                  us, same as RampUp+Flat+RampDown
+#
+# FID
+# number of echoes - sWiPMemBlock.alFree[10]
+# echo spacing     - sWiPMemBlock.adFree[2]   ms
+# time to first echo - alTE[0];               us
+
+set measasc = $argv[1];
+set varname = ("$argv[2-$#argv]");
+
+if(! -e $measasc) then
+  echo "ERROR: cannot find $measasc"
+  exit 1;
+endif
+#echo "$varname"
+
+set tmpfile = meas.asc.$$
+cp $measasc /tmp/$tmpfile
+cd /tmp
+dos2unix $tmpfile >& /dev/null
+
+set vallist = ();
+foreach v ("$varname")
+  if("$varname" != "nslices") then
+    set val = `cat $tmpfile |  awk -v v="$v" '{if($1 == v) print $3}'`;
+    if($#val == 0) then
+      echo "ERROR: cannot find $v in $measasc"
+      exit 1;
+    endif
+    set val = `echo "$val" | sed 's/\[//g' | sed 's/\]//g'`;
+  else
+    # Count the number of slices
+    @ nslices = 0;
+    while(1)
+      set tmp = `parse-measasc $tmpfile "sSliceArray.asSlice\[$nslices\].dReadoutFOV"`
+      if($status) break;
+      @ nslices = $nslices + 1;
+    end
+    if($nslices == 0) then
+      echo "ERROR: could not find any slices"
+      exit 1;
+    endif
+    set val = $nslices
+  endif
+  set vallist = ($vallist $val);
+end
+
+rm $tmpfile
+
+echo $vallist
+
+exit 0
+

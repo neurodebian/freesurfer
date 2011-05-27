@@ -1,0 +1,308 @@
+#! /bin/csh -f
+#
+# synth-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2007/06/07 21:48:29 $
+#    $Revision: 1.6 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: synth-sess,v 1.6 2007/06/07 21:48:29 greve Exp $'
+
+set inputargs = ($argv);
+
+set sess = ();
+
+set template = ();
+set nruns = ();
+
+set templatesess = ();
+set runlistfile = ();
+set fsd = bold;
+set funcstem = f;
+set parfiles = ();
+set spiketp = ();
+
+set ntrs = ();
+set seed = ();
+
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+mkdir -p $sess/$fsd
+set LF = $sess/synth-sess.log
+if(-e $LF) mv $LF $LF.bak
+
+echo "log file for synth-sess" >> $LF
+echo $VERSION >> $LF
+date      >> $LF
+echo $0   >> $LF
+echo $inputargs >> $LF
+
+if($#templatesess) then
+  # Template Session passed
+
+  set RunList = `getrunlist $templatesess/$fsd $runlistfile`;
+  if($status) then
+    echo "$RunList" | tee -a $LF
+    exit 1;
+  endif
+
+  set fstempath = $templatesess/$fsd/$RunList[1]/$funcstem;
+  set fmt = `fast_getext $fstempath`;
+  if($status) then
+    echo "$fmt" | tee -a $LF
+    exit 1;
+  endif
+  set template = $fstempath.$fmt
+
+  if(-e $templatesess/subjectname) then
+    cp $templatesess/subjectname $sess/subjectname
+  endif
+  if(-e $templatesess/$fsd/register.dat) then
+    cp $templatesess/$fsd/register.dat $sess/$fsd/register.dat
+  endif
+
+else
+  # Template Volume passed
+  set RunList = ();
+  @ nthrun = 1;
+  while($nthrun <= $nruns)
+    set runid = `printf %03d $nthrun`;
+    set RunList = ($runid);
+    @ nthrun = $nthrun + 1;
+  end
+
+endif
+
+@ nthrun = 1;
+foreach runid ($RunList)
+  mkdir -p $sess/$fsd/$runid
+  set func = $sess/$fsd/$runid/$funcstem.nii
+  set cmd = (mri_volsynth --vol $func --temp $template --offset)
+  if($#ntrs) set cmd = ($cmd --nframes $ntrs);
+  if($#seed) then
+    @ runseed = $seed + $nthrun - 1
+    set cmd = ($cmd --seed $runseed);
+  endif
+  if($#spiketp) set cmd = ($cmd --spike $spiketp);
+  echo $cmd
+  $cmd |& tee $func.volsynth |& tee -a $LF
+  if($status) exit 1;
+
+  if($#templatesess) then
+    # Not all these will be there
+    if($#runlistfile) then
+      cp $templatesess/$fsd/$runlistfile $sess/$fsd/
+    else
+      cp $templatesess/$fsd/*.rlf $sess/$fsd/ >& /dev/null
+    endif
+    cp $templatesess/$fsd/$runid/*.par   $sess/$fsd/$runid/ >& /dev/null
+    cp $templatesess/$fsd/$runid/*.par4  $sess/$fsd/$runid/ >& /dev/null
+    cp $templatesess/$fsd/$runid/*.stf   $sess/$fsd/$runid/ >& /dev/null
+    cp $templatesess/$fsd/$runid/*.sch   $sess/$fsd/$runid/ >& /dev/null
+    cp $templatesess/$fsd/$runid/*.tpexc $sess/$fsd/$runid/ >& /dev/null
+    cp $templatesess/$fsd/$runid/mcextreg* $sess/$fsd/$runid/ >& /dev/null
+    cp $templatesess/$fsd/$runid/$funcstem.meanval $sess/$fsd/$runid/ >& /dev/null
+    cp $templatesess/$fsd/$runid/*.infodump $sess/$fsd/$runid/ >& /dev/null
+  endif
+
+  foreach p ($parfiles)
+    cp $p $sess/$fsd/$runid/
+  end
+
+  @ nthrun = $nthrun + 1;
+end
+
+echo "synth-sess done"
+
+exit 0;
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-s":
+      if ( $#argv == 0) goto arg1err;
+      set sess = $1; shift;
+      breaksw
+
+    case "-ts":
+      if ( $#argv == 0) goto arg1err;
+      set templatesess = $1; shift;
+      breaksw
+
+    case "-rlf":
+      if ( $#argv == 0) goto arg1err;
+      set runlistfile = $1; shift;
+      breaksw
+
+    case "-f":
+      if ( $#argv == 0) goto arg1err;
+      set funcstem = $1; shift;
+      breaksw
+
+    case "-t":
+      if ( $#argv == 0) goto arg1err;
+      set template = $1; shift;
+      breaksw
+
+    case "-p":
+      if ( $#argv == 0) goto arg1err;
+      if(! -e $1) then
+        echo "ERROR: cannot find $1"
+        exit 1;
+      endif
+      set parfiles = ($parfiles $1); shift;
+      breaksw
+
+    case "-fsd":
+      if ( $#argv == 0) goto arg1err;
+      set fsd = $1; shift;
+      breaksw
+
+    case "-ntrs":
+      if ( $#argv == 0) goto arg1err;
+      set ntrs = $1; shift;
+      breaksw
+
+    case "-nruns":
+      if ( $#argv == 0) goto arg1err;
+      set nruns = $1; shift;
+      breaksw
+
+    case "-seed":
+      if ( $#argv == 0) goto arg1err;
+      set seed = $1; shift;
+      breaksw
+
+    case "-spike":
+      if ( $#argv == 0) goto arg1err;
+      set spiketp = $1; shift;
+      breaksw
+
+    case "-verbose":
+      set verbose = 1;
+      breaksw
+
+    case "-echo":
+      set echo = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#sess == 0) then
+    echo "ERROR: must set sess"
+    exit 1;
+  endif
+  if(-e $sess) then
+    echo "ERROR: $sess already exists"
+    exit 1;
+  endif
+
+  if($#templatesess == 1 && $#template == 1) then
+    echo "ERROR: cannot use a template volume and template sess"
+    exit 1;
+  endif
+
+  if($templatesess == 0 && $#template == 0) then
+    echo "ERROR: need either a template volume or template sess"
+    exit 1;
+  endif
+
+  if($#template != 0) then
+    if(! -e $template) then
+      echo "ERROR: cannot find $template"
+      exit 1;
+    endif
+   if($#nruns == 0) then
+      echo "ERROR: must set nruns"
+      exit 1;
+    endif
+  else
+    if(! -e $templatesess) then
+      echo "ERROR: cannot find $templatesess"
+      exit 1;
+    endif
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo "USAGE: synth-sess"
+  echo ""
+  echo "   -s sess "
+  echo ""
+  echo "   -ts  templatesess"
+  echo "   -rlf runlistfile (from templatesess)"
+  echo "   -f   funcstem (from templatesess)"
+  echo ""
+  echo "   -t template "
+  echo "   -nruns nruns "
+  echo ""
+  echo "Options:";
+  echo "   -p parfile <-p parfile2> : copied to each run"
+  echo "   -ntrs n    : override template"
+  echo "   -fsd dir   : functional subdirectory ($fsd)"
+  echo "   -seed seed : first run gets this seed, next gets seed++, etc"
+  echo "   -spike tp  : add a spike to zero-based tp"
+  echo ""
+exit 1;
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+

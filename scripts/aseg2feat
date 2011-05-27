@@ -1,0 +1,364 @@
+#! /bin/tcsh -f
+
+#
+# aseg2feat
+#
+# REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:38 $
+#    $Revision: 1.16 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+# aseg2feat
+#
+
+set VERSION = '$Id: aseg2feat,v 1.16 2011/03/02 20:16:38 nicks Exp $';
+set FeatDirList = ();
+set debug = 0;
+set usedev = 0;
+set asegvol = aseg
+set svstats = 0;
+set space = "native";
+set regfile = "anat2exf.register.dat"
+
+set PrintHelp = 0;
+
+set cmdargs = ($argv);
+if($#argv == 0)  goto usage_exit;
+set n = `echo $argv | egrep -e --version | wc -l`
+if($n != 0) then
+  echo $VERSION
+  exit 1;
+endif
+set n = `echo $argv | egrep -e --help | wc -l`
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+  exit 1;
+endif
+
+# Parse the command-line arguments
+goto parse_args;
+parse_args_return:
+
+# Check the command-line arguments
+goto check_params;
+check_params_return:
+
+if($?DEV == 0) set DEV = "";
+
+echo ""
+echo ""
+@ nth = 0;
+foreach FeatDir ($FeatDirList)
+  @ nth = $nth + 1;
+
+  # Set up a log file
+  set LF = $FeatDir/reg/freesurfer/$asegvol"2feat.log"
+  if(-e $LF) mv $LF $LF.bak
+
+  echo "#@# $nth `date` --------------" | tee -a $LF
+  echo $FeatDir  | tee -a $LF
+  echo log file is $LF | tee -a $LF
+  echo FeatDir is $FeatDir | tee -a $LF
+  date | tee -a $LF
+  pwd | tee -a $LF
+  echo $0 | tee -a $LF
+  echo $cmdargs | tee -a $LF
+  uname -a | tee -a $LF
+  echo "setenv SUBJECTS_DIR $SUBJECTS_DIR" | tee -a $LF
+  echo "subject is $subject" | tee -a $LF
+
+  if($space == native) then
+    set reg_anat2exf = $FeatDir/reg/freesurfer/$regfile
+  else
+    set reg_anat2exf = $FeatDir/reg/freesurfer/anat2std.register.dat
+  endif
+  set subject = `cat $reg_anat2exf| head -n 1`;
+
+  set L2V = mri_label2vol
+  if($usedev) set L2V = $DEV/$L2V/$L2V
+
+  set aseg = $SUBJECTS_DIR/$subject/mri/$asegvol.mgz
+  if(! -e $aseg) set aseg = $SUBJECTS_DIR/$subject/mri/$asegvol
+
+  if(-e $FeatDir/example_func.img)    set fslext = .img
+  if(-e $FeatDir/example_func.nii)    set fslext = .nii
+  if(-e $FeatDir/example_func.nii.gz) set fslext = .nii.gz
+
+  set cmd = ($L2V --seg $aseg \
+              --temp $FeatDir/example_func$fslext  \
+              --reg  $reg_anat2exf)
+  if($svstats) then
+    if($space == native) then
+      set outfile = $FeatDir/stats/$asegvol$fslext;
+    else
+      set outfile = $FeatDir/reg_standard/stats/$asegvol$fslext;
+    endif
+  else
+      set outfile = $FeatDir/reg/freesurfer/$asegvol$fslext
+  endif
+  set cmd = ($cmd --o $outfile);
+
+  date      | tee -a $LF
+  pwd       | tee -a $LF
+  echo $cmd | tee -a $LF
+  $cmd  | tee -a $LF
+  if($status) then
+     pwd
+     echo "ERROR: with $cmd" | tee -a $LF
+     echo "Continuing"  | tee -a $LF
+     continue
+  endif
+  echo "" | tee -a $LF
+  echo "" | tee -a $LF
+
+end # FeatDir List
+echo "" 
+echo "" 
+
+date 
+echo "aseg2feat done" 
+
+exit 0;
+###############################################
+
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+
+  switch($flag)
+
+    case "--seg":
+    case "--aseg":
+      if ( $#argv == 0) goto arg1err;
+      set asegvol = $argv[1]; shift;
+      breaksw
+
+    case "--aparc+aseg":
+      set asegvol = "aparc+aseg"
+      breaksw
+
+    case "--feat":
+      if ( $#argv == 0) goto arg1err;
+      set FeatDirList = ($FeatDirList $argv[1]); shift;
+      breaksw
+
+    case "--featdirfile":
+      if ( $#argv == 0) goto arg1err;
+      set FeatFile = $argv[1];
+      if(! -e $FeatFile) then
+        echo "ERROR: cannot find $FeatFile"
+        exit 1;
+      endif
+      set FeatDirList = ($FeatDirList `cat $FeatFile`); shift;
+      breaksw
+
+    case "--reg":
+      if ( $#argv == 0) goto arg1err;
+      set regfile = $argv[1]; shift;
+      breaksw
+
+    case "--svstats":
+      set svstats = 1;
+      breaksw
+
+    case "--standard":
+      set space = "standard"
+      set svstats = 1;
+      breaksw
+
+    case "--debug":
+      set verbose = 1;
+      set echo = 1; # turns on terminal echoing
+      set debug = 1;
+      breaksw
+
+    case "--usedev":
+      set usedev = 1;
+      breaksw
+
+    default:
+      echo "ERROR: flag $flag not recognized"
+      exit 1;
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+if($#FeatDirList == 0) then
+  echo "ERROR: must specify at least one feat dir"
+  exit 1;
+endif
+echo "There are $#FeatDirList input FEAT dirs"
+
+if($?SUBJECTS_DIR == 0) then
+  echo "ERROR: FreeSurfer environment variable SUBJECTS_DIR not defined"
+  exit 1;
+endif
+if(! -e $SUBJECTS_DIR) then
+  echo "ERROR: FreeSurfer SUBJECTS_DIR $SUBJECTS_DIR not found"
+  exit 1;
+endif
+
+echo "Checking inputs"
+foreach FeatDir ($FeatDirList)
+  set reg_anat2exf = $FeatDir/reg/freesurfer/$regfile
+  if(! -e $reg_anat2exf) then
+    echo "ERROR: cannot find $reg_anat2exf. You must run reg-feat2anat first."
+    exit 1;
+  endif
+  set subject = `cat $reg_anat2exf| head -n 1`;
+  if(! -e $SUBJECTS_DIR/$subject) then
+    echo "ERROR: cannot find FreeSurfer subject $subject in $SUBJECTS_DIR"
+    exit 1;
+  endif
+
+  set aseg = $SUBJECTS_DIR/$subject/mri/$asegvol
+  if(! -e $aseg/COR-.info && ! -e $aseg.mgz) then
+    echo "ERROR: cannot find $aseg for subject $subject"
+    exit 1;
+  endif
+
+end # FeatDirList
+
+endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: aseg2feat"
+  echo ""
+  echo " --feat featdir  <--feat featdir>  : Feat output directory"
+  echo " --featdirfile file : file with a list of feat directories"
+  echo ""
+  echo "Optional flags and arguments:"
+  echo ""
+  echo " --seg segvol       : change seg volume (default is aseg)"
+  echo " --aparc+aseg       : use aparc+aseg"
+  echo " --svstats          : save in featdir/stats"
+  echo " --standard         : map to standard space"
+  echo " --help             : print help and exit"
+  echo " --debug            : turn on debugging"
+  echo " --version          : print version and exit"
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+SUMMARY
+
+Resamples the FreeSurfer automatic subcortical segmentation (aseg) to
+the FEAT functional space. This is a front-end for the FreeSurfer
+mri_label2vol program (see mri_label2vol --help). See aparc2feat for
+resampling the cortical parcellation (aparc).
+
+COMMAND-LINE ARGUMENTS
+
+--feat featdir
+
+featdir is the feat directory. reg-feat2anat must have already been run. Multiple
+--feat arguments can be supplied. Eg, --feat dir1 --feat dir2 ...
+
+--featdirfile file
+
+file is an ASCII file with a list of feat directories. This may be more convenient
+than specifying all of them with --feat on the command-line. Multiple
+--featdirfile flags are allowed. Can be used in conjunction with --feat.
+
+--seg segvol
+
+Change the segmentation volume. Default is aseg. Newer version of
+recon-all will also create an aparc+aseg.mgz, which has all the
+subcortical and cortical segmentations in it (see
+$FREESURFER_HOME/FreeSurferColorLUT.txt).
+
+--aparc+aseg 
+
+Use aparc+aseg.mgz. Same as --seg aparc+aseg.mgz.
+
+--standard
+
+Map results to standard space instead of native functional space. Implies
+--svstats.
+
+--svstats
+
+Flag to save result in featdir/stats instead of featdir/reg/freesurfer
+
+--reg regfile
+
+By default uses anat2exf.register.dat in reg/freesurfer (for native
+only).
+
+EXAMPLES
+
+aseg2feat --feat fbert.feat
+
+aseg2feat --feat fbert.feat --seg aparc+aseg
+
+To view the segmentation in the functional space:
+
+  tkmedit -f fbert.feat/example_func.nii.gz \
+     -segmentation fbert.feat/reg/freesurfer/aseg.nii.gz
+
+
+NOTES
+
+The result is stored in featdir/reg/freesurfer/aseg.nii.gz. The aseg.nii.gz
+will be the same size as the example_func and in voxel-for-voxel
+registration. The value of a voxel indicates which structure it
+belongs to. The correspondance between index number and structure can
+be found in $FREESURFER_HOME/tkmeditColorsCMA.  Eg, left putamen
+is 12.
+
+A binary mask of the left putamen can be constructed with:
+
+avwmaths featdir/reg/freesurfer/aseg.nii.gz \
+         -thr 12 -uthr 12 \
+         featdir/reg/freesurfer/lh.putamen.nii.gz
+
+SEE ALSO
+
+reg-feat2anat, aparc2feat, mri_label2vol

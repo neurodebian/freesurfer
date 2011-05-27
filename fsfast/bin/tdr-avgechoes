@@ -1,0 +1,329 @@
+#! /bin/tcsh -f
+
+#
+# tdr-avgechoes
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2007/01/09 22:41:19 $
+#    $Revision: 1.5 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: tdr-avgechoes,v 1.5 2007/01/09 22:41:19 nicks Exp $';
+
+set inputargs = ($argv);
+
+set instemlist = ();
+set telist     = ();
+set outstem    = ();
+set wechostem  = ();
+set avgmethod  = ();
+set monly      = 0;
+set MLF        = ();
+
+set PrintHelp = 0;
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+set n = `echo $argv | grep -e -version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+set umask = `umask`;
+
+##### Create a log file ######
+set LF = $outdir/tdr-avgechoes.log
+if(-e $LF) mv $LF $LF.old
+echo "--------------------------------------------------------------"
+echo "tdr-avgechoes logfile is $LF"
+echo "--------------------------------------------------------------"
+
+echo "tdr-avgechoes log file" >> $LF
+echo $VERSION >> $LF
+id            >> $LF
+pwd           >> $LF
+echo $0        >> $LF
+echo $inputargs  >> $LF
+uname -a      >> $LF
+date          >> $LF
+
+set StartTime = `date`;
+mkdir -p $outdir/wecho
+if($#wechostem == 0 && $avgmethod == wavg) then
+  set wechostem = $outdir/wecho/wecho
+endif
+
+if($#MLF == 0) set MLF = $outdir/run_tdr_avgechoes.m
+echo "Matlab file is $MLF"
+rm -f $MLF
+
+set okfile = /tmp/tdr_avgechoes.$$.ok
+rm -f $okfile
+
+ #---------------------------------------------#
+tee -a > /dev/null $MLF  <<EOF
+
+tic;
+instemlist = splitstring('$instemlist');
+telist = [$telist];
+outstem = '$outstem';
+wechostem = '$wechostem';
+avgmethod = '$avgmethod';
+okfile    = '$okfile';
+
+fout = 0;
+wecho = [];
+nechoes = size(instemlist,1);
+for n = 1:nechoes
+  instem = deblank(instemlist(n,:));
+  fprintf('Loading %s (%g)\n',instem,toc);
+  [fin mristruct] = fast_ldbslice(instem, -1);
+  if(isempty(fin)) return; end
+  [nrows ncols ntp fs ns endian bext] = fmri_bfiledim(instem);
+
+  % Compute the mean to use as replacement
+  %if(n == 1) fmn = sum(fin,4);
+  %else fmn = fmn + sum(fin,4);
+  %end
+
+  if(strcmp(avgmethod,'avg'))
+    fout = fout + fin;
+  else
+    fprintf('Weighting (%g)\n',toc);
+    te = telist(n);
+
+    if(strcmp(bext,'bshort'))
+      % Rescale functional if input is bshort
+      fscalefile = sprintf('%s.scale.dat',instem);
+      frange = load(fscalefile);
+      fmin = frange(1);
+      fscale = frange(3);
+      fin = fin/fscale + fmin;
+    else
+      fprintf('Skipping bshort-rescaling because it is not a bshort, ...\n');
+      fprintf(' still performing weighting though\n');
+    end
+
+    finw = te*mean(fin,4);
+    nframes = size(fin,4);
+    fout = fout + fin .* repmat(finw,[1 1 1 nframes]);
+    wecho(:,:,:,n) = finw;
+  end
+
+end
+
+if(strcmp(avgmethod,'wavg'))
+  % When fout is computed above, the weights are not
+  % normaliazed (ie sum(w) ~= 1). This section rescales
+  % each voxel so that effectively sum(w) = 1. 
+  wechosum = sum(wecho,4);
+  ind = find(wechosum==0);
+  wechosum(ind) = 1;
+  fout = fout ./ repmat(wechosum,[1 1 1 nframes]);
+end
+
+foutmin = min(reshape1d(fout));
+foutmax = max(reshape1d(fout));
+fscale = (2^14-1)/(foutmax-foutmin);
+fout = fscale*(fout-foutmin);
+fprintf('Saving to %s (%g)\n',outstem,toc);
+err = fast_svbslice(fout,outstem,-1,'bshort',mristruct);
+if(err) return; end
+
+if(~isempty(wechostem))
+  % normalize and save the echo weights %
+  fprintf('Saving weights to to %s (%g)\n',wechostem,toc);
+  wecho = wecho ./ repmat(wechosum,[1 1 1 nechoes]);
+  err = fast_svbslice(wecho,wechostem,-1,'',mristruct);
+  if(err) return; end
+end
+
+fmri_touch(okfile);
+
+fprintf('tdr_avgechoes done (%g)\n',toc);
+return;
+
+EOF
+  #---------------------------------------------#
+
+if(! $monly) then
+  echo "--------------------------" >> $LF
+  cat $MLF >> $LF
+  echo "--------------------------" >> $LF
+  cat $MLF | matlab -display iconic -nojvm -nosplash | & tee -a $LF
+  echo "" | & tee -a $LF
+  if(! -e $okfile) then
+    echo "ERROR: during matlab execution" | & tee -a $LF
+    exit 1;
+  endif
+  rm -f $okfile
+endif
+
+echo "Started at $StartTime" |& tee -a $LF
+echo "Ended   at `date`"     |& tee -a $LF
+
+echo "tdr-avgechoes done"
+
+
+exit 0
+
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "--i":
+      if ( $#argv == 0) goto arg1err;
+      set instemlist = ($instemlist $argv[1]); shift;
+      breaksw
+
+    case "--te":
+      if ( $#argv == 0) goto arg1err;
+      set telist = ($telist $argv[1]); shift;
+      breaksw
+
+    case "--o":
+      if ( $#argv == 0) goto arg1err;
+      set outstem = $argv[1]; shift;
+      breaksw
+
+    case "--we":
+      if ( $#argv == 0) goto arg1err;
+      set wechostem = $argv[1]; shift;
+      breaksw
+
+    case "--method":
+      if ( $#argv == 0) goto arg1err;
+      set avgmethod = $argv[1]; shift;
+      if($avgmethod != avg && $avgmethod != wavg) then
+        echo "ERROR: avg method $avgmethod unrecognized"
+        exit 1;
+      endif
+      breaksw
+
+    case "--monly":
+      if ( $#argv == 0) goto arg1err;
+      set MLF = $argv[1]; shift;
+      set monly = 1;
+      breaksw
+
+    case "--debug":
+      set verbose = 1;
+      set echo = 1; # turns on terminal echoing
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#instemlist == 0) then
+    echo "ERROR: must specify instems"
+    exit 1;
+  endif
+  if($#avgmethod == 0) then
+    echo "ERROR: must specify averaging method"
+    exit 1;
+  endif
+  if($avgmethod == wavg && $#telist != $#instemlist) then
+    echo "ERROR: need $#instemlist TEs"
+    exit 1;
+  endif
+  foreach instem ($instemlist)
+    set h0 = $instem"_000.hdr"
+    if(! -e $h0) then
+      echo "ERROR: cannot find $h0"
+      exit 1;
+    endif
+  end
+
+  if($#wechostem != 0 && $avgmethod == avg) then
+    echo "ERROR: cannot save wecho when method is avg"
+    exit 1;
+  endif
+
+  if($#outstem == 0) then
+    echo "ERROR: no outstem specified"
+    exit 1;
+  endif
+  set outdir = `dirname $outstem`;
+  mkdir -p $outdir
+  if($status) then
+    echo "ERROR: making $outdir"
+    exit 1;
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: tdr-avgechoes"
+  echo ""
+  echo "  --i instem1 <--i instem2 ...>"
+  echo "  --method  method: avg or wavg"
+  echo "  --te te1 <--te te2 ...> : needed with wavg"
+  echo "  --o outstem"
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+Averages multiple echoes together.

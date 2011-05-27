@@ -1,0 +1,433 @@
+#! /bin/csh -f
+
+#
+# swfflac-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2007/01/09 22:41:19 $
+#    $Revision: 1.8 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: swfflac-sess,v 1.8 2007/01/09 22:41:19 nicks Exp $';
+
+set cmdargs = ($argv);
+
+set flacname = ();
+set flacfile = ();
+set monly     = 0;
+set nolog     = 0;
+set PrintHelp = 0;
+set synthtarg = 0;
+set alpha   = 0.5;
+set pthresh =   1;  # -log10(thresh)
+set ytikreg = 0.1;
+set sncor   = 0;
+set outfspec = ();
+set rcslist = ();
+set contrast = ();
+set targflacname = ();
+set targflacfile = ();
+set nswf = 0;
+set nswfdim = 10;
+set gscaleuse = 0;
+set nbhd = 0;
+set fdr  = 1;
+set sncdim = 0;
+set usesnc = 0;
+set sop = 0;
+set snconly = 0;
+set nbhd_inplane = 0;
+set useffxbeta = 0;
+set assumeiid = 0;
+set gnorm = 0;
+
+if($#argv == 0)  goto usage_exit;
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+  exit 1;
+endif
+
+set SessList = `getsesspath $argv`;
+if($status || $#SessList == 0) then
+  getsesspath $argv 
+  exit 1;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+if(! $nolog) then
+  set LF = log/swfflac-sess.$flacname.log
+  if(-e $LF) mv $LF $LF.bak
+else
+  set LF = /dev/null
+endif
+
+date | tee -a $LF
+pwd  | tee -a $LF
+echo $0  | tee -a $LF
+echo $cmdargs | tee -a $LF
+echo $VERSION | tee -a $LF
+hostname  | tee -a $LF
+
+if(! $monly) set MLF = /tmp/swfflac-sess.$$.m
+rm -f $MLF
+
+set okfile = /tmp/swfflac-sess.$$.ok
+
+#------------------------------------------------------------------#
+set StartTime = `date`;
+foreach sess ($SessList)
+  set sessid = `basename $sess`;
+
+#--------------------------#
+tee -a $MLF > /dev/null <<EOF
+
+flacfile = '$flacfile';
+nswf     = $nswf;
+nswfdim  = $nswfdim;
+sesspath = '$sess';
+outfspec = '$outfspec';
+alpha = $alpha;
+pthresh = $pthresh;
+ytikreg = $ytikreg;
+sncor   = $sncor;
+contrast = '$contrast';
+rcslist = [$rcslist];
+synthtarg = $synthtarg;
+targflacfile = '$targflacfile';
+gscaleuse = $gscaleuse;
+nbhd = $nbhd;
+fdr = $fdr;
+sop = $sop;
+usesnc = $usesnc;
+sncdim = $sncdim;
+snconly = $snconly;
+nbhd_inplane = $nbhd_inplane;
+useffxbeta = $useffxbeta;
+assumeiid = $assumeiid;
+gnorm = $gnorm;
+
+monly = $monly;
+okfile = '$okfile';
+
+fprintf('-----------------------------------------------------\n');
+fprintf('Session: %s \n',sesspath);
+fprintf('%g ',clock);fprintf('\n');
+
+if(~nswf)
+  if(~nbhd) fast_swfflac_sess;
+  else      fast_swfflac_nbhd_sess;
+  end
+else
+  fast_nswfflac_sess;
+end
+tmp = ls(okfile);
+if(isempty(tmp)) 
+  fprintf('ERROR: %s\n',sesspath);
+  if(~monly) quit; end  
+  return;
+end
+
+if(~monly) clear all; end
+
+EOF
+#--------------------------#
+
+end # Loop over sessions #
+
+if(! $monly) then
+  cat $MLF | matlab -display iconic
+  rm -f $MLF
+  if(! -e $okfile) then
+    echo "ERROR: during matlab execution"
+    exit 1;
+  endif
+endif
+
+
+echo "Started at $StartTime" | tee -a $LF
+echo "Ended   at `date`"     | tee -a $LF
+echo "swfflac-sess Done"    | tee -a $LF
+
+exit 0;
+###############################################
+
+
+############--------------##################
+parse_args:
+set cmdline = "$argv";
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-f":
+    case "-flac":
+      if ( $#argv == 0) goto arg1err;
+      set flacname = $argv[1]; shift;
+      set flacfile = flac/$flacname
+      if(! -e $flacfile) then
+        echo "ERROR: cannot find $flacfile"
+        exit 1;
+      endif
+      breaksw
+
+    case "-o":
+      if ( $#argv == 0) goto arg1err;
+      set outfspec = $argv[1]; shift;
+      breaksw
+
+    case "-targflac":
+      if ( $#argv == 0) goto arg1err;
+      set targflacname = $argv[1]; shift;
+      set targflacfile = flac/$targflacname
+      if(! -e $targflacfile) then
+        echo "ERROR: cannot find $targflacfile"
+        exit 1;
+      endif
+      breaksw
+
+    case "-c":
+      if ( $#argv == 0) goto arg1err;
+      set contrast = $argv[1]; shift;
+      breaksw
+
+    case "-alpha":
+      if ( $#argv == 0) goto arg1err;
+      set alpha = $argv[1]; shift;
+      breaksw
+
+    case "-pthresh":
+      if ( $#argv == 0) goto arg1err;
+      set pthresh = $argv[1]; shift;
+      breaksw
+
+    case "-ytikreg":
+      if ( $#argv == 0) goto arg1err;
+      set ytikreg = $argv[1]; shift;
+      breaksw
+
+    case "-rcs":
+      if( $#argv < 3) then
+        echo "ERROR: flac -rcs needs 3 args"
+        exit 1;
+      endif
+      set rcslist = ($rcslist $argv[1]); shift;
+      set rcslist = ($rcslist $argv[1]); shift;
+      set rcslist = ($rcslist $argv[1]); shift;
+      breaksw
+
+    case "-nswf":
+      set nswf = 1;
+      breaksw
+
+    case "-nswfdim":
+      if ( $#argv == 0) goto arg1err;
+      set nswfdim = $argv[1]; shift;
+      breaksw
+
+    case "-sncor":
+      set sncor = 1;
+      breaksw
+
+    case "-sop":
+      set sop = 1;
+      breaksw
+
+    case "-gnorm":
+      set gnorm = 1;
+      breaksw
+
+    case "-snconly":
+      set snconly = 1; 
+      set usesnc = 1; 
+      set sop = 0;
+      set fdr = 1; # Turns off FDR 
+      breaksw
+
+    case "-synth":
+      set synthtarg = 1;
+      breaksw
+
+    case "-gscale":
+      set gscaleuse = 1;
+      breaksw
+
+    case "-nogscale":
+      set gscaleuse = 0;
+      breaksw
+
+    case "-monly":
+      if ( $#argv == 0) goto arg1err;
+      set MLF = $argv[1]; shift;
+      set monly = 1;
+      breaksw
+
+    case "-fdr":
+      if ( $#argv == 0) goto arg1err;
+      set fdr = $argv[1]; shift;
+      breaksw
+
+    case "-nbhd":
+      set nbhd = 1;
+      breaksw
+
+    case "-nbhd-inplane":
+      set nbhd_inplane = 1;
+      breaksw
+
+    case "-sncdim":
+      if ( $#argv == 0) goto arg1err;
+      set sncdim = $argv[1]; shift;
+      set usesnc = 1;
+      if($sncdim == 0)    set usesnc = 0;
+      if($sncdim == "00") set usesnc = 0;
+      breaksw
+
+    case "-ffxbeta":
+      set useffxbeta = 1;
+      breaksw
+
+    case "-iid":
+      set assumeiid = 1;
+      breaksw
+
+    case "-nolog":
+      set nolog = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-g":
+    case "-s":
+    case "-sf":
+    case "-d":
+    case "-df":
+      shift;
+      # ignore getsesspath arguments 
+      breaksw
+
+    case "-cwd":
+      # ignore getsesspath arguments 
+      breaksw
+
+    case "-umask":
+      if ( $#argv == 0) goto arg1err;
+      setenv MRI_UMASK $1; shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+  if($#flacfile == 0) then
+    echo "ERROR: must spec flac"
+    exit 1;
+  endif
+  if($#outfspec == 0) then
+    echo "ERROR: must specify output spec"
+    exit 1;
+  endif
+  if($#contrast == 0) then
+    echo "ERROR: must specify contrast"
+    exit 1;
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: swfflac-sess"
+  echo ""
+  echo "   -flac flacfile : as found in flac/flacfile "
+  echo "   -o outfspec    : uses same format as flac "
+  echo "   -c contrast    : optimize wrt contrast"
+  echo ""
+  echo "Other Arguments"
+  echo "   -alpha alpha : default is $alpha"
+  echo "   -pthresh pthresh : -log10(p), default is $pthresh"
+  echo "   -ytikreg ytikreg : tikhonov regularization (def is $ytikreg)"
+  echo "   -targflac flacfile : defaullt is input flac"
+  echo "   -rcs r c s <-rcs r c s> : create outfspec-wrcs-{in,out}"
+  echo "   -synth : synthesize the target with wgn"
+  echo "   -sncor  : assume that the signal and noise are spat correlated"
+  echo "   -nswf  : estimate noise components with SWF and remove"
+  echo "   -nswfdim  : dimension of SWF to remove <$nswfdim>"
+  echo "   -nbhd : use local instead of whole-brain"
+  echo "   -nbhd-inplane : define neighborhood to be only within plane"
+  echo "   -sncdim dim"
+  echo "   -iid : assume noise is locally iid"
+  echo "   -fdr fdr"
+  echo "   -sop : spill-over protection -- turns off fdr"
+  echo "   -gnorm : L2 normalize kernel"
+  echo ""
+  echo "   -gscale : apply global scaling"
+  echo "   -debug"
+  echo "   -umask umask    : set unix file permission mask"
+  echo "   -version        : print version and exit"
+  echo "   -help           : print help and exit"
+  echo ""
+  echo "Session Arguments (Required)"
+  echo "   -sf sessidfile  "
+  echo "   -df srchdirfile "
+  echo "   -s  sessid      "
+  echo "   -d  srchdir     "
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+
+  echo "------------------------------------------------------------"
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+  echo "------------------------------------------------------------"
+
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+

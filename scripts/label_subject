@@ -1,0 +1,69 @@
+#! /bin/tcsh -ef
+
+#
+# label_subject
+#
+# REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+#
+# Original Author: REPLACE_WITH_FULL_NAME_OF_CREATING_AUTHOR
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.6 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+
+set s=$1
+
+set M3D=talairach.m3z
+set LTA=talairach.lta
+
+set label=mri_ca_label
+set emreg=mri_em_register
+set careg=mri_ca_register
+set canorm=mri_ca_normalize
+set mdir = $SUBJECTS_DIR/$s/mri
+
+if (-e $mdir/brain.mgz == 0) then
+		set BRAIN=brain
+else
+		set BRAIN=brain.mgz
+endif
+
+if (-e $mdir/nu.mgz == 0) then
+		set NU=nu
+else
+		set NU=nu.mgz
+endif
+
+set echo=1
+
+# run nu_correct if needed
+if (-e $NU == 0) then
+		set NU=nu.mgz
+		if (-e $mdir/orig.mgz != 0) then
+				set ORIG = orig.mgz
+		else
+				set ORIG = orig
+		endif
+		mri_convert $mdir/$ORIG /tmp/nu$$0.mnc
+		nu_correct -stop .0001 -iterations 3 -normalize_field -clobber /tmp/nu$$0.mnc /tmp/nu$$1.mnc
+		mri_convert /tmp/nu$$1.mnc $mdir/$NU
+		rm /tmp/nu$$0.mnc /tmp/nu$$1.mnc
+		find  /tmp  -prune -name "*.imp" -user $LOGNAME -exec rm -f {} \;
+endif
+$emreg  -mask $mdir/$BRAIN $mdir/$NU $GCA $mdir/transforms/$LTA
+$canorm -mask $mdir/$BRAIN $mdir/$NU $GCA $mdir/transforms/$LTA $mdir/norm.mgz
+$careg -cross-sequence  -mask $mdir/$BRAIN -T $mdir/transforms/$LTA $mdir/norm.mgz $GCA $mdir/transforms/$M3D
+$label -cross-sequence $mdir/norm.mgz $mdir/transforms/$M3D $GCA $mdir/aseg.mgz

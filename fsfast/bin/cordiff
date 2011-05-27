@@ -1,0 +1,69 @@
+#! /bin/csh -f
+
+#
+# cordiff
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2007/01/09 22:41:16 $
+#    $Revision: 1.2 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+if($#argv != 2 ) then
+  echo "USAGE: cordiff cor1dir cor2dir"
+  exit 1;
+endif
+
+set cor1dir = $argv[1];
+set cor2dir = $argv[2];
+
+if(! -e $cor1dir) then
+  echo "ERROR: cannot find $cor1dir"
+  exit 1;
+endif
+
+if(! -e $cor2dir) then
+  echo "ERROR: cannot find $cor2dir"
+  exit 1;
+endif
+
+@ s = 1;
+while ( $s <= 256 )
+  set corfile = `printf "COR-%03d" $s`;
+  set cor1file = $cor1dir/$corfile
+  set cor2file = $cor2dir/$corfile
+
+  if(! -e $cor1file) then
+    echo "ERROR: cannot find $cor1file"
+    exit 1;
+  endif
+
+  if(! -e $cor2file) then
+    echo "ERROR: cannot find $cor2file"
+    exit 1;
+  endif
+
+  set n = `diff $cor1file $cor2file`;
+  if($#n != 0) echo "Slices $s differ"
+
+  @ s = $s + 1;
+end
+
+
+
+
+exit 0

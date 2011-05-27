@@ -1,0 +1,399 @@
+#! /bin/tcsh -f
+
+#
+# mri_nu_correct.mni
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.18 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+# mri_nu_correct.mni
+#
+set VERSION = '$Id: mri_nu_correct.mni,v 1.18 2011/03/02 20:16:39 nicks Exp $';
+
+set InVol = ();
+set OutVol = ();
+set nIters = 4; # default in recon-all
+set HiRes = ();
+set nProtoIters = ();
+set StopThresh = ();
+set Distance = ();
+set FWHM = ();
+set LF = ();
+set UseFloat = 1;
+set DoRescale = 1;
+set cleanup = 1;
+set tmpdir = ();
+set DoUchar = 0;
+set talxfm = ();
+
+set debug = 0;
+set PrintHelp = 0;
+
+set cmdargs = ($argv);
+if($#argv == 0)  goto usage_exit;
+set n = `echo $argv | egrep -e --version | wc -l`
+if($n != 0) then
+  echo $VERSION
+  exit 1;
+endif
+
+# Parse the command-line arguments
+goto parse_args;
+parse_args_return:
+
+# Check the command-line arguments
+goto check_params;
+check_params_return:
+
+set OutDir = `dirname $OutVol`;
+mkdir -p $OutDir;
+
+if($#LF == 0) set LF = $OutDir/mri_nu_correct.mni.log
+if(-e $LF) mv $LF $LF.bak
+
+pwd  | tee -a $LF
+which mri_nu_correct.mni | tee -a $LF
+echo $cmdargs | tee -a $LF
+echo "nIters $nIters" | tee -a $LF
+echo $VERSION | tee -a $LF
+uname -a | tee -a $LF
+date | tee -a $LF
+nu_correct -version | tee -a $LF
+
+if(! $#tmpdir) set tmpdir = $OutDir/tmp.mri_nu_correct.mni.$$
+mkdir -p $tmpdir
+echo "tmpdir is $tmpdir" | tee -a $LF
+
+# Convert input to minc
+set cmd = (mri_convert ${HiRes} $InVol $tmpdir/nu0.mnc)
+if($UseFloat) set cmd = ($cmd -odt float)
+pwd |& tee -a $LF
+echo $cmd |& tee -a $LF
+$cmd |& tee -a $LF
+if($status) then
+  echo "ERROR: converting to minc" |& tee -a $LF
+  exit 1;
+endif
+
+# Run intensity correction #
+@ nthIter = 1;
+while($nthIter <= $nIters)
+  echo " " |& tee -a $LF
+  echo "--------------------------------------------------------" |& tee -a $LF
+  echo "Iteration $nthIter `date`" |& tee -a $LF
+  @ m = $nthIter - 1
+  set cmd = (nu_correct -clobber $tmpdir/nu${m}.mnc $tmpdir/nu${nthIter}.mnc)
+  set cmd = ($cmd -tmpdir ${tmpdir}/${m}/ );
+  if($#nProtoIters)   set cmd = ($cmd -iterations $nProtoIters);
+  if($#StopThresh)    set cmd = ($cmd -stop $StopThresh);
+  if($#Distance)      set cmd = ($cmd -distance $Distance);
+  if($#FWHM)          set cmd = ($cmd -fwhm $FWHM);
+  echo $cmd |& tee -a $LF
+  $cmd |& tee -a $LF
+  if($status) then
+    echo "ERROR: nu_correct" |& tee -a $LF
+    exit 1;
+  endif
+  rm -f $tmpdir/nu${m}.mnc $tmpdir/nu${m}.imp
+  @ nthIter = $nthIter + 1;
+  echo " " |& tee -a $LF
+end
+echo " " |& tee -a $LF
+echo " " |& tee -a $LF
+
+set numnc = $tmpdir/nu$nIters.mnc
+
+if($DoRescale) then
+  cp $numnc $tmpdir/pre-scale.mnc
+
+  # Rescale so that global mean of output = mean of input
+  set ones = $tmpdir/ones.mgz
+  set cmd = (mri_binarize --i $numnc --min -1 --o $ones);
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+
+  set cmd = (mri_segstats --id 1 --seg $ones --i $InVol \
+    --sum $tmpdir/sum.junk --avgwf $tmpdir/input.mean.dat)
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+  set inmean = `cat $tmpdir/input.mean.dat`
+
+  set cmd = (mri_segstats --id 1 --seg $ones --i $numnc \
+    --sum $tmpdir/sum.junk --avgwf $tmpdir/output.mean.dat)
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+  set outmean = `cat $tmpdir/output.mean.dat`
+
+  set scale = `echo $inmean/$outmean | bc -l`
+  set cmd = (mris_calc -o $numnc $numnc mul $scale)
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+endif
+
+# Convert nu back to cor or mgz, use --like to keep all the header info
+set cmd = (mri_convert ${HiRes} $numnc $OutVol --like $InVol)
+if($UseFloat && $#HiRes == 0 && ! $DoUchar) set cmd = ($cmd --conform)
+echo $cmd |& tee -a $LF
+$cmd |& tee -a $LF
+if($status) exit 1;
+
+if($UseFloat && $#HiRes == 0 && $DoUchar) then
+  set cmd = (mri_make_uchar $OutVol $talxfm $OutVol)
+  echo $cmd |& tee -a $LF
+  $cmd |& tee -a $LF
+  if($status) exit 1;
+endif
+
+
+if($cleanup) rm -r $tmpdir
+
+echo " " |& tee -a $LF
+echo " " |& tee -a $LF
+date | tee -a $LF
+echo "mri_nu_correct.mni done" | tee -a $LF
+
+exit 0;
+###############################################
+
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+
+  switch($flag)
+
+    case "-h"
+    case "-u"
+    case "-usage"
+    case "--usage"
+    case "-help"
+    case "--help"
+      set PrintHelp = 1;
+      goto usage_exit;
+      breaksw
+
+    case "--i":
+      if ( $#argv == 0) goto arg1err;
+      set InVol = $argv[1]; shift;
+      breaksw
+
+    case "--o":
+      if ( $#argv == 0) goto arg1err;
+      set OutVol = $argv[1]; shift;
+      breaksw
+
+    case "--n":
+      if ( $#argv == 0) goto arg1err;
+      set nIters = $argv[1]; shift;
+      breaksw
+
+    case "--proto-iters":
+      if ( $#argv == 0) goto arg1err;
+      set nProtoIters = $argv[1]; shift;
+      breaksw
+
+    case "--stop":
+      if ( $#argv == 0) goto arg1err;
+      set StopThresh = $argv[1]; shift;
+      breaksw
+
+    case "--distance":
+      if ( $#argv == 0) goto arg1err;
+      set Distance = $argv[1]; shift;
+      breaksw
+
+    case "--fwhm":
+      if ( $#argv == 0) goto arg1err;
+      set FWHM = $argv[1]; shift;
+      breaksw
+
+    case "--uchar":
+      if($#argv < 1) goto arg1err;
+      set talxfm = $argv[1]; shift;
+      if(! -e $talxfm) then
+        echo "ERROR: cannot find $talxfm"
+        exit 1;
+      endif
+      set DoUchar = 1;
+      breaksw
+
+    case "--no-uchar":
+    case "--nouchar":
+      set DoUchar = 0;
+      breaksw
+
+    case "--cm":
+      set HiRes = (-cm)
+      breaksw
+
+    case "--float":
+      set UseFloat = 1;
+      set DoRescale = 1;
+      breaksw
+
+    case "--no-float":
+      set UseFloat = 0;
+      breaksw
+
+    case "--rescale":
+      set DoRescale = 1;
+      breaksw
+
+    case "--no-rescale":
+      set DoRescale = 0;
+      breaksw
+
+    case "--tmp":
+    case "--tmpdir":
+      if($#argv < 1) goto arg1err;
+      set tmpdir = $argv[1]; shift;
+      set cleanup = 0;
+      breaksw
+
+    case "--cleanup":
+      set cleanup = 1;
+      breaksw
+
+    case "--no-cleanup":
+      set cleanup = 0;
+      breaksw
+
+    case "--log":
+      if ( $#argv == 0) goto arg1err;
+      set LF = $argv[1]; shift;
+      breaksw
+
+    case "--debug":
+      set verbose = 1;
+      set echo = 1; # turns on terminal echoing
+      set debug = 1;
+      breaksw
+
+    default:
+      echo "ERROR: flag $flag not recognized"
+      exit 1;
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+  if($#InVol == 0) then
+    echo "ERROR: must specify an input volume"
+    exit 1;
+  endif
+  if(! -e $InVol) then
+    echo "ERROR: input volume $InVol does not exist"
+    exit 1;
+  endif
+  if($#OutVol == 0) then
+    echo "ERROR: must specify an output volume"
+    exit 1;
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+fsPrintHelp "mri_nu_correct.mni"
+#  echo ""
+#  echo "USAGE: mri_nu_correct.mni"
+#  echo ""
+#  echo " --i  invol  : input volume"
+#  echo " --o  outvol : output volume"
+#  echo " --n  niters : number of iterations, default is $nIters"
+#  echo " --proto-iters Np : number of protocol iterations "
+#  echo " --stop thresh        : N3 option"
+#  echo " --distance Distance  : N3 -distance option"
+#  echo " --fwhm FWHM          : N3 -fwhm option"
+#  echo " --float : use floating point internally (default)"
+#  echo " --no-float : do NOT use floating point internally"
+#  echo ""
+#  echo " --cm        : conform COR volumes to the min voxel size "
+#  echo ""
+#  echo "Optional flags and arguments:"
+#  echo ""
+#  echo " --help               : print help and exit"
+#  echo " --debug              : turn on debugging"
+#  echo " --version            : print version and exit"
+#  echo ""
+
+#  if(! $PrintHelp) exit 1;
+
+#  echo $VERSION
+
+#  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+Wrapper for nu_correct, a program from the Montreal Neurological
+Insitute (MNI) used for correcting intensity non-uniformity (ie, bias
+fields). You must have the MNI software installed on your system to
+run this. See www.bic.mni.mcgill.ca/software/N3 for more info.
+
+--i  invol  : input volum
+--o  outvol : output volume
+
+Input and output can be any format accepted by mri_convert. If the output
+format is COR, then the directory must exist.
+
+--n niters
+
+Number of iterations to run nu_correct. Default is 4. This is the number
+of times that nu_correct is repeated (ie, using the output from
+the previous run as the input for the next). This is different than
+the -iterations option to nu_correct.
+
+--proto-iters Np
+
+Passes Np as argument of the -iterations flag of nu_correct. This is
+different than the --n flag above. Default is not to pass nu_correct
+the -iterations flag.
+
+--stop thresh
+
+Passes thresh as argument of the -stop flag of nu_correct. According
+to the nu_correct documentation, this threshold is the "CV of change
+in field estimate below which iteration stops (suggest 0.01 to
+0.0001)".  Default is not to pass nu_correct the -stop flag.
+
+--cm
+
+For use with data that is higher than 1mm resolution.
+

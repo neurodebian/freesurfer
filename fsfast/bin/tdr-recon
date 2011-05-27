@@ -1,0 +1,483 @@
+#! /bin/tcsh -f
+
+#
+# tdr-recon
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2007/01/09 22:41:19 $
+#    $Revision: 1.12 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: tdr-recon,v 1.12 2007/01/09 22:41:19 nicks Exp $';
+
+set inputargs = ($argv);
+
+set rawkdir    = ();
+set rcolmat    = ();
+set outstem    = ();
+set phstem     = ();
+set realstem   = ();
+set imagstem   = ();
+set bhdrfile   = ();
+set nechoes    = ();
+set nthecho    = ();
+set usefid     = 1;
+set monly      = 0;
+set fidstem    = ();
+set cleanup    = 1;
+set convmdh    = 1;
+set fixpedrift = 1;
+set fitpedrift = 1;
+set nslices    = ();
+set npcns      = 3;
+
+# This is for reconning a few frames instead of all
+# for debugging purposes
+set nframesrecon  = ();
+
+set PrintHelp = 0;
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+set n = `echo $argv | grep -e -version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+set umask = `umask`;
+
+##### Create a log file ######
+set logdir = $outdir/log;
+mkdir -p $logdir
+if(! -e $logdir) then
+  echo "WARNING: could not create $logdir"
+  set LF = /dev/null
+else
+  set LF = $logdir/tdr-recon.log
+  if(-e $LF) mv $LF $LF.old
+endif
+echo "--------------------------------------------------------------"
+echo "tdr-recon logfile is $LF"
+echo "--------------------------------------------------------------"
+
+echo "tdr-recon log file" >> $LF
+echo $VERSION | tee -a $LF
+id            | tee -a $LF
+pwd           | tee -a $LF
+echo $0       | tee -a $LF
+echo $inputargs | tee -a $LF
+uname -a      >> $LF
+date          >> $LF
+
+set StartTime = `date`;
+
+# Get EPI parameters
+set epimeasasc = $rawkdir/meas.asc
+set tmp = `parse-measasc $epimeasasc "m_iNoOfFourierColumns"`
+if($status) then
+  echo "$tmp"| tee -a $LF
+  exit 1;
+endif
+set nkcols = $tmp;
+
+set tmp = `parse-measasc $epimeasasc "m_iNoOfFourierLines"`
+if($status) then
+  echo "$tmp"| tee -a $LF
+  exit 1;
+endif
+set nrows = $tmp;
+
+set tmp = `parse-measasc $epimeasasc "nslices"`
+if($status) then
+  echo "$tmp"| tee -a $LF
+  exit 1;
+endif
+set nslices = $tmp;
+
+set tmp = `parse-measasc $epimeasasc "m_lEchoSpacing"`
+if($status) then
+  echo "$tmp"| tee -a $LF
+  exit 1;
+endif
+set epiechospacing = $tmp
+
+set tmp = `parse-measasc $epimeasasc "m_alRegridDelaySamplesTime"`
+if($status) then
+  echo "$tmp"| tee -a $LF
+  exit 1;
+endif
+set epidelsamp = $tmp
+
+set tmp = `parse-measasc $epimeasasc "m_alRegridRampupTime"`
+if($status) then
+  echo "$tmp"| tee -a $LF
+  exit 1;
+endif
+set tRampUp = $tmp;
+
+set tmp = `parse-measasc $epimeasasc "m_alRegridFlattopTime"`
+if($status) then
+  echo "$tmp"| tee -a $LF
+  exit 1;
+endif
+set tFlat = $tmp;
+
+set tmp = `parse-measasc $epimeasasc "m_alRegridRampdownTime"`
+if($status) then
+  echo "$tmp"| tee -a $LF
+  exit 1;
+endif
+set tRampDown = $tmp;
+
+set tmp = `parse-measasc $epimeasasc "sRXSPEC.alDwellTime[0]"`
+if($status) then
+  echo "$tmp"| tee -a $LF
+  exit 1;
+endif
+set epitdwell = `echo "$tmp/1000" |bc -l`; # convert to us
+
+set tmp = `parse-measasc $epimeasasc "lRepetitions"`
+if($status) then
+  echo "$tmp"| tee -a $LF
+  exit 1;
+endif
+set nframes = `echo "$tmp+1" | bc `;
+
+echo "epiechospacing $epiechospacing" | tee -a $LF
+echo "epidelsamp $epidelsamp " | tee -a $LF
+echo "epitdwell $epitdwell " | tee -a $LF
+echo "tRampUp   $tRampUp" | tee -a $LF
+echo "tFlat     $tFlat" | tee -a $LF
+echo "tRampDown $tRampDown" | tee -a $LF
+echo "nrows   $nrows" | tee -a $LF
+echo "nkcols  $nkcols" | tee -a $LF
+echo "nslices $nslices" | tee -a $LF
+echo "nframes $nframes" | tee -a $LF
+echo "nframesrecon $nframesrecon" | tee -a $LF
+
+set kepimghdir = $outdir/tmp
+if($convmdh) then
+  mkdir -p $kepimghdir
+  set cmd = (mri_convert_mdh --srcdir $rawkdir \
+      --outdir $kepimghdir \
+      --dim $nframes $nslices $nechoes $nrows $nkcols $npcns \
+      --fasterdim line)
+  echo "---------------------------------" |& tee -a $LF
+  date |& tee -a $LF
+  echo $cmd |& tee -a $LF
+  $cmd |& tee -a $LF
+  if($status) exit 1;
+else
+  if(! -e $kepimghdir ) then
+    echo "ERROR: $kepimghdir does not exist, run without --noconvmdh"
+    exit 1;
+  endif
+endif
+
+echo "Echo $nthecho -----------"| & tee -a $LF
+date | & tee -a $LF
+set funcstem = $outstem
+echo "funcstem is $funcstem" | & tee -a $LF
+
+if($#nframesrecon == 0) set nframesrecon = $nframes;
+
+if(! $monly) set MLF = $outdir/run_tdr_recon_$nthecho.m
+rm -f $MLF
+  #---------------------------------------------#
+tee -a > /dev/null $MLF  <<EOF
+  kepidir = '$kepimghdir';
+  epiecho =  $nthecho;
+  rcolmatfile = '$rcolmat';
+  usefid = $usefid;
+  fixpedrift = $fixpedrift;
+  fitpedrift = $fitpedrift;
+  nframes = $nframesrecon;
+  funcstem = '$funcstem';
+  phstem   = '$phstem';
+  realstem = '$realstem';
+  imagstem = '$imagstem';
+  fidstem  = '$fidstem';
+  bhdrfile = '$bhdrfile';
+  tDwell     = $epitdwell; % usec
+  tDelSamp   = $epidelsamp;  % usec
+  tRampUp    = $tRampUp; % usec
+  tFlat      = $tFlat; % usec
+  tRampDown  = $tRampDown; % usec
+  tdelay     = 1.0;
+  tdr_recon;
+EOF
+  #---------------------------------------------#
+
+if(! $monly) then
+  cat $MLF >> $LF
+  cat $MLF | matlab -display iconic -nojvm -nosplash | & tee -a $LF
+  echo "" | & tee -a $LF
+endif
+
+if($cleanup) then
+  echo "Deleting mgh files" |& tee -a $LF
+  set cmd = (rm -r $kepimghdir)
+  echo $cmd |& tee -a $LF
+  $cmd |& tee -a $LF
+endif
+
+echo "Started at $StartTime" |& tee -a $LF
+echo "Ended   at `date`"     |& tee -a $LF
+
+echo "tdr-recon done"
+
+
+exit 0
+
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "--rawk":
+      if ( $#argv == 0) goto arg1err;
+      set rawkdir = $argv[1]; shift;
+      breaksw
+
+    case "--rcol":
+      if ( $#argv == 0) goto arg1err;
+      set rcolmat = $argv[1]; shift;
+      breaksw
+
+    case "--nechoes":
+      if ( $#argv == 0) goto arg1err;
+      set nechoes = $argv[1]; shift;
+      breaksw
+
+    case "--echo":
+      if ( $#argv == 0) goto arg1err;
+      set nthecho = $argv[1]; shift;
+      breaksw
+
+    case "--nframesrecon":
+      if ( $#argv == 0) goto arg1err;
+      set nframesrecon = $argv[1]; shift;
+      breaksw
+
+    case "--nslices":
+      if ( $#argv == 0) goto arg1err;
+      set nslices = $argv[1]; shift;
+      breaksw
+
+    case "--o":
+      if ( $#argv == 0) goto arg1err;
+      set outstem = $argv[1]; shift;
+      breaksw
+
+    case "--ph":
+      if ( $#argv == 0) goto arg1err;
+      set phstem = $argv[1]; shift;
+      breaksw
+
+    case "--real":
+      if ( $#argv == 0) goto arg1err;
+      set realstem = $argv[1]; shift;
+      breaksw
+
+    case "--imag":
+      if ( $#argv == 0) goto arg1err;
+      set imagstem = $argv[1]; shift;
+      breaksw
+
+    case "--fid":
+      if ( $#argv == 0) goto arg1err;
+      set fidstem = $argv[1]; shift;
+      breaksw
+
+    case "--bhdr":
+      if ( $#argv == 0) goto arg1err;
+      set bhdrfile = $argv[1]; shift;
+      breaksw
+
+    case "--monly":
+      if ( $#argv == 0) goto arg1err;
+      set monly = 1;
+      set MLF = $argv[1]; shift;
+      breaksw
+
+    case "--notdr":
+    case "--nofid":
+      set usefid = 0;
+      breaksw
+
+    case "--nofixpedrift":
+      set fixpedrift = 0;
+      breaksw
+
+    case "--nofitpedrift":
+      set fitpedrift = 0;
+      breaksw
+
+    case "--nocleanup":
+      set cleanup = 0;
+      breaksw
+
+    case "--cleanup":
+      set cleanup = 1;
+      breaksw
+
+    case "--noconvmdh":
+      set convmdh = 0;
+      set cleanup = 0;
+      breaksw
+
+    case "--debug":
+      set verbose = 1;
+      set echo = 1; # turns on terminal echoing
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#rawkdir == 0) then
+    echo "ERROR: must specify a rawkdir"
+    exit 1;
+  endif
+  if(! -e $rawkdir ) then
+    echo "ERROR: $rawkdir does not exist"
+    exit 1;
+  endif
+  if(! -e $rawkdir/meas.out ) then
+    echo "ERROR: $rawkdir/meas.out does not exist"
+    exit 1;
+  endif
+  if(! -e $rawkdir/meas.asc ) then
+    echo "ERROR: $rawkdir/meas.asc does not exist"
+    exit 1;
+  endif
+  if($#nechoes == 0 ) then
+    echo "ERROR: must spec nechoes"
+    exit 1;
+  endif
+  if($#nthecho == 0 ) then
+    echo "ERROR: must which echo to recon"
+    exit 1;
+  endif
+  if(! -e $rcolmat ) then
+    echo "ERROR: $rcolmat does not exist"
+    exit 1;
+  endif
+
+  if($#bhdrfile) then
+    if(! -e $bhdrfile ) then
+      echo "ERROR: $bhdrfile does not exist"
+      exit 1;
+    endif
+  endif
+
+  if($#outstem == 0) then
+    echo "ERROR: must specify an out stem"
+    exit 1;
+  endif
+  set outdir = `dirname $outstem`;
+
+  mkdir -p $outdir
+  if($status) then
+    echo "ERROR: making $outdir"
+    exit 1;
+  endif
+
+  if($#fidstem != 0) then
+    set fidoutdir = `dirname $fidstem`;
+    mkdir -p $fidoutdir
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: tdr-recon"
+  echo ""
+  echo "  --rawk    dir : directory with EPI meas.{out,asc}"
+  echo "  --rcol    rcolmat : as created by tdr-rcolmat"
+  echo "  --echo    nthecho : echo to recon (starting at 1)"
+  echo "  --nechoes nechoes : number of echos in raw data"
+  echo "  --notdr   don't compensate for distortion"
+  echo "  --nofixpedrift  don't compensate for PE drift"
+  echo "  --nofitpedrift  don't fit PE drift to quadradic"
+  echo "  --nframesrecon nframesrecon : only recon this number of frames"
+  echo "  --o       outstem : bfloat output"
+  echo "  --fid     fidstem : save first echo of fid as an anatomical"
+  echo "  --bhdr    bhdrfile (use as a template)"
+  echo "  --nocleanup : do not delete intermediate mgh files"
+  echo "  --noconvmdh : do not convert mdh files (must exist already, forces nocleanup)"
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+Converts raw k-space data into images using time-domain 
+reconstruction  method.
+
+EXAMPLE:
+
+tdr-recon --rawk func3_mtl_raw \
+    --echo 1 --nechoes 1 --nslices 23 \
+    --rcol tdr/R28.mat \
+    --o    tdr/func3_mtl_raw/f \
+    --fid  tdr/fid/f 

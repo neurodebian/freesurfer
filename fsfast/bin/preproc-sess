@@ -1,0 +1,958 @@
+#! /bin/tcsh -f
+
+#
+# preproc-sess - runs preprocessing (mc, spatsmooth, mkbrainmask, inorm)
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2011/03/22 17:16:19 $
+#    $Revision: 1.45.2.1 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+# To get per-run reg with smoothing, make sure -fwhm is after -per-run:
+# preproc-sess -s risk001 -per-run -fwhm 5 -fsd bold 
+# This creates fmcpr.sm5, then
+# mkanalysis-sess -native -funcstem fmcpr.sm5 ...
+
+set VERSION = '$Id: preproc-sess,v 1.45.2.1 2011/03/22 17:16:19 greve Exp $';
+
+set inputargs = ($argv);
+set DateStr = "`date '+%y%m%d%H%M'`"
+
+set instem   = ();
+set mcinstem   = ();
+set mcoutstem  = ();
+set stcinstem   = ();
+set stcoutstem  = ();
+set sminstem   = ();
+set smoutstem  = ();
+set inormstem  = ();
+set maskdir    = masks
+set maskstem   = brain;
+set UseSmoothMask = 0;
+set fwhm     = ();
+set surffwhm = ();
+set SliceOrder = ();
+set fsd      = ();
+set mcrun    = ();
+set mctargstem = ();
+set mctargframe = ();
+set PerRun = 0;
+set PerSess = 0;
+set RunListFile = ();
+
+set UpdateOnly = 1;
+set DoTemplate = 1;
+set DoMC     = 1;
+set DoSTC    = 0;
+set DoMask   = 1;
+set DoVolSmooth = 1;
+set DoSurfSmooth = 0;
+set DoSmooth = 1; # any smoothing
+set DoInorm  = 0;
+set ProjFrac = (); # default will be 0.5
+set DoProjAvg = 0;
+set DoReg = 1;
+set ToSurf = 0;
+set subject = ();
+set hemi = ();
+set ToMNI305 = 0;
+set RawRes = 2;
+set RegDOF = 6;
+set regfile = ();
+set UseB0DC = 0;
+set ApplySubCortMask = 1;
+
+set nskip = 0; # for inorm
+set nolog = 0;
+set targgrp = ();
+
+set PrintHelp = 0;
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+set n = `echo $argv | grep -e -version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+set PWD = `getpwdcmd`;
+if($status) exit 1;
+
+set SessList = `getsesspath $argv`;
+if($status || $#SessList == 0) then
+  getsesspath $argv 
+  exit 1;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+##### Create a log file ######
+if($nolog) then 
+  set LF = /dev/null
+else
+  set logdir = log;
+  mkdir -p $logdir
+  if(! -e $logdir) then
+    echo "WARNING: could not create $logdir"
+    set LF = /dev/null
+  else
+    if($#SessList > 1) then
+      set LF = $logdir/preproc-sess.$$.log
+    else
+      set sb = `basename $SessList`
+      set LF = $logdir/preproc-sess.$sb.log
+    endif
+    if(-e $LF) mv $LF $LF.old
+  endif
+endif
+echo "--------------------------------------------------------------"
+echo "preproc-sess logfile is $LF"
+echo "--------------------------------------------------------------"
+
+echo "preproc-sess log file" >> $LF
+echo $VERSION | tee -a $LF
+echo "$user"  | tee -a $LF
+echo "setenv FREESURFER_HOME $FREESURFER_HOME" | tee -a $LF
+echo "setenv SUBJECTS_DIR $SUBJECTS_DIR" | tee -a $LF
+uname -a        | tee -a $LF
+pwd             | tee -a $LF
+echo $0         | tee -a $LF
+echo $inputargs | tee -a $LF
+date          | tee -a $LF
+
+echo "instem   $instem " | tee -a $LF
+echo "mc   $DoMC     $mcinstem $mcoutstem " | tee -a $LF
+echo "stc  $DoSTC    $stcinstem $stcoutstem"  | tee -a $LF
+echo "sm   $DoVolSmooth $sminstem $smoutstem "| tee -a $LF
+echo "mask $DoMask   $maskstem"| tee -a $LF
+
+set ProjectDir = `pwd`;
+
+set StartTime = `date`;
+#------------------------------------------------#
+foreach sess ($SessList)
+  set sessid     = `basename $sess`;
+  set sessparent = `dirname $sess`;
+
+  # Create a log file #
+  if(-w .) then
+    mkdir -p log
+    set LF = $ProjectDir/log/preproc-$sessid-$fsd.log
+    rm -f $LF
+  else
+    set LF = /dev/null
+  endif
+
+  echo "preproc-sess" >> $LF
+  echo $sessid      >> $LF
+  echo $VERSION     >> $LF
+  uname -a          >> $LF
+  date              >> $LF
+  pwd               >> $LF
+  echo $inputargs   >> $LF
+  echo "ProjectDir $ProjectDir" >> $LF
+
+  if($DoTemplate) then
+    set cmd = (mktemplate-sess -s $sessid -d $sessparent -fsd $fsd)
+    if($#RunListFile) set cmd = ($cmd -rlf $RunListFile);
+    if($nolog)      set cmd = ($cmd -nolog);
+    if($UpdateOnly) set cmd = ($cmd -update);
+    echo "$sessid Template -----------------------------" |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+  endif
+
+  if($DoMask) then
+    set cmd = (mkbrainmask-sess -maskstem $maskstem)
+    set cmd = ($cmd -fsd $fsd)
+    set cmd = ($cmd -s $sessid -d $sessparent)
+    if($#RunListFile) set cmd = ($cmd -rlf $RunListFile);
+    if($nolog) set cmd = ($cmd -nolog);
+    if($UpdateOnly) set cmd = ($cmd -update);
+    echo "$sessid Mask ------------------------" |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+  endif
+
+  if($DoReg) then
+    set cmd = (register-sess -s $sessid -d $sessparent -fsd $fsd)
+    set cmd = ($cmd -dof $RegDOF)
+    if($#RunListFile) set cmd = ($cmd -rlf $RunListFile);
+    if($PerRun)     set cmd = ($cmd -per-run)
+    if($PerSess) set cmd = ($cmd -per-session)
+    if($nolog)      set cmd = ($cmd -nolog);
+    if($UpdateOnly) set cmd = ($cmd -update);
+    if($UseB0DC)    set cmd = ($cmd -b0dc)
+    echo "$sessid Registration -----------------------------" |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+  endif
+
+  if($DoMC) then
+    set cmd = (mc-sess -fstem $mcinstem -fmcstem $mcoutstem)
+    set cmd = ($cmd -s $sessid -d $sessparent -fsd $fsd)
+    if($#RunListFile) set cmd = ($cmd -rlf $RunListFile);
+    if($PerRun)   set cmd = ($cmd -per-run)
+    if($PerSess) set cmd = ($cmd -per-session)
+    if($nolog)      set cmd = ($cmd -nolog);
+    if($UpdateOnly) set cmd = ($cmd -update);
+    echo "$sessid MC -----------------------------" |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+  endif
+
+  if($DoSTC) then
+    set cmd = (stc-sess -i $stcinstem -o $stcoutstem)
+    if($#SliceOrder) set cmd = ($cmd -so $SliceOrder)
+    set cmd = ($cmd -s $sessid -d $sessparent -fsd $fsd)
+    if($#RunListFile != 0)  set cmd = ($cmd -rlf $RunListFile);
+    if($nolog)      set cmd = ($cmd -nolog);
+    if($UpdateOnly) set cmd = ($cmd -update);
+    echo "$sessid STC -----------------------------" |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+  endif
+
+  if($ToSurf) then
+    set cmd = (rawfunc2surf-sess -fwhm $fwhm)
+    set cmd = ($cmd -s $sessid -d $sessparent -fsd $fsd)
+    # By default it will do both, so set -hemi to anything
+    if("$hemi" == lh || "$hemi" == rh) set cmd = ($cmd -hemi $hemi)
+    if($subject == self) set cmd = ($cmd -self)
+    if($#RunListFile != 0)  set cmd = ($cmd -rlf $RunListFile);
+    if($#SliceOrder) set cmd = ($cmd -stc $SliceOrder)
+    if($nolog)      set cmd = ($cmd -nolog);
+    if($UpdateOnly) set cmd = ($cmd -update);
+    if($UseB0DC)    set cmd = ($cmd -b0dc)
+    echo "$sessid To Surface -----------------------------" |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+  endif
+
+  if($ToMNI305) then
+    set cmd = (rawfunc2tal-sess -fwhm $fwhm )
+    set cmd = ($cmd -s $sessid -d $sessparent -fsd $fsd)
+    if($RawRes == 1) set cmd = ($cmd -1mm)
+    if($#RunListFile != 0)  set cmd = ($cmd -rlf $RunListFile);
+    if($#SliceOrder) set cmd = ($cmd -stc $SliceOrder)
+    if($nolog)      set cmd = ($cmd -nolog);
+    if($UpdateOnly) set cmd = ($cmd -update);
+    if($UseB0DC)    set cmd = ($cmd -b0dc)
+    if($ApplySubCortMask)   set cmd = ($cmd -subcort-mask)
+    if(! $ApplySubCortMask) set cmd = ($cmd -no-subcort-mask)
+    echo "$sessid To MNI305 -----------------------------" |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+  endif
+
+  if($DoVolSmooth) then
+    set cmd = (spatialsmooth-sess -i $sminstem -o $smoutstem -fwhm $fwhm)
+    set cmd = ($cmd -fsd $fsd -s $sessid -d $sessparent)
+    if($UseSmoothMask)  set cmd = ($cmd -mask);
+    if($#RunListFile != 0)  set cmd = ($cmd -rlf $RunListFile);
+    if($nolog)      set cmd = ($cmd -nolog);
+    if($UpdateOnly) set cmd = ($cmd -update);
+    echo "$sessid Volume Smoothing ---------------------" |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+  endif
+
+  if($DoSurfSmooth) then
+    set cmd = (surfsmooth-sess -i $sminstem -o $smoutstem -fwhm $fwhm)
+    set cmd = ($cmd -fsd $fsd -s $sessid -d $sessparent -reg $regfile)
+    if($#ProjFrac)  set cmd = ($cmd -projfrac $ProjFrac)
+    if($DoProjAvg)  set cmd = ($cmd -projfrac-avg)
+    if($#RunListFile != 0)  set cmd = ($cmd -rlf $RunListFile);
+    if($nolog)      set cmd = ($cmd -nolog);
+    if($UpdateOnly) set cmd = ($cmd -update);
+    if($PerRun)   set cmd = ($cmd -perrun)
+    echo "$sessid Surface Smoothing ---------------------" |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+  endif
+
+  if($DoInorm) then
+    # Should probably remove this
+    set cmd = (inorm-sess -funcstem $inormstem )
+    set cmd = ($cmd  -fsd $fsd -nskip $nskip)
+    set cmd = ($cmd -s $sessid -d $sessparent)
+    if($#RunListFile != 0) set cmd = ($cmd -rlf $RunListFile);
+    if($nolog)     set cmd = ($cmd -nolog);
+    echo "$sessid Inorm ------------------------" |& tee -a $LF
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+  endif
+
+end
+
+echo "----------------------------------------" |& tee -a $LF
+echo "Started at $StartTime" |& tee -a $LF
+echo "Ended   at `date`"     |& tee -a $LF
+
+echo "preproc-sess done"
+
+exit 0
+
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-i":
+    case "-in":
+      if ( $#argv == 0) goto arg1err;
+      set instem = $argv[1]; shift;
+      breaksw
+
+    case "-reg":
+      set DoReg = 1;
+      breaksw
+
+    case "-noreg":
+    case "-no-reg":
+      set DoReg = 0;
+      breaksw
+
+    case "-reg-dof":
+      if ( $#argv == 0) goto arg1err;
+      set RegDOF = $argv[1]; shift;
+      breaksw
+
+    case "-mc-in":
+    case "-mcin":
+      if ( $#argv == 0) goto arg1err;
+      set mcinstem = $argv[1]; shift;
+      breaksw
+
+    case "-mc-out":
+    case "-mcout":
+      if ( $#argv == 0) goto arg1err;
+      set mcoutstem = $argv[1]; shift;
+      breaksw
+
+    case "-stcin":
+      if ( $#argv == 0) goto arg1err;
+      set stcinstem = $argv[1]; shift;
+      breaksw
+
+    case "-stcout":
+      if ( $#argv == 0) goto arg1err;
+      set stcoutstem = $argv[1]; shift;
+      breaksw
+
+    case "-smin":
+      if ( $#argv == 0) goto arg1err;
+      set sminstem = $argv[1]; shift;
+      breaksw
+
+    case "-smout":
+      if ( $#argv == 0) goto arg1err;
+      set smoutstem = $argv[1]; shift;
+      breaksw
+
+    case "-mask":
+      if ( $#argv == 0) goto arg1err;
+      set maskstem = $argv[1]; shift;
+      breaksw
+
+    case "-maskdir":
+      if ( $#argv == 0) goto arg1err;
+      set maskdir= $argv[1]; shift;
+      breaksw
+
+    case "-vol-fwhm":
+    case "-fwhm":
+      if ( $#argv == 0) goto arg1err;
+      set fwhm = $argv[1]; shift;
+      if($fwhm != 0) then
+        set DoVolSmooth = 1;
+        set DoSurfSmooth = 0;
+        set DoSmooth = 1;
+      else
+        set DoVolSmooth = 0;
+        set DoSurfSmooth = 0;
+        set DoSmooth = 0;
+      endif
+      breaksw
+
+    case "-smooth-mask":
+      set UseSmoothMask = 1;
+      breaksw
+
+    case "-no-smooth-mask":
+      set UseSmoothMask = 0;
+      breaksw
+
+    case "-surf-fwhm":
+      if ( $#argv == 0) goto arg1err;
+      set fwhm = $argv[1]; shift;
+      if($fwhm != 0) then
+        set DoVolSmooth = 0;
+        set DoSurfSmooth = 1;
+        set DoSmooth = 1;
+      endif
+      breaksw
+
+    case "-regfile":
+      if ( $#argv == 0) goto arg1err;
+      set regfile = $argv[1]; shift;
+      breaksw
+
+    case "-projfrac":
+      if ( $#argv == 0) goto arg1err;
+      set ProjFrac = $argv[1]; shift;
+      breaksw
+
+    case "-projfrac-avg":
+      set DoProjAvg = 1;
+      breaksw
+
+    case "-nskip":
+      if ( $#argv == 0) goto arg1err;
+      set nskip = $argv[1]; shift;
+      breaksw
+
+    case "-fsd":
+      if ( $#argv == 0) goto arg1err;
+      set fsd = $argv[1]; shift;
+      breaksw
+
+    case "-runlistfile":
+    case "-rlf":
+      if ( $#argv == 0) goto arg1err;
+      set RunListFile = $argv[1]; shift;
+      breaksw
+
+    case "-nomc":
+    case "-no-mc":
+      set DoMC = 0;
+      breaksw
+
+    case "-per-run":
+    case "-perrun":
+      set PerRun = 1;
+      set PerSess = 0;
+      set DoSmooth = 0;
+      set DoVolSmooth = 0;
+      set DoSurfSmooth = 0;
+      breaksw
+
+    case "-per-session":
+    case "-persession":
+      set PerSess = 1;
+      set PerRun = 0;
+      breaksw
+
+    case "-no-stc":
+    case "-nostc":
+      set DoSTC = 0;
+      breaksw
+
+    case "-stc":
+    case "-sliceorder":
+    case "-so":
+      if ( $#argv == 0) goto arg1err;
+      set SliceOrder = $argv[1]; shift;
+      set DoSTC = 1;
+      breaksw
+
+    case "-no-smooth":
+    case "-nosmooth":
+      set DoVolSmooth = 0;
+      set DoSurfSmooth = 0;
+      set DoSmooth = 0;
+      breaksw
+
+    case "-surf":
+    case "-surface":
+      if($#argv< 2) goto arg2err;
+      set subject = $argv[1]; shift;
+      set hemi = $argv[1]; shift;
+      set ToSurf = 1;
+      set PerRun = 1;
+      set PerSess = 0;
+      if($subject != self && ! -e $SUBJECTS_DIR/$subject) then
+        echo "ERROR: cannot find $subject in $SUBJECTS_DIR"
+        exit 1;
+      endif
+      breaksw
+
+    case "-mni305-2mm":
+    case "-mni305":
+      set RawRes = 2;
+      set ToMNI305 = 1;
+      set PerRun = 1;
+      set PerSess = 0;
+      breaksw
+
+    case "-usual":
+      set subject = fsaverage;
+      set hemi = lhrh
+      set ToSurf = 1;
+      set RawRes = 2;
+      set ToMNI305 = 1;
+      set PerRun = 1;
+      set PerSess = 0;
+      set fwhm = 5;
+      breaksw
+
+    case "-mni305-1mm":
+      set RawRes = 1;
+      set ToMNI305 = 1;
+      set PerRun = 1;
+      set PerSess = 0;
+      breaksw
+
+    case "-subcort-mask":
+    case "-subcort":
+      set ApplySubCortMask = 1;
+      breaksw
+    case "-no-subcort-mask":
+    case "-no-subcort":
+      set ApplySubCortMask = 0;
+      breaksw
+
+    case "-b0dc":
+      set UseB0DC = 1;
+      breaksw
+
+    case "-a":
+    case "-analysis":
+      if($#argv< 1) goto arg1err;
+      set analysis = $argv[1]; shift;
+      if(! -e $analysis) then
+        echo "ERROR: cannot find $analysis"
+        exit 1;
+      endif
+      set fsd = `getana -a $analysis -t fsd`;
+      set RunListFile = `getana -a $analysis -t runlistfile`;
+      set RegDOF = `getana -a $analysis -t RegDOF`;
+      set PerRun = `getana -a $analysis -t IsPerRun`;
+      set PerSess = `getana -a $analysis -t IsPerSession`;
+      set UseB0DC = `getana -a $analysis -t UseB0DC`;
+      if($#UseB0DC == 0) set UseB0DC = 0;
+      set fwhm = `getana -a $analysis -t RawFWHM`;
+      if($fwhm == 0 || $PerRun) set DoVolSmooth = 0;
+      set SliceOrder = `getana -a $analysis -t stc`;
+      if($SliceOrder != none) set DoSTC = 1;
+      if($SliceOrder == none) set SliceOrder = ();
+      set ToSurf = `getana -a $analysis -t IsSurface`;
+      if($ToSurf) then
+        set subject = `getana -a $analysis -t subject`;
+        set hemi    = `getana -a $analysis -t hemi`;
+      endif
+      set ToMNI305 = `getana -a $analysis -t IsMNI305`;
+      if($ToMNI305) then
+        set RawRes = `getana -a $analysis -t RawRes`;
+      endif
+      breaksw
+
+    case "-no-inorm":
+    case "-noinorm":
+      set DoInorm = 0;
+      breaksw
+
+    case "-inorm":
+      set DoInorm = 1;
+      breaksw
+
+    case "-no-template":
+      set DoTemplate = 0;
+      breaksw
+
+    case "-no-mask":
+    case "-nomask":
+      set DoMask = 0;
+      breaksw
+
+    case "-update":
+      set UpdateOnly = 1;
+      breaksw
+
+    case "-force":
+    case "-noupdate":
+    case "-no-update":
+      set UpdateOnly = 0;
+      breaksw
+
+    case "-nolog":
+      set nolog = 1;
+      breaksw
+
+    case "-verbose":
+      set verbose = 1;
+      breaksw
+
+    case "-echo":
+      set echo = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-g":
+    case "-s":
+    case "-sf":
+    case "-d":
+    case "-df":
+      shift;
+      # ignore getsesspath arguments 
+      breaksw
+
+    case "-cwd":
+      # ignore getsesspath arguments 
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+  if($#instem == 0) set instem = "f";
+
+  if($#fsd == 0) then
+    echo "ERROR: you must specify a functional subdirectory with -fsd"
+    echo "       eg, -fsd bold or -fsd rest"
+    exit 1
+  endif
+
+  if($DoMC || $DoReg) then
+    if($PerRun == 0 && $PerSess == 0) then
+      echo "ERROR: You must specify -per-run or -per-session"
+      exit 1;
+    endif
+  endif
+
+  if($DoMC) then
+    if($#mcinstem  == 0) set mcinstem  = $instem
+    if($#mcoutstem == 0) then
+      if($PerRun) then
+        set mcoutstem = $mcinstem"mcpr"
+      else # PerSess
+        set mcoutstem = $mcinstem"mc"
+      endif    
+    endif    
+  else
+    set mcoutstem = $instem;
+  endif
+
+  if($DoSTC) then
+    if($#stcinstem  == 0) set stcinstem  = $mcoutstem
+    if($#stcoutstem == 0) set stcoutstem = $stcinstem.$SliceOrder
+  else
+    set stcoutstem = $mcoutstem
+  endif
+
+  if($ToSurf || $ToMNI305) then
+    if($#fwhm == 0) then
+      echo "ERROR: must specify -fwhm with -surface or -mni305."
+      echo "       Set it to 0 for no smoothing"
+      exit 1;
+    endif
+    set DoVolSmooth = 0;
+    set DoSurfSmooth = 0;
+    set DoSmooth = 0;  
+  endif
+
+  if($DoSmooth) then
+    if($#fwhm == 0) then
+      echo "ERROR: must specify FWHM when doing smoothing"
+      echo "If not smoothing, use -nosmooth"
+      exit 1;
+    endif
+    if($#sminstem  == 0) set sminstem  = $stcoutstem
+    if($#smoutstem == 0) then
+      if($DoVolSmooth) set smoutstem = $sminstem."sm"$fwhm
+      if($DoSurfSmooth) set smoutstem = $sminstem."sm"$fwhm
+    endif
+  endif
+
+  if($DoInorm && $#inormstem == 0) then
+    if($DoVolSmooth) then
+      set inormstem = $smoutstem;
+    else if($DoMC) then
+      set inormstem = $mcoutstem;
+    else
+      set inormstem = $mcinstem;
+    endif
+  endif
+
+  if(! $DoMC && ! $DoSTC  && ! $DoSmooth && ! $DoMask && ! $DoTemplate) then
+    echo "ERROR: nothing to do"
+    exit 1;
+  endif
+
+  if($#ProjFrac && $DoProjAvg) then
+    echo "ERROR: cannot -projfrac and -projfrac-avg"
+    exit 1;
+  endif
+
+  if($#regfile == 0) then
+    if(! $UseB0DC) set regfile = register.dof$RegDOF.dat
+    if($UseB0DC)   set regfile = register.dof$RegDOF.b0dc.dat
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+arg2err:
+  echo "ERROR: flag $flag requires two arguments"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: preproc-sess"
+  echo ""
+  echo "  -per-run : motion cor and reg to middle TP of each run"
+  echo "  -per-session : motion cor and reg to 1st TP of 1st run"
+  echo "  -fwhm FWHM : smoothing level (mm)"
+  echo ""
+  echo "  -update        : only run a stage if input is newer than output (default)"
+  echo "  -force         : force reprocessing of all stages (turns off -update)"
+  echo "  -no-update     : same as -force"
+  echo "  -sliceorder so : turn on slice timing correction with the given slice order"
+  echo "  -surface subject hemi : set hemi to lhrh to do both"
+  echo "  -mni305-2mm    : sample raw data to mni305 at 2mm (same as -mni305)"
+  echo "  -mni305-1mm    : sample raw data to mni305 at 1mm"
+  echo ""
+  echo "Session Arguments (some combination required)"
+  echo "  -sf sessidfile  ..."
+  echo "  -df srchdirfile ..."
+  echo "  -s  sessid      ..."
+  echo "  -d  srchdir     ..."
+  echo "  -fsd    fsd <bold>"
+  echo "  -rlf    rlf  : run list file (default all runs)"
+  echo ""
+  echo "Other options (probably not too useful)"
+  echo ""
+  echo "  -nomc     : don't do motion correction"
+  echo "  -nostc    : don't do slice-timing correction"
+  echo "  -nosmooth : don't do smoothing"
+  echo "  -nomask   : don't make brain mask"
+  echo "  -noreg    : don't do registration"
+  echo "  -noinorm  : don't do inorm"
+  echo ""
+  echo "  -mcin   mcinstem    : stem to use as input  to MC"
+  echo "  -mcout  mcoutstem   : stem to use as output of MC"
+  echo "  -stcin  stcinstem   : stem to use as input  to STC "
+  echo "  -stcout stcoutstem  : stem to use as output of STC "
+  echo "  -smin   sminstem    : stem to use as input  to smoothing "
+  echo "  -smout  sminstem    : stem to use as output of smoothing "
+  echo "  -mask   maskstem    : <brain>"
+  echo ""
+  echo "  -i    instem    : stem to use as overal input <f>"
+#  echo "  -vol-fwhm  fwhm : 3D fwhm (mm) (not with -surf-fwhm)"
+#  echo "  -surf-fwhm fwhm : 2D fwhm (mm) (not with -vol-fwhm)"
+#  echo "  -smooth-mask   : use mask when volume smoothing"
+#  echo "  -no-smooth-mask: do not use mask when volume smoothing"
+#  echo "  -inorm        : perform intensity normalization (off by default)"
+#  echo "  -nskip N      : do not use first N TRs when inorming"
+  echo ""
+  echo ""
+  echo "  -regfile regfile   : registration file for use with -surf-fwhm (register.dat)"
+  echo "  -projfrac frac : projection fraction for use with -surf-fwhm (0.5)"
+  echo "  -projfrac-avg  : average over ribbon (not with -projfrac)"
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+This will run preprocessing steps: motion correction (MC),
+slice-timing correction (STC), functional-anatomical registration,
+mask creation, intensity normalization, resampling to common space,
+and spatial smoothing. 
+
+-per-run 
+
+Motion correct and register using the middle time point of each run.
+This is the option that you should use.
+
+-per-session
+
+Motion correct and register using the first time point of the first
+run.  This is mainly for compatability with version 4.
+
+-fwhm FWHM
+
+Specify a full-width/half-max (in mm) when smoothing. If you do not
+want to smooth, specify 0 (but you must specify something).
+
+-update
+
+Only perform a stage if the output is newer than the input or if the
+output does not exist. This can be very convenient as you do not have to
+keep track of what has been done. Just specify all the sessions and
+and it will figure out what needs to be done. This is the default
+behavior. See also -force.
+
+-force
+-noupdate
+
+Force processing of all stages regardless of what has been done
+before. This turns off -update
+
+-sliceorder so
+
+Perform slice-timing correction with the given slice order. Legal
+values are siemens, up, down, odd, and even. Siemens slice order is
+interleaved starting on the first slice for an odd number of slices or
+the second slice for an even number. "up" is 1st, 2nd, 3rd,
+etc. "down" is last, next to last, etc. odd is 1st, 3rd, 5th, , etc,
+then 2nd, 4th, 6th, etc. "even" is 2nd, 4th, 6th, etc, then 1st, 3rd,
+5th, etc.  See also stc-sess.
+
+-surface subject hemi
+
+Sample raw data onto the surface of the hemisphere of the given
+subject.  Hemi should be lh, rh, or lhrh (for both). Both -surface and
+-mni305can be specified (in which case it will do both).
+
+-mni305
+
+Sample raw data into the mni305 2mm space. Both -mni305 and -surface can be
+specified (in which case it will do both).
+
+-i instem 
+
+Explicitly specify input stem. Default is f.
+
+
+EXAMPLE 1 
+
+To perform template creation, MC, registration, mask creation, sampling
+to the lh and rh hemispheres of fsaverage and to the mni305 2mm space,
+
+  preproc-sess -sf sessidlist -df sessdirlist 
+    -surface fsaverage lhrh -mni305 -fwhm 5
+
+
+EXAMPLE 2
+
+To perform template creation, MC, registration, mask creation,
+sampling to the lh and rh hemispheres of native subject anatomy and
+to the mni305 2mm space,
+
+  preproc-sess -sf sessidlist -df sessdirlist 
+    -surface self lhrh -mni305 -fwhm 5
+
+
+INPUTS AND OUTPUTS
+
+Unless otherwise specified, the input stem is f, and the input stems
+and output stems of the other stages are automatically determined as
+follows:
+
+Input to MC is instem (default is f) Output of MC is instem"mcpr" (ie,
+the MC input stem with "mcpr" appended to the end, eg, "fmcpr"). When
+per-session is used, the MC default stem will be instem"mc".
+
+Input  to STC is outstem of MC  
+Output of STC is stcinstem.SliceOrder where SliceOrder is the slice
+order used (eg, "siemens", see -sliceorder above).
+
+Input  to smoothing is outstem of STC (or MC if no STC)
+Output of smoothing is sminstem"smFWHM" (ie, the smoothing 
+input stem with "sm" appended to the end and then the specified
+FWHM appended to that).
+
+
+====================================================================
+These options are obsolete but still functional
+
+-vol-fwhm fwhm
+
+Specify the fwhm for 3D spatial smoothing. There is no default.  The
+output will have "smFWHM" appened to it. Eg, for -vol-fwhm 5, then the
+output will have "sm5" appened. If you do not want to perform
+smoothing, use -nosmooth. See also spatialsmooth-sess. Cannot be run
+with -surf-fwhm.
+
+-surf-fwhm fwhm
+
+Specify the fwhm for 2D (surface) spatial smoothing. The raw data are
+resampled to the surface, smoothed, and then put back into the volume
+(so that they can be analyzed in standard volumetric fashion). Values
+not on the surface are not changed.  Surface smoothing can be slow, so
+be patient! Requires that registration have been performed
+(spmregister-sess or fslregister-sess).  The output will have
+"smFWHMs" appened to it. Eg, for -surf-fwhm 5, then the output will
+have "sm5s" appened. If you do not want to perform smoothing, use
+-nosmooth. See also surfsmooth-sess. Cannot be run with -vol-fwhm.
+Any per-run instruction will force surface smoothing to use
+"register.dat" in each run directory. The registration file name can
+be changed with -reg. By default, samples midway between the white and
+pial surfaces (ie, projection fraction of 0.5), but this can be
+changed with -projfrac. Or the average over the ribbon can be computed
+with -projfrac-avg (but this will be slow).
+
+-inorm
+
+Not needed anymore. Turn on computing of intensity normalization
+factor (creates stem.meanval). This was necssary for the old selxavg.
+
+

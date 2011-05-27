@@ -1,0 +1,55 @@
+#! /bin/csh -f
+#
+# fname2stem
+#
+# Converts the name of a file to an extension
+#   Eg, f.mgh f.nii f.nii.gz would return mgh, nii, nii.gz
+#   Eg, here/f.mgh would return mgh
+#   This works only on the string passed to it,
+#   The file does not need to exist.
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.2 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+
+set VERSION = '$Id: fname2ext,v 1.2 2011/03/02 20:16:39 nicks Exp $';
+
+if($#argv != 1) then
+  echo "fname2stem filename"
+  echo "  Converts the name of a file to an extension"
+  echo "  Eg, f.mgh f.nii f.nii.gz would return mgh, nii, nii.gz"
+  echo "  The file does not need to exist. See also stem2fname"
+  exit 1;
+endif
+
+set fname = $argv[1];
+set dname = `dirname $fname`;
+set fname = `basename $fname`;
+
+foreach ext (mgh mgz nii nii.gz img bhdr)
+  set tmp = `basename $fname .$ext`;
+  if($fname != $tmp) then
+    echo $ext
+    exit 0;
+  endif
+end
+
+echo "ERROR: cannot determine extension"
+exit 1;
+
+

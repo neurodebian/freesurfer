@@ -1,0 +1,370 @@
+#! /bin/csh -f
+
+#
+# roisummary-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2010/03/25 16:22:35 $
+#    $Revision: 1.7 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: roisummary-sess,v 1.7 2010/03/25 16:22:35 greve Exp $';
+
+set inputargs = ($argv);
+
+set sumfile = ();
+set analysis  = ();
+set roidef    = ();
+set SourceType = 0; # 1 = raw, 2 = avg
+set RawSource = 1;
+set AvgSource = 2;
+set rawfsd = ();
+set rawmc = 0;
+set rawstem = ();
+set rawrunlistfile = ();
+set tbltranspose = 0;
+set includesessid = 1;
+set NthRun = ();
+set NthRunType = ();
+set anapend = ();
+set runlistfile = ();
+
+set umaskarg = ();
+set nolog = 0;
+
+set PrintHelp = 0;
+
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+set n = `echo $argv | grep -e -version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+## Look for nolog option ##
+set n = `echo $argv | grep nolog | wc -l` 
+if($n != 0) set nolog = 1;
+
+set SessList = `getsesspath $argv`;
+if($status || $#SessList == 0) then
+  echo "ERROR: cannot find any sessions" 
+  exit 1;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+##### Create a log file ######
+if(! $nolog) then
+  set logdir = `pwd`/log;
+  mkdir -p $logdir
+  if(! -e $logdir) then
+    echo "ERROR: could not create $logdir"
+    exit 1;
+  endif
+  set LF = $logdir/roisummary-sess.log
+  if(-e $LF) mv $LF $LF.old
+else
+  echo "No log file"
+  set LF = /dev/null
+endif
+
+#echo "----------------------------------------------------------"
+#echo "roisummary-sess logfile is $LF"
+#echo "----------------------------------------------------------"
+
+echo "roisummary-sess log file" >> $LF
+echo $VERSION >> $LF
+pwd           >> $LF
+echo "$0"     >> $LF
+echo $inputargs  >> $LF
+uname -a      >> $LF
+date          >> $LF
+
+set infofile = $analysis/analysis.info
+if(! -e $infofile) then
+  echo "ERROR: cannot find $infofile"
+  exit 1;
+endif
+set fsd = `cat $infofile | awk '{if($1 == "fsd") print $2}'`;
+set runlistfile = `cat $infofile | awk '{if($1 == "runlistfile") print $2}'`;
+
+set outdir = `dirname $sumfile`;
+mkdir -p $outdir
+
+rm -f $sumfile
+touch $sumfile
+set tbllist = ();
+set sessidlist = ();
+foreach sess ($SessList)
+  set sessid = `basename $sess`;
+  set sessidlist = ($sessidlist $sessid)
+
+  if($#NthRun != 0) then
+    set runlist = `getrunlist $sess/$fsd $runlistfile`;
+    if($status) then
+      echo $runlist;
+      exit 1;
+    endif
+    if($NthRun > $#runlist) then
+      echo "ERROR: NthRun = $NthRun, nruns = $#runlist"
+      exit 1;
+    endif
+    set run = $runlist[$NthRun];
+    if($NthRunType == perrun) set anapend = "-$run"
+    if($NthRunType == jk) set anapend = "-jk$run"
+    #echo "NthRun: $NthRun $NthRunType $anapend"
+  endif
+
+  set roidir = $sess/$fsd/$analysis$anapend/$roidef
+  if(! -e $roidir) then
+    echo "ERROR: cannot find $roidir"
+    exit 1;
+  endif
+
+  set hdat = $roidir/h.dat
+  set htxt = $roidir/h.txt
+  set hoffsettxt = $roidir/h-offset.txt
+  set tblfile = $sess/$fsd/$analysis$anapend/$roidef/h.tbl
+
+  roitxt2tbl $hdat $htxt $hoffsettxt $tblfile
+  if($status)then
+    echo "ERROR: running roitxt2tbl"
+    exit 1;
+  endif
+
+  if(! -e $tblfile) then
+    echo "ERROR: cannot find $tblfile"
+    exit 1;
+  endif
+
+  if($tbltranspose) then
+    set tmp = (`cat $tblfile`);
+    echo $sessid $tmp >> $sumfile
+  else
+    set tbllist = ($tbllist $tblfile);
+  endif
+
+end
+
+if($tbltranspose != 1) then
+  paste $tbllist > $sumfile
+  if($includesessid) then
+    set tmpsumfile = /tmp/sumfile_$$
+    set tmpsessidfile = /tmp/sessidfile_$$
+    foreach sid ($sessidlist)
+      printf "%12s    " $sessid >> $tmpsessidfile
+    end
+    printf "\n" >> $tmpsessidfile
+    #echo $sessidlist > $tmpsessidfile
+    cat $tmpsessidfile $sumfile > $tmpsumfile
+    cp $tmpsumfile $sumfile
+    rm $tmpsumfile $tmpsessidfile
+  endif
+endif
+
+exit 0;
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-roidef"
+      if ( $#argv == 0) goto arg1err;
+      set roidef = $argv[1]; shift;
+      breaksw
+
+    case "-a":
+    case "-analysis":
+      if ( $#argv == 0) goto arg1err;
+      set analysis = $argv[1]; shift;
+      breaksw
+
+    case "-anapend":
+      if ( $#argv == 0) goto arg1err;
+      set anapend = $argv[1]; shift;
+      breaksw
+
+    case "-nthrun"
+      if ( $#argv == 0) goto arg2err;
+      set NthRun = $argv[1]; shift;
+      set NthRunType = $argv[1]; shift;
+      if($NthRun <= 0) then
+        echo "ERROR: NthRun = $NthRun, must be > 0"
+        exit 1;
+      endif
+      if("$NthRunType" != perrun && "$NthRunType" != jk) then
+        echo "ERROR: NthRunType = $NthRunType, must be perrun or jk"
+        exit 1;
+      endif
+      breaksw
+
+    case "-sumfile":
+    case "-sum"
+      if ( $#argv == 0) goto arg1err;
+      set sumfile = $argv[1]; shift;
+      breaksw
+
+    case "-umask":
+      if ( $#argv == 0) goto arg1err;
+      set umaskarg = "-umask $argv[1]";
+      umask $argv[1]; shift;
+      breaksw
+
+    case "-transpose":
+      set tbltranspose = 1;
+      breaksw
+
+    case "-includesessid":
+      set includesessid = 1;
+      breaksw
+
+    case "-excludesessid":
+      set includesessid = 0;
+      breaksw
+
+    case "-verbose":
+      set verbose = 1;
+      breaksw
+
+    case "-echo":
+      set echo = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-cwd":
+    case "-nolog":
+      breaksw
+
+    case "-g":
+    case "-s":
+    case "-sf":
+    case "-df":
+    case "-d":
+      # ignore getsesspath arguments 
+      shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#roidef == 0) then
+    echo "ERROR: no ROI definition name specified " |& tee -a $LF 
+    exit 1
+  endif
+
+  if($#sumfile == 0) then
+    echo "ERROR: no summary file specified " |& tee -a $LF 
+    exit 1
+  endif
+
+  if($#analysis == 0) then
+    echo "ERROR: no analysis specified " |& tee -a $LF 
+    exit 1
+  endif
+
+  if($#anapend != 0 && $NthRun != 0) then
+    echo "ERROR: cannot specify both anapend and nthrun"
+    exit 1;
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo "USAGE: roisummary-sess"
+  echo "Options:";
+  echo "   -sumfile filename : name of file in which to store the summary"
+  echo "   -roidef   name : name of ROI definition"
+
+  echo "   -analysis name : source is averaged data from analysis"
+  echo "   -nthrun nthrun type : type = perrun or jk"
+  echo "   -sf sessidfile  ..."
+  echo "   -df srchdirfile ..."
+  echo "   -s  sessid      ..."
+  echo "   -d  srchdir     ..."
+
+  echo "   -transpose     : put sessid info on a row instead of a col"
+  echo "   -excludesessid : do not include sess id in table"
+
+  echo "   -umask umask   : set unix file permission mask"
+  echo "   -scriptonly    : don't run, just generate a script"
+  echo "   -version       : print version and exit"
+
+  if(! $PrintHelp) exit 1;
+  echo $VERSION
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+This will create a summary table of an ROI analysis created by
+func2roi-sess. There will be a row for each session listed. Each
+column will have the following interpretation:
+
+1. Session Id
+2. Number of voxels in the anatomical label
+3. Number of voxels in the anat-func label (maybe the same as 2)
+4. Baseline value (good for computing percent signal change)
+5. Average residual error standard deviation
+6. DOF
+7. TER  in seconds (mostly useful for FIR)
+8. Prestimulus time of the window (only good for FIR)
+9. Number of conditions
+10. Number of values/regressors per condition
+11+ Average values of each regression coefficient
+

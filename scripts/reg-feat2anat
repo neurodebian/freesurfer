@@ -1,0 +1,771 @@
+#! /bin/tcsh -f
+
+#
+# reg-feat2anat
+#
+# Registers example func to freesurfer using fsl
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.36 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+
+set VERSION = '$Id: reg-feat2anat,v 1.36 2011/03/02 20:16:39 nicks Exp $'
+set FeatDir = ();
+set subject = ();
+set anatvol = brainmask;
+set dof = 6;
+set bins = 256;
+set maxangle = 90;
+set cost = corratio;
+set debug = 0;
+set cleanup = 1;
+set usedev = 0;
+set manual = 0;
+set manual_use_surf = 1;
+set manxfm = func2anat;
+set DoBETFunc = 0; # Not with FSL 4.0
+set title = ();
+set UseSPM = 0;
+set DoBBR = 1; # On by default
+set INorm = 1;
+set fmov = ();
+set ReDoStandardReg = 1;
+set OverwriteExf2Std = 0;
+set PrintHelp = 0;
+
+set cmdargs = ($argv);
+if($#argv == 0)  goto usage_exit;
+set n = `echo $argv | egrep -e --version | wc -l`
+if($n != 0) then
+  echo $VERSION
+  exit 1;
+endif
+set n = `echo $argv | egrep -e --help | wc -l`
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+  exit 1;
+endif
+
+# Parse the command-line arguments
+goto parse_args;
+parse_args_return:
+
+# Check the command-line arguments
+goto check_params;
+check_params_return:
+
+if($?DEV == 0) set DEV = "";
+
+set TKR = tkregister2
+if($usedev) set TKR = $DEV/$TKR/$TKR
+if(! $manual) set TKR = $TKR"_cmdl"
+
+set MM = mri_matrix_multiply
+if($usedev) set MM = $DEV/$MM/$MM
+
+echo FeatDir is $FeatDir
+mkdir -p $FeatDir/reg/freesurfer/tmp
+
+set exf2std_fslmat = $FeatDir/reg/example_func2standard.mat
+if(! -e $exf2std_fslmat) then
+  echo "ERROR: cannot find $exf2std_fslmat. You must register to standard space first."
+  exit 1;
+endif
+
+# Automatically detect the file format
+set exfbase = $FeatDir/example_func
+if(-e $exfbase.nii.gz) then
+  setenv FSLOUTPUTTYPE NIFTI_GZ
+  set fslext = nii.gz;
+endif
+if(-e $exfbase.nii) then
+  setenv FSLOUTPUTTYPE NIFTI
+  set fslext = nii;
+endif
+if(-e $exfbase.img) then
+  setenv FSLOUTPUTTYPE ANALYZE
+  set fslext = img;
+endif
+if($#fslext == 0) then
+  echo "ERROR: cannot determine type of fsl output from $exfbase"
+  exit 1;
+endif
+set tempvol = $FeatDir/example_func.$fslext
+echo "template volume is $tempvol"
+
+set anat2exf_regdat = $FeatDir/reg/freesurfer/anat2exf.register.dat
+set anat2std_regdat = $FeatDir/reg/freesurfer/anat2std.register.dat
+set std2anat_fslmat = $FeatDir/reg/freesurfer/std2anat.fsl.mat
+set exf2anat_init_fslmat = $FeatDir/reg/freesurfer/exf2anat.init.fsl.mat
+set exf2anat_fslmat = $FeatDir/reg/freesurfer/exf2anat.fsl.mat
+set std2exf_regdat  = $FeatDir/reg/freesurfer/std2exf.register.dat
+set exf2std_regdat  = $FeatDir/reg/freesurfer/exf2std.register.dat
+set segregdat  = $FeatDir/reg/freesurfer/reg.bbr.dat
+set stdbrain = $FeatDir/reg/standard.$fslext
+
+set refvolcor =  $SUBJECTS_DIR/$subject/mri/$anatvol.mgz
+if(! -e $refvolcor) then
+  set refvolcor =  $SUBJECTS_DIR/$subject/mri/$anatvol
+  if(! -e $refvolcor/COR-.info) then
+    echo "ERROR: cannot find $anatvol for $subject "
+    exit 1;
+  endif
+endif
+
+# Manually check functional-to-anatomical registration
+if($manual && $manxfm == func2anat) then
+  if(! -e $anat2exf_regdat) then
+    echo "ERROR: you must run without --manual or --manxfm to create registration first"
+    exit 1;
+  endif
+  set cmd = ($TKR --s $subject --mov $tempvol --volview mov\
+              --reg $anat2exf_regdat --tag)
+  if($#fmov) set cmd = ($cmd --fmov $fmov)
+  if($manual_use_surf) set cmd = ($cmd --surf orig);
+  if($#title) set cmd = ($cmd --title $title);
+  if(! -e $SUBJECTS_DIR/$subject/mri/orig/COR-001) set cmd = ($cmd --mgz)
+  echo $cmd
+  $cmd
+  if($status) exit 1;
+  exit 0;
+endif
+
+# Manually check standard-to-anatomical registration
+if($manual && $manxfm == std2anat) then
+  if(! -e $anat2std_regdat) then
+    echo "ERROR: you must run without --manual or --manxfm to create registration first"
+    exit 1;
+  endif
+  set cmd = ($TKR  --tag --s $subject  --inorm\
+            --targ $refvolcor --mov $stdbrain --volview mov\
+            --reg $anat2std_regdat --fslreg $std2anat_fslmat)
+  if($manual_use_surf) set cmd = ($cmd --surf orig);
+  if($#title) set cmd = ($cmd --title $title);
+  echo $cmd
+  $cmd
+  if($status) exit 1;
+  exit 0;
+endif
+
+# Manually check function-to-standard registration
+if($manual && $manxfm == func2std) then
+  if(! -e $exf2std_regdat) then
+    echo "ERROR: you must run without --manual or --manxfm to create registration first"
+    exit 1;
+  endif
+  set cmd = ($TKR --targ $stdbrain \
+            --mov $FeatDir/example_func.$fslext --volview mov\
+            --reg $exf2std_regdat --s $subject --tag  --inorm);
+  if($#title) set cmd = ($cmd --title $title);
+  echo $cmd
+  $cmd
+  if($status) exit 1;
+  exit 0;
+endif
+
+# Set up a log file
+set LF = $FeatDir/reg/freesurfer/reg-feat2anat.log
+if(-e $LF) mv $LF $LF.bak
+echo log file is $LF
+date | tee -a $LF
+pwd | tee -a $LF
+echo $0 | tee -a $LF
+echo $cmdargs | tee -a $LF
+uname -a | tee -a $LF
+
+# Make sure the anatomical is there
+set refvolcor =  $SUBJECTS_DIR/$subject/mri/$anatvol.mgz
+if(! -e $refvolcor) then
+  set refvolcor =  $SUBJECTS_DIR/$subject/mri/$anatvol
+  if(! -e $refvolcor/COR-.info) then
+    echo "ERROR: cannot find $anatvol for $subject "
+    exit 1;
+  endif
+endif
+# Create the init exf2anat matrix -- this is not accurate, Just
+# gets things lined up. We'll compute a better one below. If
+# the input has a valid vox2ras, then use that, otherwise,
+# use the std2anat.
+if($fslext == img) then
+  # Cannot trust rasgood with analyze
+  if( -e $FeatDir/example_func.mat) then
+    set exf_ras_good = 1;
+  else
+    set exf_ras_good = 0;
+  endif
+else
+  mri_info --o /tmp/reg-feat2anat.rasgood.$$ \
+    --ras_good $FeatDir/example_func.$fslext >& /dev/null
+  set exf_ras_good = `cat /tmp/reg-feat2anat.rasgood.$$`;
+endif
+echo "example_func ras_good_flag $exf_ras_good"| tee -a $LF
+if($exf_ras_good) then
+  echo "-------------------------------------------------------" | tee -a $LF
+  echo "Initializing exf2anat with header" | tee -a $LF
+  set cmd = ($TKR \
+              --targ $refvolcor \
+              --mov $FeatDir/example_func.$fslext\
+              --reg $anat2exf_regdat.init \
+              --fslregout $exf2anat_init_fslmat \
+              --regheader)
+  if(! $debug) set cmd = ($cmd --noedit)
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+else
+  echo "-------------------------------------------------------" | tee -a $LF
+  echo "Initializing exf2anat from crude std2anat" | tee -a $LF
+  # vox2ras is not valid in exf, so init from crude std2anat
+  set cmd = ($TKR \
+              --targ $refvolcor \
+              --mov  $stdbrain \
+              --reg $anat2std_regdat \
+              --fslregout $std2anat_fslmat \
+              --regheader)
+  if(! $debug) set cmd = ($cmd --noedit)
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+  cp $std2anat_fslmat $std2anat_fslmat.init
+  # Compute initial matrix. Binarize because otherwise there
+  # might be a stretch (due to 12 dof reg to standard), which
+  # would not be appropriate for a 6 dof reg (I think).
+  set cmd = ($MM -fsl -bin \
+              -iim $exf2std_fslmat -iim $std2anat_fslmat \
+              -om $exf2anat_init_fslmat)
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+endif
+set outvol = $FeatDir/reg/freesurfer/tmp/exf-in-anat
+
+if(! $UseSPM) then
+  # Now run the fslregister cmd
+  set cmd = (fslregister --s $subject --reg $anat2exf_regdat \
+    --mov $tempvol --dof $dof --bins $bins --cost $cost \
+    --fslmat $exf2anat_fslmat --fsvol $anatvol \
+    --maxangle $maxangle  --initfslmat $exf2anat_init_fslmat \
+    --tmp $FeatDir/reg/freesurfer/tmp --out $outvol.$fslext)
+  if($DoBETFunc) set cmd = ($cmd --betfunc) # Not with FSL 4.0
+  echo "" | tee -a $LF
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+
+  if($DoBBR) then
+    cp $anat2exf_regdat $anat2exf_regdat.bbr.init
+    set cmd = (bbregister --mov $tempvol --bold --$dof\
+      --init-reg $anat2exf_regdat --reg $anat2exf_regdat)
+    echo "" | tee -a $LF
+    echo $cmd | tee -a $LF
+    $cmd | tee -a $LF
+    if($status) exit 1;
+  endif
+else
+  # Or use SPM2 or SPM5 (but don't tell Steve)
+  # This will probably only work on x32 machines
+  set cmd = (spmregister --s $subject --reg $anat2exf_regdat \
+    --mov $tempvol  --fsvol $anatvol \
+    --tmp $FeatDir/reg/freesurfer/tmp )
+  echo "" | tee -a $LF
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+
+  if($DoBBR) then
+    cp $anat2exf_regdat $anat2exf_regdat.bbr.init
+    set cmd = (bbregister --mov $tempvol --bold --$dof\
+      --init-reg $anat2exf_regdat --reg $anat2exf_regdat)
+    echo "" | tee -a $LF
+    echo $cmd | tee -a $LF
+    $cmd | tee -a $LF
+    if($status) exit 1;
+  endif
+  # Now create the fsl matrix
+  set cmd = ($TKR --reg $anat2exf_regdat --mov $tempvol\
+     --fslregout $FeatDir/reg/freesurfer/exf2anat.fsl.mat \
+     --noedit)
+  echo $cmd
+  $cmd | tee -a $LF
+  if($status) exit 1;
+endif
+
+cp $anat2exf_regdat $FeatDir/reg/freesurfer/register.dat
+
+if($ReDoStandardReg) then
+  # Create tkr anat2std registration
+  set tmp = $SUBJECTS_DIR/$subject/mri/transforms/reg.mni152.2mm.dat
+  if(-e $tmp) then
+    set cmd = (cp $tmp $anat2std_regdat)
+  else
+    set cmd = (fslregister --mov $stdbrain --s $subject --reg $anat2std_regdat --dof 12)
+  endif
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+  # Create tkr exf2std registration
+  set cmd = (mri_matrix_multiply -im $anat2exf_regdat -iim $anat2std_regdat -om $exf2std_regdat)
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+  # Create fsl exf2std registration
+  set cmd = ($TKR --targ $stdbrain --mov $FeatDir/example_func.$fslext \
+    --reg $exf2std_regdat  --fslregout $FeatDir/reg/freesurfer/example_func2standard.mat)
+  if(! $debug)  set cmd = ($cmd --noedit)
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+  # Overwrite the feat-created fsl exf2std?
+  if($OverwriteExf2Std) then
+    cp $FeatDir/reg/example_func2standard.mat $FeatDir/reg/example_func2standard.mat.bak
+    cp $FeatDir/reg/freesurfer/example_func2standard.mat $FeatDir/reg/example_func2standard.mat
+  endif
+  # Create tkr std2exf registration
+  set cmd = (mri_matrix_multiply -im $anat2std_regdat -iim $anat2exf_regdat -om $std2exf_regdat)
+  echo $cmd | tee -a $LF
+  $cmd | tee -a $LF
+  if($status) exit 1;
+else
+  # Create a tkr matrix to map exf2std
+  set cmd = ($TKR --targ $stdbrain \
+            --mov $FeatDir/example_func.$fslext \
+            --fslreg $FeatDir/reg/example_func2standard.mat \
+            --reg $std2exf_regdat --noedit)
+  echo "" | tee -a $LF
+  echo $cmd | tee -a $LF
+  $cmd |& tee -a $LF
+  if($status) exit 1;
+  # Compute fsl std2anat
+  set cmd = ($MM -fsl \
+    -im $FeatDir/reg/freesurfer/exf2anat.fsl.mat \
+    -iim $FeatDir/reg/example_func2standard.mat \
+    -om $FeatDir/reg/freesurfer/std2anat.fsl.mat)
+  echo "" | tee -a $LF
+  echo $cmd | tee -a $LF
+  $cmd |& tee -a $LF
+  if($status) exit 1;
+endif
+
+# Now compute fsl.mat anat2std
+echo "-------------------------------------------------------" | tee -a $LF
+set cmd = ($TKR --s $subject --targ $refvolcor --mov  $stdbrain \
+  --reg $anat2std_regdat  --fslregout $std2anat_fslmat)
+if(! $debug)  set cmd = ($cmd --noedit)
+echo $cmd | tee -a $LF
+$cmd | tee -a $LF
+if($status) exit 1;
+
+# Create cmd to check
+set cmd = ($TKR --s $subject --mov $tempvol)
+set cmd = ($cmd --reg $anat2exf_regdat)
+set cmd = ($cmd --fslreg $exf2anat_fslmat)
+set cmd = ($cmd --surf orig);  # for visual inspection
+echo ""
+echo "To visually check your results, run:" | tee -a $LF
+echo $cmd --tag | sed 's/_cmdl//g' | tee -a $LF
+# note: the sed will remove the _cmdl from the tkregister2 cmd
+echo ""
+echo ""
+
+
+if($cleanup == 0) then
+  # Create an identity matrix for the output
+  set outvolreg = $outvol.fsreg.dat
+  rm -f $outvolreg
+  echo $subject >> $outvolreg
+  echo 0  >> $outvolreg
+  echo 0  >> $outvolreg
+  echo .1 >> $outvolreg
+  echo "1 0 0 0" >> $outvolreg
+  echo "0 1 0 0" >> $outvolreg
+  echo "0 0 1 0" >> $outvolreg
+  echo "0 0 0 1" >> $outvolreg
+  echo "Or you can run:" | tee -a $LF
+  set tkregcheckcmd2 = (tkregister2 --s $subject --mov $outvol)
+  set tkregcheckcmd2 = ($tkregcheckcmd2 --reg $outvolreg --surf orig);
+  echo $tkregcheckcmd2 | tee -a $LF
+  echo ""
+else
+  rm -fr $FeatDir/reg/freesurfer/tmp
+endif
+
+date | tee -a $LF
+echo "reg-feat2anat done" | tee -a $LF
+
+exit 0;
+###############################################
+
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+
+  switch($flag)
+
+    case "--feat":
+    case "--featdir":
+      if ( $#argv == 0) goto arg1err;
+      set FeatDir = $argv[1]; shift;
+      breaksw
+
+    case "--s":
+    case "--subject":
+      if ( $#argv == 0) goto arg1err;
+      set subject = $argv[1]; shift;
+      breaksw
+
+    case "--dof":
+      if ( $#argv == 0) goto arg1err;
+      set dof = $argv[1]; shift;
+      breaksw
+
+    case "--bins":
+      if ( $#argv == 0) goto arg1err;
+      set bins = $argv[1]; shift;
+      breaksw
+
+    case "--cost":
+      if ( $#argv == 0) goto arg1err;
+      set cost = $argv[1]; shift;
+      breaksw
+
+    case "--maxangle":
+      if ( $#argv == 0) goto arg1err;
+      set maxangle = $argv[1]; shift;
+      breaksw
+
+    case "--fslmat":
+      if ( $#argv == 0) goto arg1err;
+      set fslmat = $argv[1]; shift;
+      breaksw
+
+    case "--fsreg":
+      if ( $#argv == 0) goto arg1err;
+      set fsreg = $argv[1]; shift;
+      breaksw
+
+    case "--title":
+      if( $#argv < 1) goto arg1err;
+      set title = $argv[1]; shift;
+      breaksw
+
+    case "--no-bet":
+      set DoBETFunc = 0;
+      breaksw
+
+    case "--bet":
+      set DoBETFunc = 1;
+      breaksw
+
+    case "--spm":
+      set UseSPM = 1;
+      breaksw
+
+    case "--bbr":
+    case "--segreg":
+      set DoBBR = 1;
+      breaksw
+
+    case "--no-bbr":
+      set DoBBR = 0;
+      breaksw
+
+    case "--fmov":
+      if($#argv < 1) goto arg1err;
+      set fmov = $argv[1]; shift;
+      breaksw
+
+    case "--overwrite-exf2std":
+      set OverwriteExf2Std = 1;
+      breaksw
+
+    case "--inorm":
+      set Inorm = 1;
+      breaksw
+
+    case "--no-inorm":
+      set Inorm = 0;
+      breaksw
+
+    case "--debug":
+      set verbose = 1;
+      set echo = 1; # turns on terminal echoing
+      set debug = 1;
+      breaksw
+
+    case "--nocleanup":
+      set cleanup = 0;
+      breaksw
+
+    case "--manual":
+      set manual = 1;
+      breaksw
+
+    case "--manxfm":
+      if ( $#argv == 0) goto arg1err;
+      set manxfm = $argv[1]; shift;
+      set manual = 1;
+      breaksw
+
+    case "--manual-no-surf":
+      set manual_use_surf = 0;
+      breaksw
+
+    case "--usedev":
+      set usedev = 1;
+      breaksw
+
+    default:
+      echo "ERROR: flag $flag not recognized"
+      exit 1;
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+if($DoBBR) then
+  which bbregister > /dev/null
+  if($status) then
+    echo ""
+    echo "ERROR: reg-feat2anat is currently configured to run bbregister."
+    echo "However, it cannot be found in your path. Make sure it is"
+    echo "in your path and then rerun reg-feat2anat. Alternatively, you"
+    echo "can run reg-feat2anat with --no-bbr, but the results might not"
+    echo "be as accurate"
+    echo ""
+    exit 1;
+  endif
+endif
+
+if($#FeatDir == 0) then
+  echo "ERROR: must specify feat dir"
+  exit 1;
+endif
+if(! -e $FeatDir) then
+  echo "ERROR: cannot find feat dir $FeatDir"
+  exit 1;
+endif
+if(! $manual) then
+  if($#subject == 0) then
+    echo "ERROR: must specify a FreeSurfer subject"
+    exit 1;
+  endif
+else
+  set anat2exf_regdat = $FeatDir/reg/freesurfer/anat2exf.register.dat
+  if(! -e $anat2exf_regdat) then
+    echo "ERROR: cannot find $anat2exf_regdat"
+    exit 1;
+  endif
+  set subject = `cat $anat2exf_regdat | head -1`;
+endif
+if($?SUBJECTS_DIR == 0) then
+  echo "ERROR: FreeSurfer environment variable SUBJECTS_DIR not defined"
+  exit 1;
+endif
+if(! -e $SUBJECTS_DIR) then
+  echo "ERROR: FreeSurfer SUBJECTS_DIR $SUBJECTS_DIR not found"
+  exit 1;
+endif
+if(! -e $SUBJECTS_DIR/$subject) then
+  echo "ERROR: cannot find FreeSurfer subject $subject in $SUBJECTS_DIR"
+  exit 1;
+endif
+if($manxfm != "func2anat" && $manxfm != "std2anat" && $manxfm != "func2std") then
+  echo "ERROR: manxfm is $manxfm, must be func2anat, std2anat, func2std"
+  exit 1;
+endif
+
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: reg-feat2anat"
+  echo ""
+  echo " --feat dir       : directory in which to find example_func"
+  echo " --subject  id    : FreeSurfer subjectid"
+  echo ""
+  echo "Optional flags and arguments:"
+  echo ""
+  echo " --overwrite-exf2std : replace Feat-generated example_func2standard"
+  echo ""
+  echo " --manual         : interactively view/edit registration"
+  echo " --manxfm xfmtype : interactively view/edit registration for xfmtype"
+  echo "        xfmtype can be: func2anat, std2anat, or func2std"
+  echo " --dof  dof       : FLIRT DOF (default is $dof)"
+  echo " --bins bins      : FLIRT bins (default is $bins)"
+  echo " --cost cost      : FLIRT cost (default is $cost)"
+  echo " --maxangle angle : FLIRT max search angle (default is $maxangle)"
+  echo " --bet            : run betfunc on example_func (not with FSL 4.0)"
+  echo " "
+  echo " --title        : title for tkregister window"
+  echo " --no-bbr       : do not use boundary-based registration"
+  echo " --spm          : use SPM instead of flirt, 6 dof only"
+  echo " --no-inorm     : do not inorm when running tkregister2"
+  echo " --fmov fmov    : for tkregister2"
+  echo " --version      : print version and exit"
+  echo " --help         : print help and exit"
+  echo " --debug        : turn on debugging"
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+Registers FSL-Feat example_func (exf) to FreeSurfer anatomical (anat).
+If the geometry in the header for the example_func is "good", then
+creates an initial matrix between the anat and the exf based on
+headers of the two volumes. NIFTI should always have a good
+geometry. ANALYZE can have a good geometry if a valid SPM-style .mat
+file exits (ie, example_func.mat). If the geometry is good, this
+should work regardless of whether the exf is in radiological
+convention (ie, negative determinant) or neurological convention (ie,
+positive determinant).
+
+If the example_func geometry is not good, then it uses the
+registration between the example_func and standard space is used to
+generate an approximate initial registration between the example_func
+and the anat -- this just assures that the two are in the same
+orientation at the start.  The registration matrices for FSL and FS
+have different interpretations and formats.
+
+Creates featdir/reg/freesurfer with the following files:
+  anat2std.register.dat - init  FS  reg from anat to FSL-standard.
+  std2anat.fsl.mat      - init  FSL reg from FSL-standard to anat.
+  exf2anat.init.fsl.mat - init  FSL reg from example_func to anat.
+  exf2anat.fsl.mat      - final FSL reg from example_func to anat.
+  anat2exf.register.dat - final FS  reg from example_func to anat.
+  register.dat          - same as anat2exf.register.dat
+  example_func2standard.mat - can be used to replace feat-generated
+
+anat2exf.register.dat is the final product of this script and is what is
+used by other FreeSurfer programs.
+
+After subject data has been resampled to standard space, you can still
+interface with freesurfer using std2anat.fsl.mat instead of 
+anat2exf.register.dat.
+
+Creates log file: reg/freesurfer/reg-feat2anat.log
+
+REQUIRED ARGUMENTS
+
+--feat dir
+
+Path to Feat directory.
+
+--subject id
+
+FreeSurfer subject identifier as found in SUBJECTS_DIR.
+
+OPTIONAL FLIRT ARGUMENTS
+
+These arguments are passed to flirt
+
+--dof  dof
+--bins bins
+--cost cost
+--maxangle angle : passed as max_angle for -searchrx, -searchry, and -searchrz
+
+--overwrite-exf2std
+
+Overwrite feat-generated example_func2standard.mat with one generated by
+reg-feat2anat. This one is generated by concatenating the example_func2anat
+and anat2standard transforms. This is recommended when the high-level
+analyses will be done in surface-space.
+
+OTHER ARGUMENTS
+
+--manual
+
+Interactively view or edit registration with tkregister2. You must have
+already run reg-feat2anat without --manual to create the initial registration.
+Equivalent to --manxfm func2anat.
+
+--manxfm xfmtype
+
+xfmtype can be func2anat, std2anat, or func2std. Implies --manual.
+Interactively view or edit registration with tkregister2. You must have
+already run reg-feat2anat without --manxfm to create the initial registration.
+
+--version            : print version and exit
+--help               : print help and exit
+--debug              : turn on debugging
+
+EXAMPLE
+
+# Assume a data set exists called fbert.$fslext, where fslext is either
+# img, nii, or nii.gz. It determines the file format based on the format
+# of the example_func. FSLOUTPUTTYPE is then set accordingly.
+#
+# Analyze fbert.$fslext with Feat to generate directory fbert.feat
+
+# Register fbert.feat to subject bert:
+reg-feat2anat --feat fbert.feat --subject bert --overwrite-exf2std
+
+# View/check the registration
+reg-feat2anat --feat fbert.feat --subject bert --manual
+
+# If the registration has catastropically failed, then check that
+# the registration to standard space did not fail:
+reg-feat2anat --feat fbert.feat --subject bert --manxfm func2std
+
+# Overlay zmap onto the bert's orig volume. Set the threshold at z=1.3
+tkmedit bert orig -overlay ./fbert.feat/stats/zstat1.$fslext \
+     -overlay-reg ./fbert.feat/reg/freesurfer/anat2exf.register.dat \
+     -fthresh 1.3 -fmid 2.3 -fslope 1
+
+# Overlay zmap onto the standard volume. Set the threshold at z=1.3
+tkmedit -f $FSLDIR/etc/standard/avg152T1_brain.$ext \
+     -overlay ./fbert.feat/stats/zstat1.$fslext \
+     -overlay-reg ./fbert.feat/reg/freesurfer/std2exf.register.dat \
+     -fthresh 1.3 -fmid 2.3 -fslope 1
+
+# Resample fbert.feat onto the surface
+feat2surf --feat fbert.feat
+
+
+SEE ALSO
+
+feat2surf, aseg2feat, aparc2feat, tkmedit, tksurfer, mris_preproc,
+mri_glmfit, tkregister2, fslregister
+

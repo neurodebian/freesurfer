@@ -1,0 +1,609 @@
+#! /bin/tcsh -f
+
+#
+# fsl_rigid_register
+#
+# Wrapper for FSL's flirt
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.31 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+#
+#
+
+set VERSION = '$Id: fsl_rigid_register,v 1.31 2011/03/02 20:16:39 nicks Exp $';
+
+setenv FSLOUTPUTTYPE NIFTI
+
+set refvol = ();
+set invol = ();
+set outvol = ();
+set interp = trilinear;
+set debug = 0;
+set tmpdir = ();
+set cleanup = 1;
+set PrintHelp = 0;
+set applyxfm = ();
+set initxfm = ();
+set initgeom = 1;
+set applyinitxfm = 0;
+set dof = 6;
+set maxangle = 90;
+set bins = 256;
+set cost = corratio;
+#set cost = mutualinfo;
+set costlist = (mutualinfo corratio normcorr normmi leastsq);
+set fslmatfile = ();
+set regmatfile = ();
+set xfmmatfile = ();
+set ltamatfile = ();
+set subject = (); # only for regmat output
+
+# To left-right reverse the input volume, know what you are doing
+set LeftRightReverse = 0; # Change with -left-right-reverse (uses 12 dof)
+
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | egrep -e -version | wc -l`
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+set n = `echo $argv | egrep -e -help | wc -l`
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+
+goto parse_args;
+parse_args_return:
+goto check_params;
+check_params_return:
+
+echo "\n\n";
+echo $VERSION
+date
+
+set StartTime = `date`;
+
+# create the output directory
+echo $outvol
+set outdir = `dirname $outvol`;
+mkdir -p $outdir
+
+# make the temporary directory
+if($#tmpdir == 0) then
+  set tmpdir = $outdir/fsl_rigid_register.$$;
+endif
+mkdir -p $tmpdir
+
+# Convert reference to analyze
+isnifti $refvol # exit status == 1 if nifti
+if($status == 1) then
+  set refvolimg  = $refvol
+  set refvoldir   = `dirname $refvol`;
+  set refvolbase = $refvoldir/`basename $refvol .nii`;
+  echo "Reference is nifti, not converting"
+  #echo "refvolimg $refvolimg"
+  #echo "refvolbase $refvolbase"
+else
+  set refvolbase = $tmpdir/refvol.fsl_rigid_register
+  set refvolimg  = $refvolbase.nii
+  set cmd = (mri_convert $refvol $refvolimg)
+  echo "--------------------------------------"
+  pwd
+  echo $cmd
+  $cmd
+  if($status) exit 1;
+endif
+
+# Convert input to nifti #
+isnifti $invol # exit status == 1 if nifti
+if($status == 1 && ! $LeftRightReverse) then
+  set involimg   = $invol
+  set involdir   = `dirname $invol`;
+  set involbase = $involdir/`basename $invol .nii`;
+  echo "Input is nifti, not converting"
+else
+  set involbase = $tmpdir/invol.fsl_rigid_register
+  set involimg  = $involbase.nii
+  set cmd = (mri_convert $invol $involimg)
+  if($LeftRightReverse) set cmd = ($cmd --left-right-reverse)
+  echo "--------------------------------------"
+  pwd
+  echo $cmd
+  $cmd
+  if($status) exit 1;
+endif
+
+# Create an init mat based on geometry in the header #
+if($initgeom) then
+  set initxfm = $tmpdir/initxfm.fslmat
+  set cmd = (tkregister2_cmdl --targ $refvol --mov $invol)
+  set cmd = ($cmd --reg $tmpdir/tkregister.dat)
+  set cmd = ($cmd --fslregout $initxfm)
+  set cmd = ($cmd --regheader --noedit --s doesnotmatter);
+  echo "--------------------------------------"
+  pwd
+  echo $cmd
+  $cmd
+  if($status) exit 1;
+  rm $tmpdir/tkregister.dat;
+  echo "Init FSL Mat based on geometry -------------------"
+  cat $initxfm
+  echo "-------------------------------------------------"
+  if($applyinitxfm) then
+    set applyxfm = $initxfm
+    set initxfm = ();
+  endif
+endif
+
+
+# Check the output format
+isnifti $outvol # exit status == 1 if nifti
+if($status == 1) then
+  set outvolimg   = $outvol
+  set outvoldir   = `dirname $outvol`;
+  set outvolbase = $outvoldir/`basename $outvol .nii`;
+  set convertout = 0;
+  echo "Output is nifti, not converting"
+else
+  set outvolbase = $tmpdir/outvol.fsl_rigid_register
+  set outvolimg  = $outvolbase.nii
+  set convertout = 1;
+endif
+
+
+# Run flirt
+set cmd = (flirt.fsl -in $involbase.hdr)
+set cmd = ($cmd -out $outvolbase.hdr)
+set cmd = ($cmd -bins $bins -cost $cost )
+set cmd = ($cmd -searchrx -$maxangle $maxangle)
+set cmd = ($cmd -searchry -$maxangle $maxangle)
+set cmd = ($cmd -searchrz -$maxangle $maxangle)
+set cmd = ($cmd -interp $interp -dof $dof)
+set cmd = ($cmd -ref $refvolbase.hdr)
+if($#initxfm  != 0) set cmd = ($cmd -init $initxfm )
+if($#applyxfm == 0) then
+  set cmd = ($cmd  -omat $outvolbase.fslmat)
+else
+  set cmd = ($cmd -init $applyxfm -applyxfm)
+endif
+
+# Check if schedule file flirt.newdefault.20080811.sch exists, which
+# explicitly uses an identity starting matrix at both 4mm and 1mm phases.
+# this bug fix is necessary only for v5.4.2b
+set flirtversion=`flirt.fsl -version`
+if ("$flirtversion" == "FLIRT version 5.4.2b") then
+  set schedulefile="$FREESURFER_HOME/bin/flirt.newdefault.20080811.sch"
+  if ( -e $schedulefile) then
+    set cmd = ($cmd -schedule $schedulefile)
+  endif
+endif
+
+echo "--------------------------------------"
+pwd
+echo calling eval $cmd
+eval $cmd
+if($status) then
+  echo "ERROR: running flirt"
+  exit 1;
+endif
+
+# Copy analyze .mat from ref to output
+# cp $refvolbase.mat $outvolbase.mat
+
+# Convert to the output format
+if($convertout) then
+  set cmd = (mri_convert $outvolbase.nii $outvol);
+  echo "--------------------------------------"
+  pwd
+  echo $cmd
+  $cmd
+  if($status) exit 1;
+endif
+
+# Make sure MR parameters are copied to output
+set cmd = (mri_copy_params --pulse $outvol $invol $outvol)
+pwd
+echo $cmd
+$cmd
+if($status) exit 1;
+
+if($#applyxfm == 0) then
+  # Copy registration matrix
+  cp $outvolbase.fslmat $fslmatfile
+
+  if($#regmatfile || $#xfmmatfile) then
+    # Convert to register.dat or xfm #
+    set tmpregdat = $tmpdir/reg.dat
+    set cmd = (tkregister2_cmdl --targ $refvol --mov $invol)
+    set cmd = ($cmd --reg $tmpregdat)
+    set cmd = ($cmd --fslreg $fslmatfile)
+    set cmd = ($cmd --noedit);
+    if($#xfmmatfile)  set cmd = ($cmd --xfmout $xfmmatfile);
+    if($#subject)     set cmd = ($cmd --s $subject); # just puts it in register.dat
+    echo "--------------------------------------"
+    pwd
+    echo $cmd
+    $cmd
+    if($status) exit 1;
+    if($#regmatfile) cp $tmpregdat $regmatfile
+  endif
+
+  if($#ltamatfile) then
+    rm -f $ltamatfile
+    #mri_fslmat_to_lta $invol $refvol $fslmatfile $ltamatfile
+    set cmd = (tkregister2_cmdl --noedit --targ $refvol --mov $invol \
+        --reg /tmp/reg.$$ --fsl $fslmatfile --ltaout $ltamatfile);
+    echo $cmd
+    $cmd
+    if($status) exit 1
+  endif
+
+endif
+
+# Cleanup
+if($cleanup) then
+  echo "Cleaning up"
+  if($initgeom) rm $initxfm
+  rm -rf $tmpdir
+endif
+
+if($LeftRightReverse) then
+  echo ""
+  echo "WARNING: input was left-right reversed prior to registration"
+  echo "because this is what you said you wanted. Make sure you"
+  echo "know what you are doing."
+  echo ""
+endif
+
+echo " "
+echo "Started at $StartTime "
+echo "Ended   at `date`"
+echo " "
+echo "fsl_rigid_register Done"
+echo " "
+
+echo "To check results, run:"
+echo "tkmedit -f $refvol -aux $outvol"
+echo " "
+
+exit 0;
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+
+  switch($flag)
+
+    case "-r":
+      if ( $#argv < 1) goto arg1err;
+      set refvol = $argv[1]; shift;
+      breaksw
+
+    case "-i":
+      if ( $#argv < 1) goto arg1err;
+      set invol = $argv[1]; shift;
+      breaksw
+
+    case "-o":
+      if ( $#argv < 1) goto arg1err;
+      set outvol = $argv[1]; shift;
+      breaksw
+
+    case "-fslmat":
+      if ( $#argv < 1) goto arg1err;
+      set fslmatfile = $argv[1]; shift;
+      breaksw
+
+    case "-regmat":
+      if ( $#argv < 1) goto arg1err;
+      set regmatfile = $argv[1]; shift;
+      breaksw
+
+    case "-subject":
+      # Just for putting in register.dat
+      if ( $#argv < 1) goto arg1err;
+      set subject = $argv[1]; shift;
+      breaksw
+
+    case "-xfmmat":
+      if ( $#argv < 1) goto arg1err;
+      set xfmmatfile = $argv[1]; shift;
+      breaksw
+
+    case "-ltamat":
+      if ( $#argv < 1) goto arg1err;
+      set ltamatfile = $argv[1]; shift;
+      breaksw
+
+    case "-interp":
+      if ( $#argv < 1) goto arg1err;
+      set interp = $argv[1]; shift;
+      breaksw
+
+    case "-dof":
+      if ( $#argv < 1) goto arg1err;
+      set dof = $argv[1]; shift;
+      breaksw
+
+    case "-bins":
+      if ( $#argv < 1) goto arg1err;
+      set bins = $argv[1]; shift;
+      breaksw
+
+    case "-cost":
+      if ( $#argv < 1) goto arg1err;
+      set cost = $argv[1]; shift;
+      set err = 1;
+      foreach c ($costlist);
+        if($cost == $c) set err = 0;
+      end
+      if($err) then
+        echo "ERROR: cost $cost is unrecognized"
+        echo " I only know about $costlist)"
+        exit 1;
+      endif
+      breaksw
+
+    case "-tmp":
+    case "-tmpdir":
+      if ( $#argv < 1) goto arg1err;
+      set tmpdir = $argv[1]; shift;
+      set cleanup = 0;
+      breaksw
+
+    case "-applyxfm":
+      if ( $#argv < 1) goto arg1err;
+      set applyxfm = $argv[1]; shift;
+      if(! -e $applyxfm) then
+        echo "ERROR: cannot find $applyxfm"
+        exit 1;
+      endif
+      set initgeom = 0;
+      breaksw
+
+    case "-initxfm":
+      if ( $#argv < 1) goto arg1err;
+      set initxfm = $argv[1]; shift;
+      if(! -e $initxfm) then
+        echo "ERROR: cannot find $initxfm"
+        exit 1;
+      endif
+      set initgeom = 0;
+      breaksw
+
+    case "-initgeom":
+      set initgeom = 1;
+      breaksw
+
+    case "-noinitgeom":
+      set initgeom = 0;
+      breaksw
+
+    case "-applyinitxfm":
+      set applyinitxfm = 1;
+      breaksw
+
+    case "-maxangle":
+      if ( $#argv < 1) goto arg1err;
+      set maxangle = $argv[1]; shift;
+      breaksw
+
+    case "-left-right-reverse":
+      set LeftRightReverse = 1;
+      set dof = 12;
+      breaksw
+
+    case "-verbose":
+      set verbose = 1;
+      breaksw
+
+    case "-nocleanup":
+      set nocleanup = 0;
+      breaksw
+
+    case "-cleanup":
+      set nocleanup = 1;
+      breaksw
+
+    case "-echo":
+      set echo = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-umask":
+      if ( $#argv == 0) goto arg1err;
+      umask $1; shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized.
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#refvol == 0) then
+    # Need ref even with -applyxfm to get mat file #
+    echo "ERROR: must spec a ref vol"
+    exit 1;
+  endif
+
+  if($#invol == 0) then
+    echo "ERROR: must spec an input vol"
+    exit 1;
+  endif
+
+  if($#outvol == 0) then
+    echo "ERROR: must spec an output vol"
+    exit 1;
+  endif
+
+  if($#initxfm && $#applyxfm) then
+    echo "ERROR: cannot spec initxfm and applyxfm"
+    exit 1;
+  endif
+
+  if($initgeom && $#applyxfm) then
+    echo "ERROR: cannot spec initgeom and applyxfm"
+    exit 1;
+  endif
+
+  if($#initxfm && $initgeom) then
+    echo "ERROR: cannot spec initxfm and initgeom"
+    exit 1;
+  endif
+
+  if($#fslmatfile == 0) set fslmatfile = $outvol.fslmat
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+arg2err:
+  echo "ERROR: flag $flag requires two arguments"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: fsl_rigid_register"
+  echo ""
+  echo "Required Arguments:";
+  echo "   -r refvol    : reference/target volume"
+  echo "   -i inputvol  : input/moveable volume"
+  echo "   -o outputvol : input resampled to reference"
+  echo ""
+  echo "Optional Arguments"
+  echo "   -fslmat fsmatfile  : spec explicitly"
+  echo "   -regmat regmatfile : get reg matrix as register.dat file"
+  echo "   -xfmmat xfmmatfile :  get reg matrix as MNI xfm file"
+  echo "   -ltamat ltamatfile :  get reg matrix as MGH lta file"
+  echo "   -noinitgeom : do not initialize matrix based on geometry"
+  echo "   -applyxfm xfmfile : do not reg, just apply xfm to input"
+  echo "   -applyinitxfm     : do not reg, just apply init xfm to input"
+  echo "   -initxfm  xfmfile : use this as an initial matrix (instead of geom)"
+  echo "   -maxangle maxangle : only search over +/- maxangle degrees"
+  echo "   -interp method : <trilinear>, nearestneighbour, sinc"
+  echo "   -dof dof : use dof instead of 6"
+  echo "   -bins bins : number of bins to use (default $bins)"
+  echo "   -cost cost : objective function (default $cost)"
+  echo "      valid costs are $costlist"
+  echo "   -tmp  tmpdir (default is $tmpdir). Implies -nocleanup"
+  echo "   -tmpdir  tmpdir : same as -tmp"
+  echo "   -nocleanup  : do not delete temporary files"
+  echo "   -cleanup  : delete temporary files (default)"
+  echo "   -subject subject  : only puts it in the register.dat file"
+  echo ""
+  echo "   -version : print version and exit"
+  echo "   -help    : print help and exit"
+  echo ""
+
+  if($PrintHelp) \
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+This is a front-end for the FSL (www.fmrib.ox.ac.uk/fsl/index.html)
+flirt program. Computes the registration matrix that transforms
+inputvol to refvol and resamples inputvol to outputvol using that
+matrix. The matrix is stored in outputvol.fslmat. The registration is
+constrained to be rigid (ie, 6 dof). The input and ref volumes are
+automatically converted to analyze, and the output volume is
+automatically converted from analyze to the output format. Note: if
+using COR as output, the COR directory must exist prior to running
+this script. The FLIRT/FSL registration matrix will be stored in
+outvol.fslmat (unless -fslmat).
+
+By default, an init FSL registration matrix is computed from the
+geometry information in the header ref and input headers. This is a
+good idea because the anlyze format does not keep the direction cosine
+info around.
+
+-fslmat fslmatfile
+
+Store the FSL registration matrix in fslmatfile instead of outvol.fslmat
+
+-regmat regmatfile
+
+Convert the FSL matrix to register.dat format and save in regmatfile. You
+will have to edit the subject name.
+
+-ltamat ltamatfile
+
+Convert the FSL matrix to an MGH lta file.
+
+-noinitgeom
+
+Do not compute init registration matrix from geometry.
+
+-initxfm fslmatfile
+
+Use matrix in fslmatfile as the initial registation matrix. If no
+initialization is specified, the identity is assumed. Forces
+-noinitgeom.
+
+-maxangle maxangle
+
+Search only +/- maxangle degrees around the initial starting
+point. Default is 90.
+
+-applyxfm
+
+When the -applyxfm flag is is used, the input is resampled to the
+output using the FSL mat file supplied as the argument to the
+-applyxfm.  The ref volume is still needed in order to get the proper
+geometry for the output file. Forces -noinitgeom.
+
+-dof dof
+
+Non-rigid registration can be performed by changing the dof from 6.
+
+
+BUGS:
+
+If using COR as output, the COR directory must exist prior to running
+this script.
+

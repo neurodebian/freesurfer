@@ -1,0 +1,341 @@
+#! /bin/csh -f
+
+#
+# flacproc-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2007/01/09 22:41:17 $
+#    $Revision: 1.22 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: flacproc-sess,v 1.22 2007/01/09 22:41:17 nicks Exp $';
+
+set cmdargs = ($argv);
+
+set flac = ();
+set analysis = ();
+set monly     = 0;
+set nolog     = 0;
+set PrintHelp = 0;
+set Synth     = 0;
+set SynthAR1  = 0;
+set npca      = 0;
+set npcathresh = 1;
+set svres  = 0;
+set svres0 = 0;
+set svrvar0 = 1;
+set svar1   = 1;
+set do_rfx = 0;
+set do_ffx = 1;
+set do_fla = 1;
+set do_fit = 1;
+
+if($#argv == 0)  goto usage_exit;
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+  exit 1;
+endif
+
+set SessList = `getsesspath $argv`;
+if($status || $#SessList == 0) then
+  getsesspath $argv 
+  exit 1;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+if(! $nolog) then
+  set LF = log/flacproc-sess.$flac.log
+  if(-e $LF) mv $LF $LF.bak
+else
+  set LF = /dev/null
+endif
+
+date | tee -a $LF
+pwd  | tee -a $LF
+echo $0  | tee -a $LF
+echo $cmdargs | tee -a $LF
+echo $VERSION | tee -a $LF
+hostname  | tee -a $LF
+
+if(! $monly) set MLF = /tmp/flacproc-sess.$$.m
+rm -f $MLF
+
+#------------------------------------------------------------------#
+set StartTime = `date`;
+foreach sess ($SessList)
+  set sessid = `basename $sess`;
+#--------------------------#
+tee -a $MLF > /dev/null <<EOF
+tic;
+
+flacfile = '$flacfile';
+analysis = '$analysis';
+sess = '$sess';
+Synth    = $Synth;
+SynthAR1 = $SynthAR1;
+npca = $npca;
+npcathresh = $npcathresh;
+svres  = $svres;
+svres0 = $svres0;
+svrvar0 = $svrvar0;
+svar1   = $svar1;
+do_fit = $do_fit;
+do_fla = $do_fla;
+do_ffx = $do_ffx;
+do_rfx = $do_rfx;
+monly = $monly;
+
+fast_flacproc_sess;
+
+fprintf(' -------------   (%6.1f)\n',toc);
+if(~monly) 
+  clear all; 
+end
+
+EOF
+#--------------------------#
+
+end # Loop over sessions #
+
+if(! $monly) then
+  cat $MLF | matlab -display iconic |& tee -a $LF
+  rm -f $MLF
+endif
+
+
+echo "Started at $StartTime" | tee -a $LF
+echo "Ended   at `date`"     | tee -a $LF
+echo "flacproc-sess Done"    | tee -a $LF
+
+exit 0;
+###############################################
+
+
+############--------------##################
+parse_args:
+set cmdline = "$argv";
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-f":
+    case "-flac":
+      if ( $#argv == 0) goto arg1err;
+      set flacname = $argv[1]; shift;
+      set flacfile = $flacname
+      if(! -f $flacfile) then
+        set flacfile = flac/$flacname
+        if(! -e $flacfile) then
+          set flacfile = flac/$flacname.flac
+          if(! -e $flacfile) then
+            echo "ERROR: cannot find $flac"
+            exit 1;
+          endif
+        endif
+      endif
+      set flacfile = `getfullpath $flacfile`;
+      echo flacfile $flacfile $flac
+      breaksw
+
+    case "-a":
+    case "-analysis":
+      if ( $#argv == 0) goto arg1err;
+      set analysis = $argv[1]; shift;
+      if(! -e $analysis) then
+        echo "ERROR: cannot find $analysis"
+        exit 1;
+      endif
+      set flacfile = "";
+      breaksw
+
+    case "-npca":
+      set npca = 1;
+      breaksw
+
+    case "-synth":
+      set Synth = 1;
+      breaksw
+
+    case "-synthar1":
+      if ( $#argv == 0) goto arg1err;
+      set SynthAR1 = $argv[1]; shift;
+      set Synth = 1;
+      breaksw
+
+    case "-svres":
+    case "-sveres":
+      set svres = 1;
+      breaksw
+
+    case "-svres0":
+    case "-sveres0":
+      set svres0 = 1;
+      breaksw
+
+    case "-svrvar0":
+      set svrvar0 = 1;
+      breaksw
+
+    case "-svar1":
+      set svar1 = 1;
+      breaksw
+
+    case "-no-fit":
+      set do_fit = 0;
+      breaksw
+
+    case "-no-fla":
+      set do_fla = 0;
+      breaksw
+
+    case "-no-rfx":
+    case "-norfx":
+      set do_rfx = 0;
+      breaksw
+
+    case "-rfx":
+      set do_rfx = 1;
+      breaksw
+
+    case "-no-ffx":
+    case "-noffx":
+      set do_ffx = 0;
+      breaksw
+
+    case "-ffx":
+      set do_ffx = 1;
+      breaksw
+
+    case "-monly":
+      if ( $#argv == 0) goto arg1err;
+      set MLF = $argv[1]; shift;
+      set monly = 1;
+      breaksw
+
+    case "-nolog":
+      set nolog = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-g":
+    case "-s":
+    case "-sf":
+    case "-d":
+    case "-df":
+      shift;
+      # ignore getsesspath arguments 
+      breaksw
+
+    case "-cwd":
+      # ignore getsesspath arguments 
+      breaksw
+
+    case "-umask":
+      if ( $#argv == 0) goto arg1err;
+      setenv MRI_UMASK $1; shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+if($#flac && $#analysis) then
+  echo "ERROR: cannot have flac and analysis"
+  exit 1;
+endif
+
+if($#analysis)  set flac = `dirname $analysis`;
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: flacproc-sess"
+  echo ""
+  echo "   -flac flacfile : as found in flac/flacfile "
+  echo ""
+  echo "Session Arguments (Required)"
+  echo "   -sf sessidfile  "
+  echo "   -df srchdirfile "
+  echo "   -s  sessid      "
+  echo "   -d  srchdir     "
+  echo "   -fsd fsdir      (optional)"
+  echo ""
+  echo "Other Arguments"
+  echo "   -svres   : save residual error as flac/res"
+  echo "   -svres0  : save unwhitened residual error as flac/res0"
+  echo "   -svrvar0 : save unwhitened resid var as flac/rvar0"
+  echo "   -svar1   : ar1 as flac/ar1"
+  echo "   -no-fla  : do not perform within-run analysis (eg, ffx only)"
+  echo "   -no-fit  : do not perform within-run fit (but do contrasts)"
+  echo "   -no-ffx  : do not perform cross-run FFx"
+  echo "   -no-rfx  : do not perform cross-run RFx"
+  echo "   -synth"
+  echo "   -synthar1 rho"
+  echo "   -debug"
+  echo "   -umask umask    : set unix file permission mask"
+  echo "   -version        : print version and exit"
+  echo "   -help           : print help and exit"
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+
+  echo "------------------------------------------------------------"
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+  echo "------------------------------------------------------------"
+
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+

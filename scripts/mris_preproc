@@ -1,0 +1,1324 @@
+#! /bin/tcsh -f
+
+#
+# mris_preproc
+#
+# Script to prepare surface-based data for high-level analysis by
+# resampling surface or volume source data to a common sujbect (usually
+# an average subject) and then concatenating them into one file which
+# can then be used by a number of programs (eg, mri_glmfit).
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.59 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+#
+setenv FIX_VERTEX_AREA
+
+set VERSION = '$Id: mris_preproc,v 1.59 2011/03/02 20:16:39 nicks Exp $';
+
+set PrintHelp = 0;
+set subjlist = ();
+set meas = ();
+set isplist = ();
+set ivplist = ();
+set irplist = ();
+set srcfmt  = ();
+set target = fsaverage
+set surfdir = surf
+set fwhmsrc  = ();
+set fwhmtarg = ();
+set niterssrc = ();
+set niterstarg = ();
+set projfrac = ();
+set projfracmax = ();
+set V2SMaskNonCtx = 1; 
+set outpath = ();
+set paireddiff = 0;
+set paireddiffnorm = 0;
+set paireddiffnorm1 = 0;
+set paireddiffnorm2 = 0;
+set catmean = 0;
+set catstd = 0;
+set synth = 0;
+set srcsurf = 0;
+set srcvol  = 0;
+set tmpdir = ();
+set cleanup = 1;
+set RunIt = 1;
+set LF = ();
+set reshape = 0;
+set sval = ();
+set svalsurf = ();
+set hash = 1;
+set jac = 0;
+set CacheOutFile = ();
+set CacheOutOnly = 0;
+set CacheOutUpdate = 0;
+set CacheIn = 0;
+set MeasIn  = 0;
+set outdir = ();
+set SmoothCortexOnly = 0; # At some point, this should be the default
+set DoXHemi = 0;
+set subjlistfile = ();
+set fsgdf = ();
+
+set SessFile = ();
+set SessDirFile = ();
+set FSFAnalysis = ();
+set FSFContrast = ();
+set FSFMap = ces
+set DoFSFCVar = 0;
+set DoFSFOffset = 0;
+
+set srchemi = ();
+set trghemi = ();
+set SrcSurfReg = sphere.reg
+set TrgSurfReg = sphere.reg
+set nolog = 0;
+
+set cmdargs = ($argv);
+if($#argv == 0)  goto usage_exit;
+set n = `echo $argv | egrep -e --help | wc -l`
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+  exit 1;
+endif
+set n = `echo $argv | egrep -e --version | wc -l`
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+# Parse the command-line arguments
+goto parse_args;
+parse_args_return:
+
+# Handle FSFAST if needed
+goto handle_fsfast;
+handle_fsfast_return:
+
+# Check the command-line arguments
+goto check_params;
+check_params_return:
+
+set nsubjects = $#subjlist;
+if($srcsurf) set geom = surface
+if($srcvol)  set geom = volume
+
+if(! $CacheOutOnly) then
+  # Check for analyze and nifti output format
+  isanalyze $outpath >& /dev/null
+  if($status) then
+    if(! $reshape) then
+      set reshape = 1
+      echo "INFO: output detected as analyze, turning on reshaping"
+    endif
+  endif
+  isnifti $outpath >& /dev/null
+  if($status) then
+    if(! $reshape) then
+      set reshape = 1
+      echo "INFO: output detected as nifti, turning on reshaping"
+    endif
+  endif
+  # Create the output directory
+  set outdir = `dirname $outpath`;
+  mkdir -p $outdir
+  if($status) then
+    echo "ERROR: creating $outdir"
+    exit 1;
+  endif
+endif
+
+# Create the tmpdir
+if($#tmpdir == 0) set tmpdir = $outdir/tmp.mris_preproc.$$
+echo tmpdir is $tmpdir
+pwd
+mkdir -p $tmpdir
+if($status) then
+  echo "ERROR: creating $tmpdir"
+  exit 1;
+endif
+
+# Log file
+if(! $nolog) then
+  if($#LF == 0) then
+    if(! $CacheOutOnly) set LF = $outstem.mris_preproc.log
+    if($CacheOutOnly)   set LF = mris_preproc.$geom.$trghemi.log
+    if(-e $LF) mv $LF $LF.bak
+  endif
+else
+  set LF = /dev/null
+endif
+
+echo "Log file is $LF"
+
+date | tee -a $LF
+echo "setenv SUBJECTS_DIR $SUBJECTS_DIR" | tee -a $LF
+echo "cd `pwd`" | tee -a $LF
+echo $0 $cmdargs | tee -a $LF
+echo ""  | tee -a $LF
+uname -a  | tee -a $LF
+echo $VERSION | tee -a $LF
+cat $FREESURFER_HOME/build-stamp.txt | tee -a $LF
+echo "tmpdir is $tmpdir" | tee -a $LF
+echo "Src $srchemi $SrcSurfReg" | tee -a $LF
+echo "Trg $trghemi $TrgSurfReg" | tee -a $LF
+echo ""  | tee -a $LF
+
+set tvallist = ();
+@ nthsubj = 0;
+foreach subj ($subjlist)
+  @ nthsubj = $nthsubj + 1;
+  echo "\n\n" | tee -a $LF
+  echo "---------------------------------------------------" | tee -a $LF
+  echo "#@# $nthsubj/$#subjlist $subj `date` --------------" | tee -a $LF
+
+  set subjpath = $SUBJECTS_DIR/$subj
+
+  if($CacheOutOnly && $CacheOutUpdate) then
+    if($trghemi == $srchemi) then
+      set tcache = $subjpath/$surfdir/$trghemi.$CacheOutFile
+    else
+      set tcache = $subjpath/$surfdir/$trghemi.$srchemi.$CacheOutFile
+    endif
+    if(-e $tcache) continue;
+  endif
+
+  if($CacheIn) then
+    # Input has been cached
+    set tval = $subjpath/$surfdir/$srchemi.$meas.mgh
+    if(! -e $tval) then
+      echo "ERROR: cannot find cached file $tval"
+      exit 1;
+    endif
+  else
+    # Input has NOT been cached, create
+    if($srcvol) then
+      # Source is a volume, run mri_vol2surf
+      set srcsurfpath = $tmpdir/subjsurfvals.mgh
+      set vol = $ivplist[$nthsubj];
+      set reg = $irplist[$nthsubj];
+      set cmd = (mri_vol2surf --src $vol --srcreg $reg --hemi $srchemi)
+      set cmd = ($cmd --out $srcsurfpath)
+      if($#projfrac) set cmd = ($cmd --projfrac $projfrac)
+      if($#projfracmax)  set cmd = ($cmd --projfrac-max $projfracmax)
+      if($V2SMaskNonCtx) set cmd = ($cmd --cortex)
+      if($synth)     set cmd = ($cmd --srcsynth -1) # Synth if desired
+      if($reshape)   set cmd = ($cmd --reshape);
+      if(! $reshape) set cmd = ($cmd --noreshape);
+      echo "-----------------------"| tee -a $LF
+      echo $cmd | tee -a $LF
+      if($RunIt) $cmd |& tee -a $LF
+      if($status) exit 1;
+    else
+      # Source is already a surface
+      if($#meas || $#sval) then
+        set srcsurfpath = $subjpath/$surfdir/$srchemi.$meas
+      else
+        set srcsurfpath = $isplist[$nthsubj];
+      endif
+    endif
+    # Now srcsurfpath file exists, convert it to the target subject
+    set subjtmp = `echo $subj | sed 's/\//./g'`; # Hack to handle xhemi subdirs
+    set tval = $tmpdir/$subjtmp.$nthsubj.mgh
+    set cmd = (mri_surf2surf)
+    set cmd = ($cmd --srcsubject $subj   --srchemi $srchemi --srcsurfreg $SrcSurfReg)
+    set cmd = ($cmd --trgsubject $target --trghemi $trghemi --trgsurfreg $TrgSurfReg)
+    set cmd = ($cmd --tval $tval)
+    if($#sval == 0) then
+       set cmd = ($cmd --sval $srcsurfpath)
+    else
+       set cmd = ($cmd --sval-$sval $svalsurf)
+    endif
+    if($jac) set cmd = ($cmd --jac)
+    if($#srcfmt) set cmd = ($cmd --sfmt $srcfmt)
+    if($synth && ! $srcvol) set cmd = ($cmd --synth) # Synth if desired, vol done above
+    if($#fwhmsrc)   set cmd = ($cmd --fwhm-src $fwhmsrc) # Smth in the targ space below
+    if($#niterssrc) set cmd = ($cmd --nsmooth-in $niterssrc) # Smth in the targ space below
+    if($reshape)   set cmd = ($cmd --reshape);
+    if(! $reshape)  set cmd = ($cmd --noreshape);
+    if(! $hash)     set cmd = ($cmd --nohash);
+    if($SmoothCortexOnly)   set cmd = ($cmd --cortex)
+    if(! $SmoothCortexOnly) set cmd = ($cmd --no-cortex)
+    echo "-----------------------"| tee -a $LF
+    echo $cmd | tee -a $LF
+    if($RunIt) $cmd |& tee -a $LF
+    if($status) exit 1;
+  endif # if($CacheIn) then
+
+  # Copy/smooth resampled data to CacheOutFile
+  if($#CacheOutFile) then
+    if($trghemi == $srchemi) then
+      set tcache = $subjpath/$surfdir/$trghemi.$CacheOutFile
+    else
+      set tcache = $subjpath/$surfdir/$trghemi.$srchemi.$CacheOutFile
+    endif
+    # Smooth in the target space
+    if($#fwhmtarg || $#niterstarg) then
+      set cmd = (mri_surf2surf --hemi $trghemi --s $target )
+      set cmd = ($cmd --sval $tval)
+      set cmd = ($cmd --tval $tcache)
+      if($#fwhmtarg)   set cmd = ($cmd --fwhm-trg $fwhmtarg)
+      if($#niterstarg) set cmd = ($cmd --nsmooth-out $niterstarg)
+      if($reshape)   set cmd = ($cmd --reshape);
+      if(! $reshape)   set cmd = ($cmd --noreshape);
+      if($SmoothCortexOnly)   set cmd = ($cmd --cortex)
+      if(! $SmoothCortexOnly) set cmd = ($cmd --no-cortex)
+      echo "-----------------------"| tee -a $LF
+      echo $cmd | tee -a $LF
+      if($RunIt) $cmd |& tee -a $LF
+      if($status) exit 1;
+      echo "\n\n" | tee -a $LF
+    else
+      # Does this work?
+      if($trghemi == $srchemi) then
+        set cmd = (cp $tval $subjpath/$surfdir/$trghemi.$CacheOutFile.mgh)
+      else
+        set cmd = (cp $tval $subjpath/$surfdir/$trghemi.$srchemi.$CacheOutFile.mgh)
+      endif
+      echo "-----------------------"| tee -a $LF
+      echo $cmd | tee -a $LF
+      if($RunIt) $cmd |& tee -a $LF
+      if($status) exit 1;
+      echo "\n\n" | tee -a $LF
+    endif
+  endif
+
+  # Prepare to concatenate them
+  set tvallist = ($tvallist $tval)
+
+end
+
+echo "\n\n" | tee -a $LF
+
+if(! $CacheOutOnly) then
+  # Now concatenate all the inputs together
+  set cmd = (mri_concat $tvallist --o $outpath)
+  if($paireddiff)      set cmd = ($cmd --paired-diff --prune);
+  if($paireddiffnorm)  set cmd = ($cmd --paired-diff-norm --prune);
+  if($paireddiffnorm1) set cmd = ($cmd --paired-diff-norm1 --prune);
+  if($paireddiffnorm2) set cmd = ($cmd --paired-diff-norm2 --prune);
+  if($catmean)         set cmd = ($cmd --mean --prune);
+  if($catstd)          set cmd = ($cmd --std --prune);
+  echo "-----------------------"| tee -a $LF
+  echo $cmd | tee -a $LF
+  if($RunIt) $cmd |& tee -a $LF
+  if($status) exit 1;
+  echo "\n\n" | tee -a $LF
+
+  # Smooth in the target space
+  if($#fwhmtarg || $#niterstarg) then
+    set cmd = (mri_surf2surf --hemi $trghemi --s $target )
+    set cmd = ($cmd --sval $outpath)
+    set cmd = ($cmd --tval $outpath)
+    if($#fwhmtarg)   set cmd = ($cmd --fwhm-trg $fwhmtarg)
+    if($#niterstarg) set cmd = ($cmd --nsmooth-out $niterstarg)
+    if($reshape)   set cmd = ($cmd --reshape);
+    if(! $reshape)   set cmd = ($cmd --noreshape);
+    if($SmoothCortexOnly)   set cmd = ($cmd --cortex)
+    if(! $SmoothCortexOnly) set cmd = ($cmd --no-cortex)
+    echo "-----------------------"| tee -a $LF
+    echo $cmd | tee -a $LF
+    if($RunIt) $cmd |& tee -a $LF
+    if($status) exit 1;
+    echo "\n\n" | tee -a $LF
+  endif
+endif
+
+if($cleanup) then
+  echo "Cleaning up" | tee -a $LF
+  set cmd = (rm -r $tmpdir)
+  echo "-----------------------"| tee -a $LF
+  echo $cmd | tee -a $LF
+  $cmd |& tee -a $LF
+  if($status) exit 1;
+endif
+
+
+date | tee -a $LF
+echo "mris_preproc done"| tee -a $LF
+
+exit 0
+#----------------------------------------------------------#
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+
+  switch($flag)
+
+    case "--subject":
+    case "--s":
+      if($#argv < 1) goto arg1err;
+      set subjlist = ($subjlist $argv[1]); shift;
+      breaksw
+
+    case "--f":
+      if($#argv < 1) goto arg1err;
+      set subjlistfile = $argv[1]; shift;
+      if(! -e $subjlistfile) then
+        echo "ERROR: cannot find $subjlistfile";
+        exit 1;
+      endif
+      set subjlist = ($subjlist `cat $subjlistfile`);
+      breaksw
+
+    case "--fsgd":
+      if ( $#argv == 0) goto arg1err;
+      set fsgdf = $argv[1]; shift;
+      if(! -e $fsgdf) then
+        echo "ERROR: cannot find $fsgdf";
+        exit 1;
+      endif
+      set sl = `cat $fsgdf | awk '{if($1 == "Input") print $2}'`;
+      set subjlist = ($subjlist $sl);
+      breaksw
+
+    case "--meas":
+      if($#argv < 1) goto arg1err;
+      set meas = $argv[1]; shift;
+      set srcsurf = 1;
+      set srcfmt = curv;
+      set MeasIn = 1;
+      breaksw
+
+    case "--cache-in":
+      if($#argv < 1) goto arg1err;
+      set meas = $argv[1]; shift;
+      set srcsurf = 1;
+      set CacheIn = 1;
+      # dont set format
+      breaksw
+
+    case "--area":
+      if($#argv < 1) goto arg1err;
+      set svalsurf = $argv[1]; shift;
+      set sval = area;
+      set srcsurf = 1;
+      set jac = 1;
+      breaksw
+
+    case "--surfreg":
+      if($#argv < 1) goto arg1err;
+      set SrcSurfReg = $argv[1]; shift;
+      set TrgSurfReg = $SrcSurfReg;
+      breaksw
+
+    case "--srcsurfreg":
+      if($#argv < 1) goto arg1err;
+      set SrcSurfReg = $argv[1]; shift;
+      breaksw
+
+    case "--trgsurfreg":
+      if($#argv < 1) goto arg1err;
+      set TrgSurfReg = $argv[1]; shift;
+      breaksw
+
+    case "--srcfmt":
+      if($#argv < 1) goto arg1err;
+      set srcfmt = $argv[1]; shift;
+      breaksw
+
+    case "--surfdir":
+      if($#argv < 1) goto arg1err;
+      set surfdir = $argv[1]; shift;
+      breaksw
+
+    case "--isp": # Input surface path
+    case "--is":
+      if($#argv < 1) goto arg1err;
+      set isp = $argv[1];shift;
+      if(! -e $isp) then
+        echo "ERROR: cannot find $isp"
+        exit 1;
+      endif
+      set isplist = ($isplist $isp);
+      set srcsurf = 1;
+      breaksw
+
+    case "--iv": # Input volume path
+    case "--ivp":
+      if($#argv < 2) goto arg2err;
+      set ivp = $argv[1];shift;
+      if(! -e $ivp) then
+        echo "ERROR: cannot find $ivp"
+        exit 1;
+      endif
+      set irp = $argv[1];shift;
+      if(! -e "$irp") then
+        echo "ERROR: cannot find $irp"
+        exit 1;
+      endif
+      set ivplist = ($ivplist $ivp);
+      set irplist = ($irplist $irp);
+      set subj = `head -1 $irp`;
+      set subjlist = ($subjlist $subj);
+      set srcvol = 1;
+      breaksw
+
+    case "--hemi":
+      if ( $#argv == 0) goto arg1err;
+      set srchemi = $argv[1]; shift;
+      set trghemi = $srchemi;
+      breaksw
+
+    case "--no-mask-non-cortex":
+      set V2SMaskNonCtx = 0;
+      breaksw
+
+    case "--srchemi":
+      if ( $#argv == 0) goto arg1err;
+      set srchemi = $argv[1]; shift;
+      breaksw
+
+    case "--trghemi":
+      if ( $#argv == 0) goto arg1err;
+      set trghemi = $argv[1]; shift;
+      breaksw
+
+    case "--target":
+      if ( $#argv == 0) goto arg1err;
+      set target = $argv[1]; shift;
+      breaksw
+
+    case "--fwhm-src":
+      if ( $#argv == 0) goto arg1err;
+      set fwhmsrc = $argv[1]; shift;
+      breaksw
+
+    case "--niters-src":
+      if ( $#argv == 0) goto arg1err;
+      set niterssrc = $argv[1]; shift;
+      breaksw
+
+    case "--fwhm-targ":
+    case "--fwhm":
+      if ( $#argv == 0) goto arg1err;
+      set fwhmtarg = $argv[1]; shift;
+      breaksw
+
+    case "--niters-targ":
+    case "--niters":
+      if ( $#argv == 0) goto arg1err;
+      set niterstarg = $argv[1]; shift;
+      breaksw
+
+    case "--smooth-cortex-only"
+      set SmoothCortexOnly = 1;
+      breaksw;
+
+    case "--no-smooth-cortex-only"
+      set SmoothCortexOnly = 0;
+      breaksw;
+
+    case "--projfrac":
+      if ( $#argv == 0) goto arg1err;
+      set projfrac = $argv[1]; shift;
+      breaksw
+
+    case "--projfrac-max":
+      if ( $#argv < 3) goto arg3err;
+      set projfracmax = ($argv[1] $argv[2] $argv[3]); 
+      shift; shift; shift;
+      breaksw
+
+    case "--out":
+      if ( $#argv == 0) goto arg1err;
+      set outpath = $argv[1]; shift;
+      # Make sure format is recognized
+      set outstem = `fname2stem $outpath`
+      if($status) then
+        echo "ERROR: format for $outpath not recognized"
+        exit 1
+      endif
+      breaksw
+
+    case "--sf":
+      if ( $#argv == 0) goto arg1err;
+      set SessFile = $argv[1]; shift;
+      breaksw
+
+    case "--df":
+    case "--sd":
+      if ( $#argv == 0) goto arg1err;
+      set SessDirFile = $argv[1]; shift;
+      breaksw
+
+    case "--analysis":
+    case "--a":
+      if ( $#argv == 0) goto arg1err;
+      set FSFAnalysis = $argv[1]; shift;
+      breaksw
+
+    case "--contrast":
+    case "--c":
+      if ( $#argv == 0) goto arg1err;
+      set FSFContrast = $argv[1]; shift;
+      breaksw
+
+    case "--map":
+      if ( $#argv == 0) goto arg1err;
+      set FSFMap = $argv[1]; shift;
+      breaksw
+
+    case "--offset":
+      set DoFSFOffset=1;
+      set FSFMap = h-offset
+      breaksw
+
+    case "--cvar":
+      set DoFSFCVar=1;
+      set FSFMap = cesvar
+      breaksw
+
+    case "--cache-out":
+      if ( $#argv == 0) goto arg1err;
+      set CacheOutFile = $argv[1]; shift;
+      breaksw
+
+    case "--cache-out-update":
+      if( $#argv < 1) goto arg1err;
+      set tmpdir = $argv[1]; shift;
+      set tmpdir = $tmpdir/tmp.mris_preproc.$$
+      echo tmpdir $tmpdir
+      set CacheOutOnly = 1;
+      set CacheOutUpdate = 1;
+      breaksw
+
+    case "--cache-out-only":
+      if( $#argv < 1) goto arg1err;
+      set tmpdir = $argv[1]; shift;
+      set tmpdir = $tmpdir/tmp.mris_preproc.$$
+      echo tmpdir $tmpdir
+      set CacheOutOnly = 1;
+      breaksw
+
+    case "--log":
+      if ( $#argv == 0) goto arg1err;
+      set LF = $argv[1]; shift;
+      breaksw
+
+    case "--tmpdir":
+      if ( $#argv == 0) goto arg1err;
+      set tmpdir = $argv[1]; shift;
+      breaksw
+
+    case "--mean":
+      set catmean = 1;
+      breaksw
+
+    case "--std":
+      set catstd = 1;
+      breaksw
+
+    case "--paired-diff":
+      set paireddiff = 1;
+      breaksw
+
+    case "--xhemi":
+      set DoXHemi = 1;
+      breaksw
+
+    case "--paired-diff-norm":
+      set paireddiffnorm = 1;
+      breaksw
+
+    case "--paired-diff-norm1":
+      set paireddiffnorm1 = 1;
+      breaksw
+
+    case "--paired-diff-norm2":
+      set paireddiffnorm2 = 1;
+      breaksw
+
+    case "--synth":
+      set synth = 1;
+      breaksw
+
+    case "--reshape":
+      set reshape = 1;
+      breaksw
+
+    case "--no-hash":
+      set hash = 0;
+      breaksw
+
+    case "--dontrun":
+      set RunIt = 0;
+      breaksw
+
+    case "--nolog":
+      set nolog = 1;
+      breaksw
+
+    case "--cleanup":
+      set cleanup = 1;
+      breaksw
+
+    case "--nocleanup":
+      set cleanup = 0;
+      breaksw
+
+    case "--nocleanup":
+      set cleanup = 0;
+      breaksw
+
+    case "--debug":
+      set verbose = 1;
+      set echo = 1; # turns on terminal echoing
+      set debug = 1;
+      breaksw
+
+    default:
+      echo "ERROR: flag $flag not recognized"
+      exit 1;
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+handle_fsfast:
+
+if($#SessFile) then
+
+  # FS-Fast Session File
+  if($#FSFAnalysis == 0) then
+    echo "ERROR: need to specify --analysis with --sf"
+    exit 1;
+  endif
+  if($DoFSFOffset && $#FSFContrast != 0) then
+    echo "ERROR: cannot specify both --offset and --contrast"
+    exit 1;
+  endif
+  if(! $DoFSFOffset && $#FSFContrast == 0) then
+    echo "ERROR: need to specify --contrast or --offset with --sf"
+    exit 1;
+  endif
+
+  # Get the info file for the fsd
+  set infofile = $FSFAnalysis/analysis.info
+  if(! -e $infofile) then
+    echo "ERROR: cannot find $infofile" |& tee -a $LF
+    exit 1;
+  endif
+  set fsd = `cat $infofile | awk '{if($1 == "fsd") print $2}'`;
+
+  # Get the paths to the sessions
+  set cmd = (getsesspath -sf $SessFile);
+  if($#SessDirFile) set cmd = ($cmd -df $SessDirFile);
+  set SessList = (`$cmd`)
+  if($status || $#SessList == 0) then
+    echo $cmd
+    echo "$SessList"
+    exit 1;
+  endif
+
+  # Go thru each session, get the input volume and register.dat
+  @ nthsess = 1;
+  set fsfsubjects = ();
+  set ivplist = ();
+  set irplist = ();
+  foreach sess ($SessList)
+    set anadir = $sess/$fsd/$FSFAnalysis
+    set map = `stem2fname $anadir/$FSFContrast/$FSFMap`
+    if($status) then
+      echo "$map"
+      exit 1;
+    endif
+    # should check that map has only one frame
+    set reg = $sess/$fsd/register.dat
+    if(! -e $reg) then
+      echo "ERROR: cannot find $reg"
+      exit 1;
+    endif
+    set subject = `head -n 1 $reg`;
+    set fsfsubjects = ($fsfsubjects $subject)
+    set ivplist = ($ivplist $map);
+    set irplist = ($irplist $reg);
+    @ nthsess = $nthsess + 1;
+  end
+
+  # Check subjlist against fsfast subjects
+  if($#subjlist == 0) set subjlist = ($fsfsubjects)
+  if($#subjlist != $#fsfsubjects) then
+    echo "ERROR: number of subjects does not equal the number"
+    echo "  of input fsfast sessions"
+    exit 1;
+  endif
+
+  @ nthsess = 1;
+  foreach subj ($subjlist)
+    set fsfsubj = $fsfsubjects[$nthsess]
+    if($subj != $fsfsubj) then
+      echo "ERROR: $nthsess mismatch: $subj vs $fsfsubj"
+      exit 1;
+    endif
+    @ nthsess = $nthsess + 1;
+  end
+
+  set srcvol = 1;
+endif
+
+goto handle_fsfast_return;
+
+
+############--------------##################
+check_params:
+
+if($#subjlistfile && $#ivplist) then
+  echo "ERROR: do not use both --f and --iv "
+  exit 1;
+endif
+if($#subjlistfile && $#fsgdf) then
+  echo "ERROR: do not use both --f and --fsgd "
+  exit 1;
+endif
+if($#ivplist && $#fsgdf) then
+  echo "ERROR: do not use both --iv and --fsgd "
+  exit 1;
+endif
+if($#subjlist == 0) then
+  echo "ERROR: no subjects specified"
+  exit 1;
+endif
+if($#srchemi == 0) then
+  echo "ERROR: no source hemi specified"
+  exit 1;
+endif
+if($#trghemi == 0) then
+  echo "ERROR: no  hemi specified"
+  exit 1;
+endif
+if($#outpath == 0 && ! $CacheOutOnly) then
+  echo "ERROR: no output specified"
+  exit 1;
+endif
+if($#target == 0) then
+  echo "ERROR: no target subject specified"
+  exit 1;
+endif
+if(! -e $SUBJECTS_DIR) then
+  echo "ERROR: cannot find $SUBJECTS_DIR"
+  exit 1;
+endif
+if(! -e $SUBJECTS_DIR/$target) then
+  echo "ERROR: cannot find $target in $SUBJECTS_DIR"
+  exit 1;
+endif
+if($srcsurf == 0 && $srcvol == 0 && $#sval == 0) then
+  echo "ERROR: no input specified"
+  exit 1;
+endif
+if($srcsurf && $srcvol) then
+  echo "ERROR: cannot use both surface and volume sources"
+  exit 1;
+endif
+if($srcsurf && $#projfrac != 0) then
+  echo "ERROR: can only use projfrac with volume-based sources"
+  exit 1;
+endif
+if($catmean && $catstd) then
+  echo "ERROR: cannot specify both --mean and --std"
+  exit 1;
+endif
+if($#meas && $#isplist) then
+  echo "ERROR: cannot specify both --meas and --is"
+  exit 1;
+endif
+if($MeasIn && $CacheIn) then
+  echo "ERROR: cannot specify both --meas and --cache-in"
+  exit 1;
+endif
+if($#ivplist != 0) then
+  if($#ivplist != $#subjlist) then
+    echo "ERROR: number of input volumes ($#ivplist) does not equal number of subjects ($#subjlist)"
+    exit 1;
+  endif
+endif
+if($#isplist != 0) then
+  if($#isplist != $#subjlist) then
+    echo "ERROR: number of input surfaces ($#isplist) does not equal number of subjects"
+    exit 1;
+  endif
+endif
+if($paireddiff) then
+  set rem = `echo "$#subjlist%2" | bc`;
+  if($rem != 0) then
+    echo "ERROR: need an even number of subjects with --paired-diff"
+    exit 1;
+  endif
+endif
+
+if(! -e $SUBJECTS_DIR) then
+  echo "ERROR: cannot find SUBJECTS_DIR $SUBJECTS_DIR"
+  exit 1;
+endif
+
+# Add xhemi
+if($DoXHemi) then
+  set tmplist = ();
+  foreach subj ($subjlist)
+    if($srchemi == lh) set tmplist = ($tmplist $subj $subj/xhemi)
+    if($srchemi == rh) set tmplist = ($tmplist $subj/xhemi $subj)
+  end
+  set subjlist = ($tmplist);
+endif
+
+echo "nsubjects = $#subjlist";
+@ nthsubj = 1;
+foreach subj ($subjlist)
+  set subjpath = $SUBJECTS_DIR/$subj
+  if(! -e $subjpath) then
+    echo "ERROR: cannot find $subjpath"
+    exit 1;
+  endif
+  if($#meas) then
+    if(! $CacheIn) set measpath = $subjpath/$surfdir/$srchemi.$meas
+    if($CacheIn) set measpath = $subjpath/$surfdir/$srchemi.$meas.mgh
+    if(! -e $measpath) then
+      echo "ERROR: cannot find $measpath"
+      exit 1;
+    endif
+  endif
+  if($#ivplist != 0) then
+    set regfile = $irplist[$nthsubj];
+    set regsubj = `head -n 1 $regfile`;
+    if($regsubj != $subj) then
+      echo "ERROR: subject mismatch for input $nthsubj ($regsubj vs $subj)"
+      exit 1;
+    endif
+  endif
+  @ nthsubj = $nthsubj + 1;
+end
+
+if($#fwhmsrc && $#niterssrc) then
+  echo "ERROR: cannot specify both --fwhm-src and --niters-src"
+  exit 1;
+endif
+
+if($#fwhmtarg && $#niterstarg) then
+  echo "ERROR: cannot specify both --fwhm-targ and --niters-targ"
+  exit 1;
+endif
+
+if($#projfrac && $#projfracmax) then
+  echo "ERROR: cannot specify --projfrac and --projfrac-max"
+  exit 1;
+endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+arg2err:
+  echo "ERROR: flag $flag requires two arguments"
+  exit 1
+############--------------##################
+
+############--------------##################
+arg3err:
+  echo "ERROR: flag $flag requires three arguments"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: mris_prepoc"
+  echo ""
+  echo "  --out outfile"
+  echo "  --target subject"
+  echo "  --hemi hemi "
+  echo ""
+  echo "  --meas surfmeas"
+  echo "  --area surfname"
+  echo "  --s subj1 <--s subj2 ... --s subjN>"
+  echo "  --fsgd fsgdfile"
+  echo "  --f subjectlistfile"
+  echo ""
+  echo "  --is surfmeasfile <--is surfmeasfile> "
+  echo "  --srcfmt fmt : source format"
+  echo "  --surfdir dirname    : alternative directory (instead of surf)"
+  echo ""
+  echo "  --iv volmeasfile reg <--iv volmeasfile reg>"
+  echo "  --projfrac frac : projection fraction for vol2surf"
+  echo "  --projfrac-max min max delta : find max along projection for vol2surf"
+  echo "  --no-mask-non-cortex : do not mask out non-cortex in vol2surf"
+  echo ""
+  echo "  --sf sessfile        : fsfast session file"
+  echo "  --df sessdirfile     : fsfast session directory file"
+  echo "  --analysis analysis  : fsfast analysis"
+  echo "  --contrast constrast : fsfast contrast"
+  echo "  --cvar               : use fsfast contrast variance (cesvar)"
+  echo "  --offset             : use fsfast mean offset (h-offset)"
+  echo "  --map mapname        : use fsfast contrast/map"
+  echo ""
+  echo "  --fwhm fwhm : smooth by fwhm mm on the target surface"
+  echo "  --fwhm-src fwhmsrc : smooth by fwhm mm on the source surface"
+  echo ""
+  echo "  --niters niters : smooth by niters on the target surface"
+  echo "  --niters-src niterssrc : smooth by niters on the source surface"
+  echo ""
+  echo "  --smooth-cortex-only : only smooth cortex (ie, exclude medial wall)"
+  echo "  --no-smooth-cortex-only : default"
+  echo ""
+  echo "  --paired-diff"
+  echo "  --paired-diff-norm"
+  echo "  --paired-diff-norm1"
+  echo "  --paired-diff-norm2"
+  echo ""
+  echo "  --cache-out cachefile"
+  echo "  --cache-in  cachefile"
+  echo "  --cache-out-only tmpdir"
+  echo "  --cache-out-update tmpdir : implies --cach-out-only"
+  echo ""
+  echo "  --mean : compute the mean of all inputs"
+  echo "  --std : compute the standard deviation of all inputs"
+  echo "  --reshape : reshape spatial dimensions"
+  echo "  --surfreg SurfReg : default is sphere.reg"
+  echo ""
+  echo "  --synth"
+  echo "  --tmpdir dir : use tmpdir. Implies --nocleanup."
+  echo "  --nocleanup  : do not delete tmpdir"
+  echo "  --cleanup  : delete tmpdir (default)"
+  echo "  --log logfile : specify log file"
+  echo "  --nolog    : do not create a log file"
+  echo "  --help    : short descriptive help"
+  echo "  --version : script version info"
+  echo "  --debug   "
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo Version: $VERSION
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+SUMMARY
+
+Script to prepare surface-based data for high-level analysis by
+resampling surface or volume source data to a common sujbect (usually
+an average subject) and then concatenating them into one file which
+can then be used by a number of programs (eg, mri_glmfit).
+
+COMMAND-LINE ARGUMENTS
+
+--out outfile
+
+Save output here.
+
+--target subject
+
+Subject to use as the common-space. All the input data will be
+resampled to the surface of this subject.
+
+--hemi hemi
+
+Use hemi for source and target surfaces. hemi can be lh or rh.
+
+--meas surfmeasure
+
+Use subject/surf/hemi.surfmeasure as input. For use with --s, --fsgd,
+or --f.  Implies --srcfmt curv.
+
+--area surfname
+
+Extract vertex area from subject/surf/hemi.surfname to use as input. For use
+with --s, --fsgd, or --f.  surfname does not include hemi. Eg, white, pial.
+
+--s subjN
+
+Specify an input subject on the command-line. All subjects must be
+specified in this way on the command-line (ie, each with its own
+--s). For use with --meas.
+
+--fsgd fsgdfile
+
+Specify the list of input subjects from the fsgd file. The fsgd file can then
+be used with mri_glmfit (unless --paired-diff is specified). The subject list
+is obtained from the "Input" lines. See surfer.nmr.mgh.harvard.edu/docs/fsgdf.txt
+for more info. For use with --meas.
+
+--f subjlistfile
+
+List all subjects separated by white space in subjlistfile. This is just an
+alternative to using an fsgd file. For use with --meas.
+
+--is surfmeasfile
+
+Specify full path to input surface measure file. This is an alternative to
+using --meas. This still requires that a subject list be supplied.
+
+--surfdir dirname
+
+Specify a directory other than the default <subjid>/surf. Path must be at the same
+level as surf.  Ex. --surfdir dtrans 
+
+--srcfmt fmt
+
+Specify source format when using --is. This is mainly needed when the
+input format is not one recognized by mri_convert (eg, "curv" format
+that thickness files are in). --meas implies --srcfmt curv. Can also
+use "paint" or "w".
+
+--iv volmeasfile
+
+Specify full path to a volume file and its registration matrix file.
+The registration matrix file is of the type accepted/created by
+tkregister2. The volume is sampled to the surface, and the result is
+used as the input surface measure. This is an alternative to
+using --meas. This still requires that a subject list be supplied.
+The non-cortical area (eg in the medial wall) is set to 0 unless
+--no-mask-non-cortex is specified.
+
+--projfrac projfrac
+
+When sampling a volume onto the surface, sample a fraction of the thickness
+along the surface normal. projfrac is 0-1. Default is 0.
+
+--projfrac-max min max delta 
+
+When sampling a volume onto the surface, return the maximum along the
+surface normal sampled at fractions of the thickness between min and
+max at increments of delta.  Eg, 0 1 .1 means to sample every 10% of
+the thickness between the white and pial surfaces. Just passes
+the arguments to mri_vol2surf with the --projfrac-max flag.
+
+--fwhm fwhm
+
+Smooth the data on the target surface by fwhm mm. As a workflow strategy, it
+might make more sense to run it without any smoothing, and then use
+mri_surf2surf to smooth the output. That way you can smooth to whatever
+levels you want without having to re-run mris_preproc.
+
+--fwhm-src fwhm
+
+Smooth the data on the source surface by fwhm mm. It is better to do it
+on the target surface.
+
+--niters niters
+--niters-src niterssrc
+
+Smooth target or source by niters or nitersrc nearest neighbor iterations.
+This is an alternative to specifying the smoothing level with FWHM.
+
+--smooth-cortex-only
+
+Only applies with -qcache. Only smooth data if it is part of the ?h.cortex.label.
+This prevents values in the medial wall (which are meaningless) from being smoothed
+into cortical areas. At some point in the future, this will be the default and
+you will have to turn it off with -no-smooth-cortex-only. This documentation will
+reflect this change.
+
+--no-smooth-cortex-only
+
+Allow medial wall values to smooth into cortex (default).
+
+--paired-diff
+
+After concatenating all the inputs together, create a new output file by
+computing paired differences, ie, Input1-Input2, Input3-Input4, etc.
+There must be an even number of inputs. The inputs are "pruned" before
+taking the difference, meaning that values for all inputs are set to 0
+if any individual is 0.
+
+--paired-diff-norm
+
+Same as --paired-diff, but normalizes by average of time points, ie,
+(Input1-Input2)/((Input1+Input2)/2).
+
+--paired-diff-norm1
+
+Same as --paired-diff, but normalizes by time point 1, ie,
+(Input1-Input2)/Input1.
+
+--paired-diff-norm2
+
+Same as --paired-diff, but normalizes by time point 2, ie,
+(Input1-Input2)/Input2.
+
+--cache-out cachefile
+--cache-in  cachefile
+--cache-out-only tmpdir
+--cache-out-update tmpdir
+
+Unless you are planning to do some type of semi-real-time processing,
+you can ignore caching. With --cache-out cachefile, mris_preproc will
+save the data for each subject, after resampling to the target and
+smoothing, in the subjects surf directory as hemi.cachefile. In a
+subsequent call to mris_preproc, you can specify --cache-in cachefile,
+and the precomputed data will be used. If you are going to smooth your
+data at some point, do it when caching out. If you want to cache
+without actually creating an output, then --cache-out-only. You must
+supply a tmpdir. The true tmpdir will be created under this. tmpdir
+itself will not be deleted. None of the paired diff options will
+affect caching. --cache-out-update is the same as --cache-out-only
+except the output file will not be recreated if it already exists
+(does not check dates).
+
+  mris_preproc --target fsaverage --hemi lh --s subj1 --s subj2 \
+    --meas thickness --fwhm 5 --cache-out thickness.avg7.sm5.mgh \
+    --cache-out-only tmp
+  mris_preproc --target fsaverage --hemi lh --s subj1 --s subj2 \
+    --cache-in thickness.avg7.sm5.mgh --out s12.thickness.avg7.sm5.mgh \
+
+--mean
+
+After concatenating all the inputs together (and possibly computing
+paired diffs), compute the mean of all inputs. This may be helpful
+as part of a lower-level analysis. Eg, if there are multiple measures
+for each subjects, these can be averaged together for each subject
+separately, then combined in a second call to mris_preproc.
+
+--std
+
+Similar to --mean, except standard deviation is computed.
+
+--synth
+
+Synthesize the input data with white gaussian noise. For volume source,
+the volume is synthesized prior to resampling to the surface. The
+synthesis is done prior to any smoothing. This is mainly good for testing
+and running simulations.
+
+--surfreg SurfReg
+
+Use hemi.SurfReg as the surface registration to the common space. Default
+is sphere.reg.
+
+--reshape
+
+Reshape spatial dimensions. Normally, the output volume-encoded
+surface file will have spatial dimension of nvertices-by-1-by-1 (ie,
+number of columns equals number of vertices, nrows=nslices=1). This
+will not work for ANALYZE and NIFTI formats because they cannot
+represent a dimension with more than 32k elements.  This flag
+instructs mris_preproc to change the number of cols, rows, and slices
+so that no one dimension is greater than 32k.  When ANALYZE and NIFTI
+formats are automatically detected, reshaping is turned on.
+
+--tmpdir tmpdir
+
+Use tmpdir. By default, creates a tmpdir in the output directory.
+Implies --nocleanup
+
+--nocleanup
+
+Do not delete temporary directory and files.
+
+--cleanup
+
+DO delete temporary directory and files.  Done by default.
+
+
+FreeSurfer Functional Analysis Stream (FS-FAST) OPTIONS:
+
+When running mris_preproc in conjunction with FS-FAST, you only need
+to run the first level anlaysis (selxavg-sess) and the first level
+contrast (stxgrinder-sess). It is not necessary to sample onto the
+surface (this will be done by this script).  As with the other FS-FAST
+commands, you specify the sessions with --sf and --df (note the two
+dashes). Specify the analysis with --analysis (or just --a) and the
+contrast with --contrast (or just --c). By default, the volume
+resampled onto the surface will be analysis/contrast/ces (ie, the
+contrast effect size).  This can be changed in several ways. First,
+with --cvar, in which case it will use cesvar instead. Second,
+with --offset, then a contrast is not used; rather it samples
+analysis/h-offset onto the surface. Third, with --map mapname, in
+which case it uses analysis/contrast/mapname.
+
+
+EXAMPLES
+
+1. Resample abcXX-anat/surf/lh.thickness onto fsaverage:
+
+mris_preproc --s abc01-anat --s abc02-anat --s abc03-anat --s abc04-anat \
+  --target fsaverage --hemi lh --meas thickness --out abc-lh-thickness.mgh
+
+2. Same as #1 but using an fsgd file (which would have the abcXXs as Inputs):
+
+mris_preproc --fsgd abc.fsgd --target fsaverage --hemi lh --meas thickness \
+  --out abc-lh-thickness.mgh
+
+3. Same as #1 but smooths by 5mm fwhm:
+
+mris_preproc --s abc01-anat --s abc02-anat --s abc03-anat --s abc04-anat \
+  --target fsaverage --hemi lh --meas thickness \
+  --fwhm 5 --out abc-lh-thickness.sm5.mgh
+
+4. Same as #1 but using full paths. Note there is no --meas, but
+   --fsgd still needed to provide list of subjects, which must be in
+   the same order as the --isp. Also note that --srcfmt curv is used:
+
+mris_preproc --target fsaverage --hemi lh --out abc-lh-thickness.mgh \
+  --fsgd abc.fsgd --srcfmt curv \
+  --isp abc01-anat/surf/lh.thickness \
+  --isp abc02-anat/surf/lh.thickness \
+  --isp abc03-anat/surf/lh.thickness \
+  --isp abc04-anat/surf/lh.thickness
+
+5. Same as #2 but computes paired differneces, ie, there will be two
+   frames in the output instead of four. The first frame will be
+   abc01-abc02, and the second frame will be abc03-abc04:
+
+mris_preproc --fsgd abc.fsgd --target fsaverage --hemi lh --meas thickness \
+  --out abc-lh-thickness-pdiff.mgh --paired-diff
+
+6. Sample volume data (no --meas):
+
+mris_preproc --fsgd abc.fsgd  --target fsaverage --hemi lh \
+  --out abc-lh-vol.mgh \
+  --ivp abc01-func/bold/main/nvr/ces.bhdr abc01-func/bold/register.dat \
+  --ivp abc02-func/bold/main/nvr/ces.bhdr abc02-func/bold/register.dat \
+  --ivp abc03-func/bold/main/nvr/ces.bhdr abc03-func/bold/register.dat \
+  --ivp abc04-func/bold/main/nvr/ces.bhdr abc04-func/bold/register.dat
+
+7. Prepare functional analysis from FS-FAST for surface-based group analysis
+
+mris_preproc --sf sessid --analysis edp --contrast probe --hemi lh \
+  --out edp-probe-lh.mgh --fsgd abc.fsgd
+
+This will find the ces volume from inside the session/analysis/contrast
+directory, resample it to the common space, and concatenate all the
+subjects together into edp-probe-lh.mgh. The fsgd file is optional. This
+can then be analyzed with something like:
+
+mri_glmfit --y edp-probe-lh.mgh --surf fsaverage lh --osgm --glmdir glm-edp-probe-lh
+
+

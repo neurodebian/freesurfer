@@ -1,0 +1,53 @@
+#!/bin/tcsh -f
+
+# For a new dev/ environment, before running configure, 
+# and anytime after a Makefile.am file has changed, 
+# the following commands must be executed within the 
+# dev/ directory:
+
+set cmd1=(rm -rf autom4te.cache)
+if ( "`uname -s`" == "Darwin" ) then 
+    set cmd2=(glibtoolize --force)
+else
+    set cmd2=(libtoolize --force)
+endif
+set cmd3=(aclocal)
+#automake --add-missing is necessary because config.sub
+# and config.guess are links, and make not be present,
+# so if missing, --add-missing will add them for this
+# platform
+set cmd4=(automake --add-missing -Wno-portability)
+set cmd5=(autoreconf --force -Wno-portability)
+#automake Note: autoreconf --force runs automake
+set cmd6=(autoconf -Wno-portability)
+
+echo $cmd1
+$cmd1
+if ($status) exit $status
+echo $cmd2
+$cmd2
+if ($status) exit $status
+echo $cmd3
+$cmd3
+if ($status) exit $status
+echo $cmd4
+$cmd4
+#if ($status) exit $status
+echo $cmd5
+$cmd5
+if ($status) exit $status
+echo $cmd6
+$cmd6
+if ($status) exit $status
+
+# The first three commands create the platform specific 
+# tools needed by configure (use glibtoolize on the Mac 
+# in place of libtoolize). These platform specific tools 
+# are placed in the dev/config directory. 
+# Autoreconf --force and automake create the Makefile.in 
+# files from the Makefile.am files in each directory. 
+# Following successful execution of these commands, the 
+# configure command can be executed. 
+
+echo 
+echo "setup_configure complete.  now run ./configure"

@@ -1,0 +1,442 @@
+#! /bin/csh -f
+
+#
+# Name: mcparams2extreg: convert motion correction
+# parameters to a format suitable to use an external 
+# regressor.
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2009/04/10 21:13:00 $
+#    $Revision: 1.10 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set inputargs = ($argv);
+set VERSION = '$Id: mcparams2extreg,v 1.10 2009/04/10 21:13:00 greve Exp $';
+
+set PrintHelp = 0;
+
+if($#argv == 0) goto usage_exit;
+
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+
+set n = `echo $argv | grep -e -version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+# Set Default Values #
+set mcfile     = ();
+set extreg     = ();
+set extregasc  = ();
+set ascpoly    = ();
+set nkeep      = ();
+set northog    = ();
+set pctorthog  = ();
+set DoGradient = 0;
+set DoDemean   = 0;
+set mfile      = ();
+set monly      =  0;
+set MergeFileList = ();
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+set MATLAB = `getmatlab`;
+if($status) then
+  echo "ERROR: cannot find matlab"
+  exit 1;
+endif
+
+set outdir = `dirname $extreg`;
+mkdir -p $outdir
+
+## Get path for log-file ##
+set LF = $outdir/mcparams2extreg.log
+echo "Logfile is $LF"
+rm -f $LF;
+touch $LF;
+echo ------------------------------------------ >> $LF
+echo "mcparams2extreg $VERSION" >> $LF
+echo "Comments or questions: analysis-bugs@nmr.mgh.harvard.edu" >> $LF
+uname -a >> $LF
+hostname >> $LF
+date >> $LF
+pwd >> $LF
+echo $0 >> $LF
+echo $inputargs >> $LF
+
+## Set path for matlab file ##
+if(! $monly) then
+  set MLF = "/tmp/mcparams2extreg_$$.m"
+  set QuitOnError = 1;
+else
+  set MLF = $mfile;
+  set QuitOnError = 0;
+endif
+
+#--------- Create matlab file -------------#
+tee $MLF > /dev/null <<EOF
+  mcfile = '$mcfile';
+  extreg = '$extreg';
+  extregasc = '$extregasc';
+  ascpoly   = [$ascpoly];
+  nkeep     = [$nkeep];
+  northog   = [$northog];
+  pctorthog = [$pctorthog];
+  monly     = $monly;
+  DoGradient  = [$DoGradient];
+  DoDemean    = [$DoDemean];
+  MergeFileList = splitstring('$MergeFileList');
+  monly = [$monly];
+
+  mc = textread(mcfile);
+  mc = mc(:,2:7);
+  ntrs = size(mc,1);
+  if(ntrs < 6)
+    fprintf('ERROR: ntrs = %d < 6\n',ntrs);
+    if(~monly) 
+      fprintf('Quiting matlab\n');
+      quit; 
+      fprintf('should not be here\n');
+    end
+  end
+
+  mc0 = mc;
+  if(DoGradient)
+    fprintf('Computing gradient\n');
+    mc = gradient(mc);
+  end
+
+  nMerge = size(MergeFileList,1);
+  fprintf('nMerge = %d\n',nMerge);
+  for nth = 1:nMerge
+    MergeFile = deblank(MergeFileList(nth,:));
+    mf = textread(MergeFile);
+    if(isempty(mf))
+      fprintf('ERROR: cannot read %s\n',MergeFile);
+      return;
+    end
+    if(size(mf,1) ~= ntrs)
+      fprintf('ERROR: %s has wrong number of rows\n',MergeFile);
+      fprintf('       Found %d, expected %d\n',size(mf,1),ntrs);
+      return;
+    end
+    mc = [mc mf];
+  end
+  if(isempty(nkeep)) nkeep = size(mc,2); end
+
+  if(DoDemean)
+    % Demean (new as of Mar 5, 2008)
+    mcmn = mean(mc);
+    mc = mc - repmat(mcmn, [ntrs 1]);
+  end
+
+  x = mc;
+  if(~isempty(northog))
+    [u s v] = svd(mc);
+    ds = diag(s).^2;
+    pct = 100*cumsum(ds)/sum(ds);
+    x = u(:,1:northog);
+    nkeep = northog;
+    fprintf('INFO: northog = %d, pct = %g\n',northog,pct(nkeep));
+  elseif(~isempty(pctorthog))
+    [u s v] = svd(mc);
+    ds = diag(s).^2;
+    pct = 100*cumsum(ds)/sum(ds);
+    nkeep = min(find(pct > pctorthog));
+    x = u(:,1:nkeep);
+    fprintf('INFO: pctorthog = %g, nkeep = %d\n',pctorthog,nkeep);
+  end
+
+  x2 = zeros(1,1,size(x,2),ntrs);
+  x2(1,1,:,:) = x'; %'
+
+  mri.vol = permute(x2,[1 3 2 4]);
+  mri.tr = 0;
+  mri.flip_angle = 0;
+  mri.te = 0;
+  mri.ti = 0;
+  mri.vox2ras0 = eye(4);
+  mri.xsize = 1;
+  mri.ysize = 1;
+  mri.zsize = 1;
+  mri.volres = [1 1 1];
+  mri.volsize = [size(mri.vol,1) size(mri.vol,2) size(mri.vol,3)];
+  fname = sprintf('%s.bhdr',extreg);
+  MRIwrite(mri,fname);
+
+  if(~isempty(extregasc))
+    % Save out as an ascii (demean, maybe add poly)
+    xmn = mean(x);
+    xdm = x - repmat(xmn,[ntrs 1]);
+    if(~isempty(ascpoly))
+      Xpoly = fast_polytrendmtx(1,ntrs,1,ascpoly);
+    end
+    fp = fopen(extregasc,'w');
+    for n = 1:ntrs
+      if(~isempty(ascpoly))
+        for m = 1:size(Xpoly,2)
+          fprintf(fp,'%g ',Xpoly(n,m));
+        end
+      end
+      for m = 1:size(x,2)
+        fprintf(fp,'%g ',xdm(n,m));
+      end
+      fprintf(fp,'\n');
+    end
+    fclose(fp);    
+  end
+
+  if(~monly) 
+    fprintf('Quiting matlab\n');
+    quit; 
+    fprintf('should not be here\n');
+  end
+
+EOF
+#------------------------------------------#
+if(! $monly ) echo "quit;" >> $MLF
+
+echo "----------- Matlab file --------------" | tee -a $LF
+cat $MLF | tee -a $LF
+echo " " | tee -a $LF
+echo "-----------------------------------" | tee -a $LF
+
+if(! $monly ) then
+  echo "------------------------------------------" | tee -a $LF
+  echo "------- matlab output --------------------" | tee -a $LF
+  cat $MLF | $MATLAB -display iconic | tee -a $LF
+  echo "------------------------------------------" | tee -a $LF
+  rm $MLF
+
+  if(! -e $extreg"_000.bfloat") then
+    echo "ERROR: output not created"
+    exit 1;
+  endif
+
+endif
+
+echo " " | tee -a $LF
+echo " " | tee -a $LF
+date | tee -a $LF
+echo "mcparams2exterg: finished" | tee -a $LF
+
+exit 0;
+############################################################
+
+############--------------##################
+parse_args:
+
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-mcfile":
+      if ( $#argv < 1) goto arg1err;
+      set mcfile = $argv[1]; shift;
+      breaksw
+
+    case "-merge":
+      if ( $#argv < 1) goto arg1err;
+      set MergeFileList = ($MergeFileList $argv[1]); shift;
+      breaksw
+
+
+    case "-extreg":
+      if ( $#argv < 1) goto arg1err;
+      set extreg = $argv[1]; shift;
+      breaksw
+
+    case "-asc":
+      if ( $#argv < 1) goto arg1err;
+      set extregasc = $argv[1]; shift;
+      breaksw
+
+    case "-ascpoly":
+    case "-asc-poly":
+      if ( $#argv < 1) goto arg1err;
+      set ascpoly = $argv[1]; shift;
+      breaksw
+
+    case "-nkeep":
+      if ( $#argv < 1) goto arg1err;
+      set nkeep = $argv[1]; shift;
+      breaksw
+
+    case "-northog":
+      if ( $#argv < 1) goto arg1err;
+      set northog = $argv[1]; shift;
+      breaksw
+
+    case "-pctorthog":
+      if ( $#argv < 1) goto arg1err;
+      set pctorthog = $argv[1]; shift;
+      breaksw
+
+    case "-gradient":
+      set DoGradient = 1; 
+      breaksw
+
+    case "-no-gradient":
+      set DoGradient = 0; 
+      breaksw
+
+    case "-demean":
+      set DoDemean = 1; 
+      breaksw
+
+    case "-no-demean":
+      set DoDemean = 0; 
+      breaksw
+
+    case "-monly":
+      if ( $#argv == 0) goto arg1err;
+      set mfile = $argv[1]; shift;
+      set monly = 1; 
+      breaksw
+
+    case "-umask":
+      if ( $#argv == 0) goto arg1err;
+      umask $1; shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized.
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#mcfile == 0) then
+    echo "ERROR: must specify an mc parameter file"
+    exit 1;
+  endif
+  if(! -e $mcfile) then
+    echo "ERROR: cannot find $mcfile"
+    exit 1;
+  endif
+
+  if($#extreg == 0) then
+    echo "ERROR: must specify an extreg stem"
+    exit 1;
+  endif
+
+  if($#nkeep && $#northog) then
+    echo "ERROR: cannot spec -nkeep and -northog"
+    exit 1;
+  endif
+
+  if($#nkeep && $#pctorthog) then
+    echo "ERROR: cannot spec -nkeep and -pctorthog"
+    exit 1;
+  endif
+
+  if($#northog && $#pctorthog) then
+    echo "ERROR: cannot spec -northog and -pctorthog"
+    exit 1;
+  endif
+
+goto check_params_return;
+############--------------##################
+
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+#--------------------------------------------------------------------#
+usage_exit:
+  echo "USAGE: mcparams2extreg"
+  echo ""
+  echo "  -mcfile filename : text file with mc parameters"
+  echo "  -extreg stem     : stem of the external regressor file"
+  echo "  -nkeep    nkeep  : keep nkeep (max 6)"
+  echo "  -northog  nkeep  : keep nkeep (max 6) after orthogonalizing"
+  echo "  -pctorthog pctkeep : orthogonalize and keep enough for pctkeep"
+  echo "  -asc ascfile       : save in ascii file (demeaned)"
+  echo "  -ascpoly order     : add polnomial to ascii file"
+  echo "  -gradient          : compute temporal gradient of mc params"
+  echo "  -demean            : remove temporal mean of mc params"
+  echo "  -umask umask      : set unix file permission mask"
+  echo "  -version          : print version and exit"
+  echo "  -monly mfile      : only create matlab file"
+  echo ""
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+#--------------------------------------------------------------------#
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+This converts a motion correction parameter file created with
+preproc-sess, mc-sess, or mc-afni2 into a file that can be used for
+external nuisance regressors.  This is automatically called by mc-sess
+and preproc-sess to create mcextreg.bhdr. It can also merge other data
+files to create on external regressor file. It can also orthogonalize
+the regressor. All inputs are demeaned.
+
+Example 1:
+
+  mcparams2extreg  -mcfile fmc.mcdat -extreg mcextreg -northog 5
+
+Takes 6 columns (2-7) from fmc.mcdat, demeans them, orthogonalizes
+them, and keeps the top 5 regressors which are stored in
+mcextreg.bhdr. To use this in analysis, 
+  mkanalysis-sess ... -mcextreg ...
+
+Example 2:
+
+  mcparams2extreg  -mcfile fmc.mcdat \
+     -merge heartrate.dat \
+     -merge respiration.dat \
+     -pctorthog 95 -extreg nuisance
+
+Takes 6 columns (2-7) from fmc.mcdat, merges (horizontally concats)
+with all columns in heartrate.dat and respiration.dat, demeans them,
+orthogonalizes them, and keeps enough regressors to span 95 of the
+variance. The output is stored in nuisance.bhdr.  heartrate.dat and
+respiration.dat should be simple text files with columns of data where
+the number of rows equals to the number of time points. To use this in
+analysis, mkanalysis-sess ... -extreg nuisance ...
+

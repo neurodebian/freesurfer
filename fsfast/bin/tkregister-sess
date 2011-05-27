@@ -1,0 +1,528 @@
+#! /bin/csh -f
+
+#
+# tkregister-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2011/03/11 20:17:31 $
+#    $Revision: 1.36 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: tkregister-sess,v 1.36 2011/03/11 20:17:31 greve Exp $';
+set inputargs = ($argv);
+set DateString = "`date '+%y%m%d%H%M'`"
+
+set fsd          = bold;
+set nolog        = 0;
+set anatvol      = orig
+set UseNew       = 1;
+set Surf         = white;
+set PerRun       = 0;
+set PerSess      = 0;
+
+set Plane        = "cor";
+set Slice        = ();
+set Inorm        = 0;
+set VolView      = mov;
+set RegDOF = 6;
+set regfilename  = ();
+set FOV          = ();
+set fmov         = ();
+set movscale     = ();
+set movframe     = 0;
+set RegHeader    = 0;
+set BBRSumFile   = ();
+set SurfRGB = ();
+set DoAseg = 0;
+set DoAparcAseg = 0;
+set DoWMparc = 0;
+set DoTag = 0;
+set Size = ();
+set RunListFile = ();
+set UseB0DC = 0;
+
+set PrintHelp = 0;
+if($#argv == 0)  goto usage_exit;
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+set n = `echo $argv | grep -e -version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+set SessList = `getsesspath $inputargs`;
+if($status || $#SessList == 0) then
+  echo "$SessList"
+  exit 1;
+endif
+
+goto parse_args;
+parse_args_return:
+goto check_params;
+check_params_return:
+
+#-----------------------------------------------
+if($#BBRSumFile) then
+  # Print out a summary of BBR costs and exit
+  if($BBRSumFile != /dev/null) rm -f $BBRSumFile
+  foreach sess ($SessList)
+    set sessid = `basename $sess`
+    if($PerSess) then
+      set reg = $sess/$fsd/$regfilename
+      if(! -e $reg.mincost) then
+        echo "ERROR: cannot find costfile $reg.mincost"
+        echo "Make sure to run register-sess using -bbr"
+        exit 1;
+      endif
+      set mincost = `cat $reg.mincost | awk '{print $1}'`
+      printf "%-10s %6.4f\n" $sessid $mincost | tee -a $BBRSumFile
+      continue
+    else
+      set RunList = `getrunlist $sess/$fsd $RunListFile`;
+      foreach Run ($RunList)
+        set reg = $sess/$fsd/$Run/$regfilename
+        if(! -e $reg.mincost) then
+          echo "ERROR: cannot find costfile $reg.mincost"
+          echo "Make sure to run register-sess using -bbr"
+          exit 1;
+        endif
+        set mincost = `cat $reg.mincost | awk '{print $1}'`
+        printf "%-10s %s %6.4f\n" $sessid $Run $mincost | tee -a $BBRSumFile
+      end 
+    endif
+  end
+  exit 0
+endif
+
+##### Create a log file ######
+if(! $nolog) then
+  set logdir = `pwd`/log;
+  mkdir -p $logdir
+  if(! -e $logdir) then
+    echo "WARNING: could not create $logdir"
+    set LF = /dev/null
+  else
+    set LF = $logdir/tkregister-sess.log
+    if(-e $LF) mv $LF $LF.old
+  endif
+else
+  set LF = /dev/null
+endif
+
+echo "--------------------------------------------------------------"
+echo "tkregister-sess logfile is $LF"
+echo "--------------------------------------------------------------"
+
+echo "tkregister-sess log file" >> $LF
+echo $VERSION  >> $LF
+echo "" >> $LF
+echo "setenv SUBJECTS_DIR $SUBJECTS_DIR " >> $LF
+echo "cd `pwd` " >> $LF
+echo "$0 $inputargs" >> $LF
+echo "" >> $LF
+hostname  >> $LF
+which tkregister2 >> $LF
+
+## Loop through each session ##
+foreach sess ($SessList)
+  set sessid = `basename $sess`
+  echo " " |& tee -a $LF
+  echo "Session: $sessid ----------------" |& tee -a $LF
+
+  set subject = `cat $sess/subjectname`;
+  if(! -e $SUBJECTS_DIR/$subject) then
+    echo "ERROR: $subject is not in SUBJECTS_DIR" |& tee -a $LF
+    echo "  SUBJECTS_DIR is $SUBJECTS_DIR" |& tee -a $LF
+    exit 1;
+  endif
+
+  # Set up the basic cmd line
+  set cmd = (tkregister2 --plane $Plane --volview $VolView)
+  if($#Slice)    set cmd = ($cmd --slice $Slice)
+  if($Inorm)     set cmd = ($cmd --inorm)
+  if(! $Inorm)   set cmd = ($cmd --no-inorm)
+  if($FOV)       set cmd = ($cmd --fov $FOV)
+  if($#movscale) set cmd = ($cmd --movscale $movscale)
+  if($#fmov)     set cmd = ($cmd --fmov $fmov)
+  if($RegHeader) set cmd = ($cmd --regheader)
+  if($#SurfRGB)  set cmd = ($cmd --surf-rgb $SurfRGB)
+  if($DoTag)     set cmd = ($cmd --tag)
+  if($DoAseg)    set cmd = ($cmd --aseg)
+  if($DoAparcAseg)  set cmd = ($cmd --aparc+aseg)
+  if($DoWMparc)     set cmd = ($cmd --wmparc)
+  if($Size)     set cmd = ($cmd --$Size)
+  set cmd = ($cmd --fstarg --targ $anatvol)
+  if($#Surf) then
+    set lhsurfpath = $SUBJECTS_DIR/$subject/surf/lh.$Surf;
+    set rhsurfpath = $SUBJECTS_DIR/$subject/surf/rh.$Surf;
+    if(-e $lhsurfpath && -e $rhsurfpath ) set cmd = ($cmd --surf $Surf)
+  endif
+  set title = $subject--$sessid;
+
+  if($PerSess) then
+    # Session-Level
+    set template = `stem2fname $sess/$fsd/template`
+    if($status) then
+      echo "ERROR: cannot find template in $sess/$fsd" | tee -a $LF
+      echo " Try running mktemplate-sess" | tee -a $LF
+      exit 1;
+    endif
+    set reg = $sess/$fsd/$regfilename
+    if(! -e $reg) then
+      echo "ERROR: cannot find $reg"  | tee -a $LF
+      echo "Try running register-sess"  | tee -a $LF
+      exit 1;
+    endif
+    # Set up the title
+    set ttl = $title
+    if(-e $reg.mincost) then
+      set mincost = `cat $reg.mincost | awk '{print $1}'`
+      set ttl = `printf "%s-%4.2f" $ttl $mincost`
+    endif
+    # Run the cmd
+    set cmd = ($cmd --reg $reg --mov $template --title $ttl)
+    echo $cmd | tee -a $LF
+    $cmd | tee -a $LF
+    if($status) exit 1;
+    continue
+  endif
+
+  # Per-Run ------------------------------------
+  set RunList = `getrunlist $sess/$fsd $RunListFile`;
+  foreach Run ($RunList)
+    set template = `stem2fname $sess/$fsd/$Run/template`
+    if($status) then
+      echo "ERROR: cannot find template in $sess/$fsd/$Run" | tee -a $LF
+      echo " Try running mktemplate-sess" | tee -a $LF
+      exit 1;
+    endif
+    set reg = $sess/$fsd/$Run/$regfilename
+    if(! -e $reg) then
+      echo "ERROR: cannot find $reg"  | tee -a $LF
+      echo "Try running register-sess"  | tee -a $LF
+      exit 1;
+    endif
+    # Set up the title
+    set ttl = $title-$Run
+    if(-e $reg.mincost) then
+      set mincost = `cat $reg.mincost | awk '{print $1}'`
+      set ttl = `printf "%s-%4.2f" $ttl $mincost`
+    endif
+    # Run the cmd
+    set cmd = ($cmd --reg $reg --mov $template --title $ttl)
+    echo $cmd | tee -a $LF
+    $cmd | tee -a $LF
+    if($status) exit 1;
+  end
+
+end  # foreach sess ($SessList)
+
+echo "tkregister-sess completed"
+
+exit 0;
+
+############--------------##################
+parse_args:
+set cmdline = "$argv";
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-fsd":
+      if ( $#argv == 0) goto arg1err;
+      set fsd = $argv[1]; shift;
+      breaksw
+
+    case "-per-run":
+    case "-perrun":
+      set PerRun = 1;
+      set PerSess = 0;
+      breaksw
+
+    case "-per-sess":
+    case "-per-session":
+    case "-persession":
+      set PerSess = 1;
+      set PerRun = 1;
+      breaksw
+
+    case "-plane":
+      if ( $#argv == 0) goto arg1err;
+      set Plane = $argv[1]; shift;
+      breaksw
+
+    case "-slice":
+      if ( $#argv == 0) goto arg1err;
+      set Slice = $argv[1]; shift;
+      breaksw
+
+    case "-fov":
+      if ( $#argv == 0) goto arg1err;
+      set FOV = $argv[1]; shift;
+      breaksw
+
+    case "-size":
+      if ( $#argv == 0) goto arg1err;
+      set Size = $argv[1]; shift;
+      breaksw
+
+    case "-aseg":
+      set DoAseg = 1;
+      breaksw
+
+    case "-aparc+aseg":
+      set DoAparcAseg = 1;
+      breaksw
+
+    case "-wmparc":
+      set DoWMparc = 1;
+      breaksw
+
+    case "-movscale":
+      if ( $#argv == 0) goto arg1err;
+      set movscale = $argv[1]; shift;
+      breaksw
+
+    case "-fmov":
+      if ( $#argv == 0) goto arg1err;
+      set fmov = $argv[1]; shift;
+      breaksw
+
+    case "-movframe":
+      if ( $#argv == 0) goto arg1err;
+      set movframe = $argv[1]; shift;
+      breaksw
+
+    case "-fmt":
+      if ( $#argv == 0) goto arg1err;
+      set fmt = $argv[1]; shift;
+      breaksw
+
+    case "-volview":
+      if ( $#argv == 0) goto arg1err;
+      set VolView = $argv[1]; shift;
+      if($VolView != mov && $VolView != targ) then
+        echo "ERROR: volview = $VolView, must be mov or targ"
+        exit 1;
+      endif
+      breaksw
+
+    case "-inorm":
+      set Inorm = 1;
+      breaksw
+
+    case "-noinorm":
+    case "-no-inorm":
+      set Inorm = 0;
+      breaksw
+
+    case "-bbr-sum":
+      if($#argv == 0) then
+        set BBRSumFile = /dev/null
+      else
+        set isarg = `isargflag "$argv[1]"`
+        if($isarg) set BBRSumFile = /dev/null
+        if(! $isarg) then
+          set BBRSumFile = $argv[1]; shift;
+        endif
+      endif
+      breaksw
+
+    case "-b0dc":
+    case "-b0dcor":
+    case "-vsm":
+      set UseB0DC = 1;
+      breaksw
+
+    case "-no-b0dc":
+    case "-no-b0dcor":
+    case "-no-vsm":
+      set UseB0DC = 0;
+      breaksw
+
+    case "-regheader":
+      set RegHeader = 1;
+      breaksw
+
+    case "-fstarg":
+    case "-targ":
+    case "-anatvol":
+    case "-anat":
+      if ( $#argv == 0) goto arg1err;
+      set anatvol = $argv[1]; shift;
+      breaksw
+
+    case "-surf":
+      if ( $#argv == 0) goto arg1err;
+      set Surf = $argv[1]; shift;
+      breaksw
+
+    case "-surf-rgb":
+      if($#argv < 3) goto arg3err;
+      set SurfRGB = ($argv[1] $argv[2] $argv[3]);
+      shift;shift;shift;
+      breaksw
+
+    case "-reg":
+    case "-regfile":
+      if ( $#argv == 0) goto arg1err;
+      set regfilename = $argv[1]; shift;
+      breaksw
+
+    case "-rlf":
+      if ( $#argv == 0) goto arg1err;
+      set RunListFile = $argv[1]; shift;
+      breaksw
+
+    case "-nosurf":
+      set Surf = ();
+      breaksw
+
+    case "-tag":
+      set DoTag = 1;
+      breaksw
+
+    case "-nolog":
+      set nolog = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      breaksw
+
+    case "-cwd":
+      breaksw
+
+    case "-s":
+    case "-sf":
+    case "-df":
+    case "-d":
+    case "-g":
+      shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+if($PerRun == 0 && $PerSess == 0) then
+  echo "ERROR: You must specify -per-run or -per-session"
+  exit 1;
+endif
+if($#regfilename == 0) then
+  if(! $UseB0DC) set regfilename  = register.dof$RegDOF.dat
+  if($UseB0DC)   set regfilename  = register.dof$RegDOF.b0dc.dat
+endif
+goto check_params_return;
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+arg3err:
+  echo "ERROR: flag $flag requires three arguments"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo "tkregister-sess"
+  echo ""
+  echo "Session Arguemnts (some combination required)";
+  echo "   -sf sessidfile  ..."
+  echo "   -df srchdirfile ..."
+  echo "   -s  sessid      ..."
+  echo "   -d  srchdir     ..."
+  echo ""
+  echo "   -per-run     : register each run separately"
+  echo "   -per-session : register each run separately"
+  echo ""
+  echo "Optional Arguments"
+  echo "   -bbr-sum sumfile : only print summary of BBR cost (for quality assurance)"
+  echo "   -fsd dir       : functional subdirectory (default $fsd)"
+  echo "   -reg file      : use file instead of register.dat"
+  echo "   -regheader     : force init based on header"
+  echo "   -anat anat  : specify anatomy (default $anatvol)"
+  echo "   -surf surfacename : display surfacename as an overlay (white)"
+  echo "   -surf-rgb R G B : surface color 0-255"
+  echo "   -nosurf        : don't display a surface"
+  echo ""
+  echo "These control the presentation"
+  echo "   -volview volid : starup with either mov (def) or targ"
+  echo "   -fov FOV       : set window FOV in mm (default is 256)"
+  echo "   -fmov fmov     : set mov brightness"
+  echo "   -movscale scale: scale FOV size of mov volume"
+  echo "   -movframe frame: 0-based frame number"
+  echo "   -plane orient  : starup with orient. <cor>, sag, or ax"
+  echo "   -slice sliceno : starup with slice. Default is 128."
+  echo ""
+  echo "   -version       : print version and exit"
+  echo "   -debug "
+  echo "   -help "
+
+  echo "Also see tkregister2 --help"
+  if(! $PrintHelp) exit 1;
+  echo $VERSION
+  echo "------------------------------------------------------------"
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+tkregister-sess allows users to visually inspect the registration
+computed from register-sess. It can also print out the final BBR cost
+value which can be used to determine which, if any, failed registration.
+
+To visually check
+
+tkregister-sess -sf sessidlist
+
+To print a list of cost values
+
+tkregister-sess -sf sessidlist -bbr-sum bbr.summary.dat -per-run
+
+The file bbr.summary.dat will have three columns:
+1. The session name
+2. The run number
+3. The final cost value
+
+A "good" final cost depends on a lot of things, so it is not possible
+to give a hard threshold before hand. Smaller is better. A value
+above 0.9 is almost always a failure. Something less than 0.7 is usually
+fine. You should visually check the worst 10% or so and spot check
+a few others. If it fails, try running register-sess with -init-spm.
+

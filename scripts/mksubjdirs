@@ -1,0 +1,73 @@
+#! /bin/tcsh -f
+
+#
+# mksubjdirs
+#
+# REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+#
+# Original Author: REPLACE_WITH_FULL_NAME_OF_CREATING_AUTHOR
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2011/03/02 20:16:39 $
+#    $Revision: 1.5 $
+#
+# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+#
+# Terms and conditions for use, reproduction, distribution and contribution
+# are found in the 'FreeSurfer Software License Agreement' contained
+# in the file 'LICENSE' found in the FreeSurfer distribution, and here:
+#
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
+#
+# Reporting: freesurfer@nmr.mgh.harvard.edu
+#
+#
+
+
+
+if ($#argv != 1) then
+  echo "usage: mksubjdirs <subj_name>"
+  exit
+endif
+
+if(-e $1) then
+  echo "ERROR: $1 already exists"
+  exit 1;
+endif
+
+mkdir $1
+if($status) then
+  echo "ERROR: creating directory $1"
+  exit 1;
+endif
+
+
+chmod g+rws $1
+cd $1
+mkdir -p bem mri rgb scripts surf tmp label morph mpg tiff touch stats
+mkdir -p mri/transforms mri/aseg mri/fsamples mri/norm mri/T1 \
+         mri/brain mri/filled mri/orig mri/tmp mri/wm mri/flash \
+         mri/flash/parameter_maps
+chmod -R g+rw .
+
+echo " "
+echo "REMEMBER to do a 'chgrp -R r_group' for the right group if needed."
+echo "    All directories where just created as group writable."
+echo "    Use the 'id' command to get a list of your groups."
+echo " "
+
+
+set um=`umask`
+if ($um != 2) then
+  echo " "
+  echo "WARNING: your umask is not 002! New files will not be group writable."
+  echo "This is a warning only, it is not an error."
+  echo " "
+endif
+
+echo "Creation of subject directory complete."
+echo "See recon-all -help for more info on how to proceed."
+echo " "
+
+
+exit 0;

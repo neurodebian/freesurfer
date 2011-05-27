@@ -1,0 +1,154 @@
+#! /bin/tcsh -f
+
+if ( "x$1" == "x" || \
+     "x$2" == "x" || \
+     "x$3" == "x" || \
+     "x$4" == "x" || \
+     "x$5" == "x") then
+    echo "USAGE: aparcstatsdiff <subj1> <subj2> <hemi> <parc> <meas> [<outdir>]"
+    echo ""
+    echo "The utility aparcstats2table is executed given the two subjects"
+    echo "as input, along with hemisphere (rh or lh), parcellation scheme"
+    echo "(aparc or aparc.a2009s) and measure (area, volume, or thickness), "
+    echo "and an output table called aparcstats-hemi.parc.meas.txt "
+    echo "is produced."
+    echo "Then, another row is added to that table containing the percent"
+    echo "difference between the data of each of the two subjects."
+    echo "Mainly this is used to evaluate the effect of a code change on"
+    echo "the aparc morphometry data for a given subject (before and after)."
+    echo "The return code is the number of structures found to have nonzero"
+    echo "percentage differences."
+    echo ""
+    echo "[<outdir>] - optionally specify a directory to write aparcstats-hemi.parc.meas.txt"
+    echo ""
+    exit 1
+endif
+
+set subject1=$1
+set subject2=$2
+if ( ! -e $SUBJECTS_DIR/${subject1} ) then
+    echo "$SUBJECTS_DIR/${subject1} does not exist!"
+    exit 1
+endif
+if ( ! -e $SUBJECTS_DIR/${subject2} ) then
+    echo "$SUBJECTS_DIR/${subject2} does not exist!"
+    exit 1
+endif
+if ( "x${subject1}" == "x${subject2}" ) then
+    echo "Subject names must be different."
+    exit 1
+endif
+if ( "x$3" != "xrh" && "x$3" != "xlh" ) then
+    echo "Third parameter must be either rh or lh"
+    exit 1
+endif
+if ( "x$4" != "xaparc" && "x$4" != "xaparc.a2009s" ) then
+    echo "Fourth parameter must be either aparc or aparc.a2009s"
+    exit 1
+endif
+if ( "x$5" != "xarea" && "x$5" != "xvolume" && "x$5" != "xthickness") then
+    echo "Fifth parameter must be either area, volume or thickness"
+    exit 1
+endif
+set hemi=$3
+set parc=$4
+set meas=$5
+set stat="${hemi}.${parc}.${meas}"
+if ( "x$6" != "x" ) then
+    set outfile=$6/aparcstats-${stat}.txt
+else
+    set outfile=aparcstats-${stat}.txt
+endif
+
+set tmpout=(/tmp/aparcstats2table-$$.txt)
+set cmd=(aparcstats2table \
+        --subjects ${subject1} ${subject2} \
+        --hemi $hemi \
+        --parc $parc \
+        --meas $meas \
+        --tablefile ${outfile})
+$cmd >& $tmpout
+if ($status) then
+    echo "FAILED: $cmd"
+    cat  $tmpout
+    exit 1
+endif
+rm -f $tmpout >& /dev/null
+    
+set labels=`grep -w "^${stat}" ${outfile}`
+set subj1=`grep -w "^${subject1}" ${outfile}`
+set subj2=`grep -w "^${subject2}" ${outfile}`
+
+if ( "$#labels" != "$#subj1" ) then
+    echo "Label row and Subj1 row have unequal number of columns!"
+    echo "$#labels"
+    echo "$#subj1"
+    exit 1
+endif
+if ( "$#subj1" != "$#subj2" ) then
+    echo "Subj1 and Subj2 rows have unequal number of columns" 
+    echo "$#subj1"
+    echo "$#subj2"
+    exit 1
+endif
+
+set total=$#subj1
+@ total++
+set idx=2
+set newrow=( "pctdiff" )
+set diffcount=0
+set stdoutfile=(/tmp/aparcstatsdiff-$$.txt)
+set totaldiff=0
+rm -f $stdoutfile >& /dev/null
+while ( "$idx" != "$total" )
+
+    set label=$labels[$idx]
+    set struct1=$subj1[$idx]
+    set struct2=$subj2[$idx]
+    set diff=`echo "scale=4; ${struct2} - ${struct1}" | bc`
+    if ($status) exit 1
+    set totaldiff=`echo "scale=4; (${diff} * ${diff} ) + ${totaldiff}" | bc`
+    if ($status) exit 1
+    set sum=`echo "scale=4; ${struct1} + ${struct2}" | bc`
+    if ($status) exit 1
+    set avg=`echo "scale=4; ${sum} / 2" | bc`
+    if ($status) exit 1
+    if ( "$diff" != "0" ) then
+      set pctdiff=`echo "scale=4; ${diff} / ${avg}" | bc`
+      if ($status) exit 1
+      set pctdiff=`echo "scale=4; ${pctdiff} * 100" | bc`
+      if ($status) exit 1
+      echo "${pctdiff}\t\t${label}   (s1: ${struct1}, s2: ${struct2}, d: ${diff})" \
+          >>& $stdoutfile
+      set newrow=( ${newrow} ${pctdiff} )
+      @ diffcount++
+    else
+      set newrow=( ${newrow} 0 )
+    endif
+
+    @ idx++
+
+end
+
+# add the new row to table output by aparcstats2table
+echo "${newrow}" >> ${outfile}
+
+# output the column of non-zero structures, sorted by % change
+echo ""
+echo "----------------"
+echo "Aparc Stats Diff:" 
+echo "subject1: ${subject1}, subject2: ${subject2}"
+echo "hemisphere: ${hemi}, parcellation: ${parc}, measure: ${meas}"
+echo "% diff:\t\tlabel:   (subject1: value, subject2: value, diff: value)"
+echo "-------\t\t--------------------------------------------------------"
+if ( -e $stdoutfile) then
+    cat $stdoutfile | sort -n
+    rm -f $stdoutfile >& /dev/null
+else 
+    echo "All labels in $stat have equal measures (zero diff)."
+endif
+echo ""
+echo "Total diff measure (sum-of-square-of-diff):\t${totaldiff}"
+echo ""
+
+exit ${diffcount}

@@ -1,0 +1,538 @@
+#! /bin/csh -f
+
+#
+# tkmedit-sess
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2010/07/16 16:19:35 $
+#    $Revision: 1.34 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: tkmedit-sess,v 1.34 2010/07/16 16:19:35 greve Exp $';
+set inputargs = ($argv);
+
+set sessid  = ();
+set sessdir = ();
+set sessdirfile = ();
+set analysis      = ();
+set flac = ();
+set mapanalysis   = ();
+set contrastlist = ();
+set map    = ();
+set ShowHdr = 1;
+set ShowOverlay = 1;
+set ShowSurfs = 0;
+set ToSelf = 0; # show tal on subjects anatomy
+set RegDOF = 6;
+set regfile = ();
+
+set subject  = ();
+set mainvol  = orig.mgz;
+set auxvol   = brainmask.mgz;
+
+set segvol = aparc+aseg.mgz;
+set segcolor = $FREESURFER_HOME/FreeSurferColorLUT.txt
+set segopacity = .3;
+
+set fthresh = 2;
+set fmax    = 4;
+set DoAllContrasts = 0;
+
+set TCL = ();
+
+set IsFIR = 0;
+set UseTalairach = 0;
+
+set tmpdir = ();
+set cleanup = 1;
+
+set PrintHelp = 0;
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep -e -help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+set n = `echo $argv | grep -e -version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+goto parse_args;
+parse_args_return:
+goto check_params;
+check_params_return:
+
+## Parse the analysis
+if($#analysis != 0) then
+  if(! -e $analysis ) then
+    echo "ERROR: $analysis does not exist. Try running mkanalysis-sess" |& tee -a $LF
+    exit 1;
+  endif
+  set IsSurface = `getana -a $analysis -t IsSurface`
+  if($IsSurface) then
+    echo "ERROR: This is a surface-based analysis. Try using tksurfer-sess"
+    exit 1;
+  endif
+  set fsd = `getana -a $analysis -t fsd`;
+  set UseTalairach = `getana -a $analysis -t IsMNI305`;
+  set IsFIR = `getana -a $analysis -t IsFIR`;
+else if($#flac) then
+  set fsd = `cat $flac | awk '{if($1 == "fsd") print $2}'`
+  set analysis = `basename $flac .flac`
+  echo $analysis $fsd
+  set ShowHdr = 0;
+endif
+
+## Parse the map analysis
+if($#mapanalysis != 0) then
+  set mapfsd = `getana -a $mapanalysis -t fsd`;
+  set IsSurface = `getana -a $mapanalysis -t IsSurface`
+  if($IsSurface) then
+    echo "ERROR: $mapanalysis is a surface-based analysis. Try using tksurfer-sess"
+    exit 1;
+  endif
+  set MapUseTalairach = `getana -a $mapanalysis -t IsMNI305`;
+  if($UseTalairach != $MapUseTalairach) then
+    if($MapUseTalairach) then
+      echo "ERROR: map analysis $mapanalysis is talairach-based."
+      echo "This does not match the analysis $analysis"
+    else
+      echo "ERROR: map analysis $mapanalysis is NOT talairach-based."
+      echo "This does not match the analysis $analysis"
+    endif      
+    exit 1;
+  endif
+else if($#flac) then
+  set mapfsd = $fsd
+  set mapanalysis = $analysis
+endif
+
+set anadir = $sess/$fsd/$analysis
+if($#tmpdir == 0) then
+  set tmpdir = $anadir/tmp.tkmedit-sess
+  mkdir -p $tmpdir
+endif
+
+# Get subject name (and maybe reg)
+if(! $UseTalairach) then 
+  set regfile = $sess/$fsd/$regfile
+  if(! -e $regfile ) then
+    echo "ERROR: cannot find $regfile"
+    exit 1;
+  endif
+  # get the full path the regfile
+  set d = `dirname $regfile`;
+  pushd $d > /dev/null
+  set d = `pwd`;
+  popd > /dev/null
+  set regfile = $d/`basename $regfile`;
+  set subject = `cat $regfile | head -n 1`;
+else
+  set regfile = ();
+  set subject = fsaverage
+endif
+echo "subject is $subject"
+if(! -e $SUBJECTS_DIR/$subject) then
+  echo "ERROR: cannot find $subject in $SUBJECTS_DIR"
+  exit 1;
+endif
+
+if($ToSelf && $UseTalairach) then
+  set self = `cat $sess/subjectname`
+  if(0) then
+  if(! -e $SUBJECTS_DIR/$self) then
+    echo "ERROR: cannot find $self in $SUBJECTS_DIR"
+    exit 1;
+  endif
+  set mf = `stem2fname $anadir/meanfunc`
+  set reg1 = $tmpdir/reg1.dat
+  set cmd = ( tkregister2_cmdl --reg $reg1 --mov $mf \
+    --s fsaverage --regheader --noedit)
+  echo $cmd
+  $cmd
+  if($status) exit 1;
+  set reg2 = $tmpdir/reg2.dat
+  set cmd = (tkregister2_cmdl --s $self --fstal --reg $reg2)
+  echo $cmd
+  $cmd
+  if($status) exit 1;
+  set regfile = $tmpdir/register.dat
+  set cmd = (mri_matrix_multiply -im $reg1 -im $reg2 -om $regfile)
+  echo $cmd
+  $cmd
+  if($status) exit 1;
+  endif
+  set regfile = $tmpdir/register.dat
+  set cmd = (reg-mni305.2mm --s $self --reg $regfile)
+  echo $cmd
+  $cmd
+  if($status) exit 1;
+  set subject = $self  
+endif
+
+# Construct the overlay options
+set mapconcatfile = ();
+set mapoption = ()
+if($ShowOverlay) then
+  set mapanadir = $sess/$mapfsd/$mapanalysis
+  set maplist = ()
+  foreach contrast ($contrastlist)
+    set condir = $mapanadir/$contrast
+    if(! -e $condir) then
+      echo "ERROR: cannot find $condir"
+      exit 1;
+    endif
+    set mapstem = $condir/$map
+    set mapfile = `stem2fname $mapstem`
+    if($status) then
+      echo "$mapfile"
+      exit 1;
+    endif
+    set maplist = ($maplist $mapfile)
+  end
+  set mapconcatfile = $tmpdir/tkmconcat.nii
+  set cmd = (mri_concat $maplist --o $mapconcatfile);
+  echo $cmd
+  $cmd
+  if($status) exit 1;
+  set mapoption = (-overlay $mapconcatfile)
+endif
+
+# Construct the time course options
+set hdroption  = ""
+if(! $IsFIR) set ShowHdr = 0;
+if($ShowHdr) then
+  set anapath = $sess/$fsd/$analysis
+  set hdrfile = `stem2fname $sess/$fsd/$analysis/h`;
+  if($status) then
+    echo "$hdrfile"
+    exit 1;
+  endif
+  set hofffile = `stem2fname $sess/$fsd/$analysis/h-offset`;
+  if($status) then
+    echo "$hofffile"
+    exit 1;
+  endif
+  set hdroption  = (-timecourse $hdrfile -timecourse-offset $hofffile);
+endif
+
+#------- Create and run the cmd line -----------------------#
+set TKMEDIT = tkmedit
+set cmd = ($TKMEDIT $subject $mainvol)
+if($#auxvol)   set cmd = ($cmd -aux $auxvol)
+if($ShowSurfs) set cmd = ($cmd -surfs)
+if($#segvol)   set cmd = ($cmd -seg $segvol $segcolor -opacity $segopacity)
+if($#regfile)  set cmd = ($cmd -reg $regfile)
+set cmd = ($cmd $hdroption $mapoption)
+set cmd = ($cmd -fthresh $fthresh -fmax $fmax)
+if($#TCL) set cmd = ($cmd -tcl $TCL)
+echo "------------------------"
+echo "SUBJECTS_DIR $SUBJECTS_DIR"
+pwd 
+echo $cmd
+echo "------------------------"
+
+# Print out list of contrasts and their frame number
+@ nth = 0;
+foreach c ($contrastlist)
+  echo $nth $c
+  @ nth = $nth + 1;
+end
+
+# Run the cmd
+$cmd
+if($status) then
+  echo "tkmedit failed"
+  exit 1;
+endif
+
+if($cleanup) rm -rf $tmpdir
+
+exit 0;
+###--------------------------------------------###
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-c":
+    case "-contrast":
+      if ( $#argv == 0) goto arg1err;
+      set contrastlist = ($contrastlist $argv[1]); shift;
+      breaksw
+
+    case "-call":
+      set DoAllContrasts = 1;
+      breaksw
+
+    case "-main":
+      if ( $#argv == 0) goto arg1err;
+      set mainvol = $argv[1]; shift;
+      breaksw
+
+    case "-aux":
+      if ( $#argv == 0) goto arg1err;
+      set auxvol = $argv[1]; shift;
+      breaksw
+    case "-no-aux":
+      set auxvol = ();
+      breaksw
+
+    case "-map":
+      if ( $#argv == 0) goto arg1err;
+      set map = $argv[1]; shift;
+      if($map != sig && $map != minsig && $map != iminsig && $map != t) then
+        #echo "ERROR: map must be either sig, minsig, iminsig, or t"
+        # exit 1;
+      endif
+      breaksw
+
+    case "-s":
+      if ( $#argv == 0) goto arg1err;
+      set sessid = $argv[1]; shift;
+      breaksw
+    case "-d":
+      if ( $#argv == 0) goto arg1err;
+      set sessdir = $argv[1]; shift;
+      breaksw
+    case "-df":
+      if ( $#argv == 0) goto arg1err;
+      set sessdirfile = $argv[1]; shift;
+      breaksw
+
+    case "-a":
+    case "-analysis":
+      if ( $#argv == 0) goto arg1err;
+      set analysis = $argv[1]; shift;
+      breaksw
+
+    case "-flac":
+      if ( $#argv == 0) goto arg1err;
+      set flac = $argv[1]; shift;
+      breaksw
+
+    case "-mapanalysis":
+    case "-ma":
+      if ( $#argv == 0) goto arg1err;
+      set mapanalysis = $argv[1]; shift;
+      breaksw
+
+    case "-fthresh":
+      if ( $#argv == 0) goto arg1err;
+      set fthresh = $argv[1]; shift;
+      breaksw
+
+    case "-fmax":
+    case "-fsat":
+      if ( $#argv == 0) goto arg1err;
+      set fmax = $argv[1]; shift;
+      breaksw
+
+    case "-seg":
+      if ( $#argv < 2) then
+        echo "ERROR: -seg needs to arguments"
+        exit 1;
+      endif
+      set segvol = $argv[1]; shift;
+      set segcolor = $argv[1]; shift;
+      breaksw
+
+    case "-no-seg":
+      set segvol = ();
+      breaksw
+
+    case "-segopacity":
+      if ( $#argv == 0) goto arg1err;
+      set segopacity = $argv[1]; shift;
+      breaksw
+
+    case "-aseg":
+      set segvol = aseg.mgz;
+      breaksw
+
+    case "-aparc+aseg":
+      set segvol = aparc+aseg.mgz;
+      breaksw
+
+    case "-surfs":
+      set ShowSurfs = 1;
+      breaksw
+
+    case "-reg":
+      if($#argv == 0) goto arg1err;
+      set regfile = $argv[1];shift;
+      breaksw
+
+    case "-reg-dof":
+      if($#argv == 0) goto arg1err;
+      set RegDOF = $argv[1];shift;
+      breaksw
+
+    case "-tmp":
+      if($#argv < 1) goto arg1err;
+      set tmpdir = $argv[1]; shift;
+      set cleanup = 0;
+      breaksw
+    case "-no-cleanup":
+    case "-nocleanup":
+      set cleanup = 0;
+      breaksw
+    case "-cleanup":
+      set cleanup = 1;
+      breaksw
+
+    case "-no-show-hdr":
+    case "-nohdr":
+      set ShowHdr = 0;
+      breaksw
+
+    case "-tcl":
+      if ( $#argv == 0) goto arg1err;
+      set TCL = $argv[1]; shift;
+      if(! -e $TCL) then
+        echo "ERROR: cannot find $TCL"
+        exit 1
+      endif
+      breaksw
+
+    case "-self":
+      set ToSelf = 1;
+      breaksw
+
+    case "-debug":
+      set verbose = 1;
+      set echo = 1;
+      setenv XDEBUG 1
+      breaksw
+
+    case "-cwd":
+      set cwd = `pwd`;
+      set sessdir = `dirname $cwd`;
+      set sessid  = `basename $cwd`;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#flac == 0) then
+    if($#analysis == 0) then
+      echo "ERROR: no analysis specified" 
+      exit 1;
+    endif
+    if(! -e $analysis) then
+      echo "ERROR: $analysis does not exist"
+      exit 1;
+    endif
+    if($#mapanalysis == 0) set mapanalysis = $analysis;
+    if(! -e $mapanalysis) then
+      echo "ERROR: $mapanalysis does not exist"
+      exit 1;
+    endif
+    set IsRet = `getana -a $analysis -t IsRetinotopy`
+    if($IsRet && $#contrastlist == 0) then
+      set contrastlist = (eccen polar)
+      if($#map == 0) set map = fsig;
+    endif
+    if($DoAllContrasts) set contrastlist = `getana -a $mapanalysis -t contrasts`
+    if($#contrastlist == 0) then
+      echo "INFO: no contrast specified" 
+      sleep 2
+      set ShowOverlay = 0;
+    endif
+    if($#map == 0) set map = sig;
+  endif # flac == 0
+
+  # Get session path
+  if($#sessid == 0) then
+    echo "ERROR: no sessions specified" 
+    exit 1;
+  endif
+  set cmd = (getsesspath -s $sessid)
+  if($#sessdir)     set cmd = ($cmd -d $sessdir)
+  if($#sessdirfile) set cmd = ($cmd -df $sessdirfile)
+  set sess = `$cmd`;
+  if($status) then
+    echo "$sess"
+    exit 1;
+  endif
+
+  if($#regfile == 0) set regfile = register.dof$RegDOF.dat
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo "USAGE: tkmedit-sess"
+  echo ""
+  echo "   -s sessid <-d sessdir, -df sessdirfile>"
+  echo "   -analysis    analysis"
+  echo "   -c contrast <-c contrast>"
+  echo "   -call      : show all contrasts"
+  echo ""
+  echo "   -map  map"
+  echo "   -mapanalysis mapanalysis"
+  echo "   -no-show-hdr : for FIR analyses"
+  echo "   -self : show talairach on subject's own anatomy"
+  echo ""
+  echo "   -main mainvol : default is ($mainvol)"
+  echo "   -aux auxvol : default is ($auxvol)"
+  echo "   -surfs : display surfaces"
+  echo "   -no-seg : do not display segmentation (default is aparc+aseg)"
+  echo "   -aseg : display aseg instead of aparc+aseg"
+  echo "   -seg segmentation colortable : specify segmentation"
+  echo "   -segopacity opacity : between 0 and 1 (def .3)"
+  echo "   -fthresh fthresh : threshold for color overlay"
+  echo "   -fmax    fmax    : saturation threshold for color overlay"
+  echo "   -tcl script.tcl  : run tkmedit with tcl script"
+  echo ""
+  if(! $PrintHelp) exit 1;
+  echo $VERSION
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+exit 1;
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+tkmedit frontend
+
+

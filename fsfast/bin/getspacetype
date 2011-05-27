@@ -1,0 +1,96 @@
+#! /bin/csh -f
+
+#
+# getspacetype
+#
+# parses space names into space type and averaging method (fx)
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: nicks $
+#    $Date: 2007/01/09 22:41:17 $
+#    $Revision: 1.2 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+set VERSION = '$Id: getspacetype,v 1.2 2007/01/09 22:41:17 nicks Exp $';
+
+if($#argv != 1) then
+  echo "USAGE: getspacetype spacename"
+  echo $VERSION
+  exit 1;
+endif
+
+set spacename = $argv[1];
+set spacetype = ();
+set fx = ();
+
+switch ( $spacename )
+  
+  case "tal": 
+    set spacetype = tal;
+    set fx = ();
+    breaksw
+
+  case "tal-ffx": 
+    set spacetype = tal;
+    set fx = ffx;
+    breaksw
+
+  case "tal-rfx": 
+    set spacetype = tal;
+    set fx = rfx;
+    breaksw
+
+
+  case "sph": 
+    set spacetype = sph;
+    set fx = ();
+    breaksw
+
+  case "sph-ffx": 
+    set spacetype = sph;
+    set fx = ffx;
+    breaksw
+
+  case "sph-rfx": 
+    set spacetype = sph;
+    set fx = rfx;
+    breaksw
+
+
+  case "native": 
+    set spacetype = native;
+    set fx = ();
+    breaksw
+
+  case "native-ffx": 
+    set spacetype = native;
+    set fx = ffx;
+    breaksw
+
+  case "native-rfx": 
+    set spacetype = native;
+    set fx = rfx;
+    breaksw
+
+endsw
+
+
+echo $spacetype $fx
+
+
+exit 0;
+##########################################

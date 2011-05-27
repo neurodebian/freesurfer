@@ -1,0 +1,89 @@
+#! /bin/csh -f
+
+#
+# getnframes
+#
+# Original Author: Doug Greve
+# CVS Revision Info:
+#    $Author: greve $
+#    $Date: 2009/10/06 16:53:10 $
+#    $Revision: 1.5 $
+#
+# Copyright (C) 2002-2007,
+# The General Hospital Corporation (Boston, MA). 
+# All rights reserved.
+#
+# Distribution, usage and copying of this software is covered under the
+# terms found in the License Agreement file named 'COPYING' found in the
+# FreeSurfer source code root directory, and duplicated here:
+# https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferOpenSourceLicense
+#
+# General inquiries: freesurfer@nmr.mgh.harvard.edu
+# Bug reports: analysis-bugs@nmr.mgh.harvard.edu
+#
+
+
+if($#argv != 1) then
+  echo "USAGE: getnframes stem|fname "
+  echo '$Id: getnframes,v 1.5 2009/10/06 16:53:10 greve Exp $'
+  exit 1;
+endif
+
+set stem = $argv[1];
+
+# First, check for bshort/bfloat without bhdr
+set f0 = $stem"_000.hdr";
+if(-e $f0) then
+  if(! -e $stem.bhdr) then
+    set nframes = `cat $f0 | awk '{print $3}'`;
+    echo $nframes
+    exit 0
+  endif
+endif
+
+# If it gets here, then bhdr exists or is not bshort/bfloat
+if(-e $stem) then
+  set fname = $stem;
+else
+  set fname = `stem2fname $stem`;
+  if($status) then
+    echo "$fname"
+    exit 1;
+  endif
+endif
+
+set cmd = (mri_info --o /tmp/$$.tmp --nframes $fname);
+$cmd >& /dev/null
+if($status) then
+  echo "ERROR: with $cmd"
+  exit 1;
+endif
+
+set nframes = `cat /tmp/$$.tmp`
+echo $nframes
+
+rm /tmp/$$.tmp
+
+exit 0;
+#-----------------------------------------------------
+
+set firstslice = `getfirstsliceno $stem`
+set st = $status;
+if($st) then
+  echo "ERROR: cannot find any files with $stem";
+  exit 1;
+endif
+
+set hdr = `printf "%s_%03d.hdr" $stem $firstslice`
+if(! -e $hdr) then
+  echo "ERROR: cannot find $hdr"
+  exit 1;
+endif
+
+set tmp = `cat $hdr`;
+set nframes = $tmp[3];
+
+echo $nframes;
+
+exit 0;
+##########################################
