@@ -1,12 +1,15 @@
 --- a/GEMS/Makefile.am
 +++ b/GEMS/Makefile.am
-@@ -908,3 +908,6 @@
+@@ -909,6 +909,9 @@
+ endif
+ endif
  
- endif
- endif
-+
 +clean-local:
 +	-rm kvlImageThresholdingConsoleGUI.h kvlImageViewingConsoleGUI.h
++
+ # Our release target. Include files to be excluded here. They will be
+ # found and removed after 'make install' is run during the 'make
+ # release' target.
 --- a/orient_mri/Makefile.am
 +++ b/orient_mri/Makefile.am
 @@ -142,3 +142,8 @@
