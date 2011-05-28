@@ -1,0 +1,30 @@
+Source: freesurfer
+Format: extended
+Tasks: debian-science/neuroscience-cognitive,
+	   debian-med/imaging
+Homepage: http://surfer.nmr.mgh.harvard.edu/
+Author: The General Hospital Corporation (Boston, MA) "MGH"
+Language: C/C++/Python/Perl/...
+License: BSD-style FreeSurfer Software License Agreement v1.0
+Version: 5.1.0
+Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/freesurfer.git
+Vcs-Git: git://git.debian.org/git/pkg-exppsy/freesurfer.git
+Pkg-Description: analysis and visualization of functional brain imaging data
+ FreeSurfer is a set of tools for analysis and visualization of
+ structural and functional brain imaging data. It contains a fully
+ automatic structural stream for processing cross sectional and
+ longitudinal data.
+ .
+ FreeSurfer provides many anatomical analysis tools, including:
+ representation of the cortical surface between white and gray matter,
+ representation of the pial surface, segmentation of white matter from
+ the rest of the brain, skull stripping, B1 bias field correction,
+ nonlinear registration of the cortical surface of an individual with
+ an sterotaxic atlas, labeling of regions of the cortical surface,
+ statistical analysis of group morphometry differences, and labeling of
+ subcortical brain structures, etc.
+Pkg-URL: http://neuro.debian.net/pkgs/freesurfer.html
+Published-In: see http://surfer.nmr.mgh.harvard.edu/fswiki/Articles
+Registration: http://surfer.nmr.mgh.harvard.edu/fswiki/Registration
+Remark: The 'tktools' (tkmedit, tksurfer and tkregister2)  under the
+  CorTechs license are not readily redistributable thus excluded.
