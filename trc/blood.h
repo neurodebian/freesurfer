@@ -28,6 +28,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <algorithm>
 #include <limits>
 #include <limits.h>
@@ -42,22 +43,23 @@ class Blood {
     Blood(const char *TrainListFile, const char *TrainTrkFile,
           const char *TrainRoi1File, const char *TrainRoi2File,
           const char *TrainAsegFile, const char *TrainMaskFile,
-          float TrainMaskLabel, const char *TestMaskFile,
-          bool UseTruncated);
+          float TrainMaskLabel, const char *ExcludeFile,
+          const char *TestMaskFile, const char *TestFaFile,
+          bool UseTruncated, std::vector<int> &NumControls);
     Blood(const char *TrainTrkFile, const char *TrainRoi1File,
           const char *TrainRoi2File);
     ~Blood();
     void ReadStreamlines(const char *TrainListFile, const char *TrainTrkFile,
                          const char *TrainRoi1File, const char *TrainRoi2File,
-                         float TrainMaskLabel);
+                         float TrainMaskLabel, const char *ExcludeFile);
     void ReadAnatomy(const char *TrainListFile, const char *TrainAsegFile,
                                                 const char *TrainMaskFile);
     void RemoveLengthOutliers();
     void MatchStreamlineEnds();
     void ComputeHistogram();
     void ComputePriors();
-    void FindCenterStreamline(bool CheckOverlap=true, bool CheckDeviation=true);
-    void SelectControlPoints(int NumControls);
+    void FindCenterStreamline(bool CheckOverlap=true, bool CheckDeviation=true,
+                                                      bool CheckFa=true);
     void WriteOutputs(const char *OutBase);
     void WriteCenterStreamline(const char *CenterTrkFile,
                                const char *RefTrkFile);
@@ -92,7 +94,7 @@ class Blood {
     float mMaskLabel, mDx, mLengthAvg, mLengthAvgEnds;
     std::vector<bool> mIsInEnd1, mIsInEnd2;
     std::vector<int> mNumLines, mLengths, mMidPoints, mTruncatedLengths,
-                     mCenterStreamline, mDirLocal, mDirNear;
+                     mCenterStreamline, mDirLocal, mDirNear, mNumControls;
     std::vector<float> mMeanEnd1, mMeanEnd2, mMeanMid,
                        mVarEnd1, mVarEnd2, mVarMid,
                        mTangentMean, mTangentStd,
@@ -100,6 +102,7 @@ class Blood {
                        mCurvatureMean, mCurvatureStd,
                        mCurvatureMeanAll, mCurvatureStdAll;
     std::vector< std::vector<int> > mStreamlines, mControlPoints,
+                                    mExcludedStreamlines,
                                     mHistoLocal, mHistoNear,
                                     mHistoLocalAll, mHistoNearAll;
     std::vector< std::vector<float> > mControlStd,
@@ -110,8 +113,9 @@ class Blood {
     std::vector< std::set<unsigned int> > mIdsLocal, mIdsNear, //[{6,7}xmNumArc]
                                           mIdsLocalAll, mIdsNearAll;
     std::vector<MRI *> mRoi1, mRoi2, mAseg, mMask;
-    MRI *mTestMask, *mHistoStr, *mHistoSubj;
+    MRI *mTestMask, *mTestFa, *mHistoStr, *mHistoSubj;
 
+    void ReadExcludedStreamlines(const char *ExcludeFile);
     void ComputeStats();
     void ComputeStatsEnds();
     void ComputeEndPointCoM();
@@ -124,7 +128,7 @@ class Blood {
     void ComputeAnatomyPrior(bool UseTruncated);
     void ComputeCurvaturePrior(bool UseTruncated);
     void FindPointsOnStreamline(std::vector<int> &Streamline, int NumPoints);
-    void FindPointsOnStreamlineComb(std::vector<int> &Streamline,
+    bool FindPointsOnStreamlineComb(std::vector<int> &Streamline,
                                     int NumPoints);
     void TryControlPoint(float &OverlapMax,
                          int IndexPoint,
