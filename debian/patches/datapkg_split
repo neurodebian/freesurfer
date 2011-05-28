@@ -1,8 +1,6 @@
-diff --git a/Makefile.am b/Makefile.am
-index bfddd39..98275b0 100644
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -328,7 +328,6 @@ SUBDIRS=\
+@@ -326,7 +326,6 @@
  	qdecproject \
  	svm-lib \
  	scripts \
@@ -10,11 +8,9 @@ index bfddd39..98275b0 100644
  	$(GLSUBDIRS) \
  	$(MRISUBDIRS) \
  	$(MRISSUBDIRS) \
-diff --git a/configure.in b/configure.in
-index 4bad4cd..f83d432 100644
 --- a/configure.in
 +++ b/configure.in
-@@ -3215,20 +3215,6 @@ AC_OUTPUT([Makefile
+@@ -3213,20 +3213,6 @@
             cudatest/volumecopy/Makefile
             cudatest/mrilabeltest/Makefile
             dicom/Makefile

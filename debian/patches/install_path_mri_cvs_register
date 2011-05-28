@@ -15,5 +15,5 @@ text files
 -foodir=$(DESTDIR)$(bindir)
 +foodir=$(bindir)
  foo_DATA= \
- 	elastic_registration_CVS.pl \
- 	elastic_registration_CVS_hemi.pl \
+ 	id.xfm \
+ 	mri_cvs_requiredfiles.txt
