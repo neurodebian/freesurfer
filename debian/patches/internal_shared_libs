@@ -830,8 +830,8 @@ Subject: [PATCH 2/2] Shared libs
 +LIB_LAPACK_A=-llapack
  AC_SUBST(LIB_LAPACK_A)
  
- # Centos 5 needs libgfortran when linking fem_elastic/surf2vol
-@@ -1099,7 +1101,7 @@
+ 
+@@ -1109,7 +1111,7 @@
  fi
  
  # these are the libs used by freesurfer:
@@ -840,7 +840,7 @@ Subject: [PATCH 2/2] Shared libs
  
  AC_SUBST(MNI_CFLAGS)
  AC_SUBST(MNI_LIBS)
-@@ -1867,21 +1869,21 @@
+@@ -1877,21 +1879,21 @@
  fi
  
  # use static lib if found
@@ -877,7 +877,7 @@ Subject: [PATCH 2/2] Shared libs
  
  AM_CONDITIONAL(USE_LOCAL_JPEG, test "$ac_jpeg_libraries" = "NO")
  
-@@ -2059,7 +2061,7 @@
+@@ -2069,7 +2071,7 @@
  
  AC_ARG_WITH(vtk-include,
    [  --with-vtk-include=DIR      root of VTK include directory.],
@@ -886,7 +886,7 @@ Subject: [PATCH 2/2] Shared libs
       ac_vtk_includes="$vtk_i"
    ])
  
-@@ -2501,34 +2503,37 @@
+@@ -2511,34 +2513,37 @@
  
    # these are the minimum ITK libs necessary to support Nrrd IO,
    # notice they are all static (avoiding LD_LIBRARY_PATH usage)
@@ -948,7 +948,7 @@ Subject: [PATCH 2/2] Shared libs
    LIBS_ITK="$LIBS_ITK $LIB_UUID_A"
  else
    AC_MSG_RESULT([Not building ITK apps.])
-@@ -2569,7 +2574,7 @@
+@@ -2579,7 +2584,7 @@
  
  if test ! "$ac_gl_includes" = "NO"; then
    AC_MSG_RESULT(gl directory is $withval)
@@ -957,7 +957,7 @@ Subject: [PATCH 2/2] Shared libs
  else
    AC_MSG_RESULT(OpenGL directory is not supplied)
  fi
-@@ -2668,14 +2673,13 @@
+@@ -2678,14 +2683,13 @@
  
  # stupid circular dependency on iopen swapInt etc.
  LIBS_MGH="\
@@ -979,7 +979,7 @@ Subject: [PATCH 2/2] Shared libs
  
  # use local libjpeg if --with-jpeg-dir not used:
  if test "$ac_jpeg_libraries" = "NO"; then
-@@ -2697,6 +2701,7 @@
+@@ -2707,6 +2711,7 @@
  LIBS_CUDA_MGH=`echo ${LIBS_MGH} | sed 's/libutils/libutils_cuda/g'`
  
  AC_SUBST(LIBS_MGH)
@@ -987,7 +987,7 @@ Subject: [PATCH 2/2] Shared libs
  AC_SUBST(LIBS_CUDA_MGH)
  AC_SUBST(LIB_JPEG)
  AC_SUBST(LIB_TIFF)
-@@ -2760,10 +2765,10 @@
+@@ -2770,10 +2775,10 @@
  AC_CHECK_LIB([netcdf], [nccreate],[],
    [AC_MSG_ERROR([FATAL: netcdf lib not found. \
  Set LDFLAGS or --with-mni-dir.])] )
@@ -1000,7 +1000,7 @@ Subject: [PATCH 2/2] Shared libs
    [AC_MSG_ERROR([FATAL: volume_io lib not found. \
  Set LDFLAGS or --with-mni-dir.])] )
  
-@@ -2961,8 +2966,8 @@
+@@ -2971,8 +2976,8 @@
  if test ! "x$tcltk_apps" = "xNO"; then
    ################## Tcl
    # check tcl8.5
@@ -1011,7 +1011,7 @@ Subject: [PATCH 2/2] Shared libs
    # check tcl8.4
  #    [
      AC_CHECK_LIB([tcl8.4],[Tcl_Init],
-@@ -2988,7 +2993,7 @@
+@@ -2998,7 +3003,7 @@
            ])
          ])
        ])
@@ -1020,7 +1020,7 @@ Subject: [PATCH 2/2] Shared libs
    AC_SUBST(LIB_TCL)
  
    #################### Tk needs X11 (or Aqua)
-@@ -2996,8 +3001,8 @@
+@@ -3006,8 +3011,8 @@
    CPPFLAGS="$GL_CFLAGS $CPPFLAGS"
    LDFLAGS="$X_LIBS $LDFLAGS"
    # check tk8.5
@@ -1031,7 +1031,7 @@ Subject: [PATCH 2/2] Shared libs
    # check tk8.4
  #    [
      AC_CHECK_LIB([tk8.4],[Tk_Init],
-@@ -3020,11 +3025,14 @@
+@@ -3030,11 +3035,14 @@
            ])
          ])
        ])
@@ -1047,7 +1047,7 @@ Subject: [PATCH 2/2] Shared libs
    # check Tix8.4.2 first, as that is known to work best with tcl/tk 8.5
    AC_CHECK_LIB([Tix8.4.2], [Tix_Init],
    [LIB_TIX=-lTix8.4.2],
-@@ -3056,6 +3064,7 @@
+@@ -3066,6 +3074,7 @@
          ])
        ])
      ])
@@ -1604,8 +1604,8 @@ Subject: [PATCH 2/2] Shared libs
  # build library...
 -noinst_LIBRARIES= libfem_elastic.a
 -libfem_elastic_a_SOURCES = $(createMorph_SOURCES) $(applyMorph_SOURCES)
-+noinst_LIBRARIES= libfem_elastic.la
-+libfem_elastic_la_SOURCES = $(createMorph_SOURCES) $(applyMorph_SOURCES)
++lib_LTLIBRARIES = libfem_elastic.la
++libfem_elastic_la_SOURCES = $(dlibcommon3d_SOURCES) $(createMorph_SOURCES) $(applyMorph_SOURCES)
  
  endif
  endif
@@ -3128,7 +3128,7 @@ Subject: [PATCH 2/2] Shared libs
  mri_ms_fitparms_LDFLAGS=$(OS_LDFLAGS)
  
  foodir=$(prefix)/docs/xml
-@@ -21,4 +21,4 @@
+@@ -23,4 +23,4 @@
  EXCLUDE_FILES=""
  include $(top_srcdir)/Makefile.extra
  
