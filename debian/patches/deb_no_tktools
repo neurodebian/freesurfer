@@ -23,3 +23,23 @@
  	mri_probedicom \
  	orient_mri \
  	qdec
+--- a/scripts/Makefile.am
++++ b/scripts/Makefile.am
+@@ -252,17 +252,6 @@
+ 
+ tktoolsdir = $(prefix)/tktools
+ tktools_SCRIPTS= \
+-tkanalyse.tcl \
+-tkm_common.tcl \
+-tkm_dialog.tcl \
+-tkmedit.tcl \
+-tkm_functional.tcl \
+-tkm_graph.tcl \
+-tkm_wrappers.tcl \
+-tkregister.tcl \
+-tkregister2.tcl \
+-tksurfer.tcl \
+-tkUtils.tcl \
+ fsgdfPlot.tcl
+ 
+ xmldir=$(prefix)/docs/xml
