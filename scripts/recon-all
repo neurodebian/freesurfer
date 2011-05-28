@@ -7,9 +7,9 @@
 #
 # Original Author: Doug Greve
 # CVS Revision Info:
-#    $Author: krish $
-#    $Date: 2011/05/13 19:26:06 $
-#    $Revision: 1.379.2.15 $
+#    $Author: nicks $
+#    $Date: 2011/05/20 22:48:18 $
+#    $Revision: 1.379.2.17 $
 #
 # Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
 #
@@ -26,7 +26,7 @@
 #
 umask 002;
 
-set VERSION = '$Id: recon-all,v 1.379.2.15 2011/05/13 19:26:06 krish Exp $';
+set VERSION = '$Id: recon-all,v 1.379.2.17 2011/05/20 22:48:18 nicks Exp $';
 set ProgName = `basename $0`;
 
 set inputargs = ($argv);
@@ -2695,6 +2695,13 @@ foreach hemi ($hemilist)
       echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
       if($RunIt) $fs_time $cmd |& tee -a $LF
       if($status) goto error_exit;
+      
+      # also copy pial just in case (needed if $DoPialSurf == 0 below)
+      set cmd = (cp -vf $longbasedir/surf/${hemi}.pial \
+                        $subjdir/surf/${hemi}.orig_pial)
+      echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+      if($RunIt) $fs_time $cmd |& tee -a $LF
+      if($status) goto error_exit;
     endif
 
     # Note mris_make_surfaces uses filled.mgz implicitly
@@ -2962,7 +2969,8 @@ foreach hemi ($hemilist)
       |& tee -a $SF |& tee -a $LF |& tee -a $CF
     cd $subjdir/scripts > /dev/null
 
-    if( $longitudinal ) then
+    if( $longitudinal && ! -e $subjdir/surf/${hemi}.orig_pial ) then
+    # should rarely get here as this is copied above in Make White Surfaces
       set cmd = (cp -vf $longbasedir/surf/${hemi}.pial\
                         $subjdir/surf/${hemi}.orig_pial)
       echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
@@ -3670,48 +3678,52 @@ endif
 
 #-------------- Hippocampal Subfields  -----------------#
 if($DoGEMS) then
+  set GEMSF = ($subjdir/scripts/hippo-subfields.log)
+  rm -f $GEMSF
   echo "#--------------------------------------------" \
-      |& tee -a $LF |& tee -a $CF
+      |& tee -a $LF |& tee -a $CF |& tee -a $GEMSF
   echo "#@# Hippocampal Subfields processing `date`" \
-      |& tee -a $SF |& tee -a $LF |& tee -a $CF
+      |& tee -a $SF |& tee -a $LF |& tee -a $CF |& tee -a $GEMSF
   if (-e ${subjdir}/mri/aseg.mgz && -e ${subjdir}/mri/nu.mgz && -e ${subjdir}/mri/transforms/talairach.xfm ) then
     # create a tmp directory if it doesn't exist
     set cmd = (mkdir -p ${subjdir}/tmp/subfieldResults)
     echo "\n $cmd"|& tee -a $LF |& tee -a $CF
-    if($RunIt) $cmd |& tee -a $LF
+    if($RunIt) $cmd |& tee -a $GEMSF
 
     set kvltmpd = (${subjdir}/tmp/subfieldResults)
       
     # do hippocampal processing
     set cmd = (kvlSegmentHippocampalSubfields.sh $subjid left $SUBJECTS_DIR ${kvltmpd} ) 
     echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
-    if($RunIt) $fs_time $cmd |& tee -a $LF
+    if($RunIt) $fs_time $cmd |& tee -a $GEMSF
     if($status) goto error_exit;
     set cmd = (kvlSegmentHippocampalSubfields.sh $subjid right $SUBJECTS_DIR ${kvltmpd} ) 
     echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
-    if($RunIt) $fs_time $cmd |& tee -a $LF
+    if($RunIt) $fs_time $cmd |& tee -a $GEMSF
     if($status) goto error_exit;
 
     # copy results back to mri directory
     set cmd = ("cp ${kvltmpd}/${subjid}/left/segmentationWithoutPartialVolumingLog/posterior_left* ${subjdir}/mri" )
     echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
-    if($RunIt) $fs_time $cmd |& tee -a $LF
+    if($RunIt) $fs_time $cmd |& tee -a $GEMSF
     if($status) goto error_exit;
     set cmd = ("cp ${kvltmpd}/${subjid}/left/segmentationWithoutPartialVolumingLog/posterior_Left* ${subjdir}/mri" )
     echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+    if($RunIt) $fs_time $cmd |& tee -a $GEMSF
+    if($status) goto error_exit;
     set cmd = ("cp ${kvltmpd}/${subjid}/right/segmentationWithoutPartialVolumingLog/posterior_right* ${subjdir}/mri" )
     echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
-    if($RunIt) $fs_time $cmd |& tee -a $LF
+    if($RunIt) $fs_time $cmd |& tee -a $GEMSF
     if($status) goto error_exit;
     set cmd = ("cp ${kvltmpd}/${subjid}/right/segmentationWithoutPartialVolumingLog/posterior_Right* ${subjdir}/mri" )
     echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
-    if($RunIt) $fs_time $cmd |& tee -a $LF
+    if($RunIt) $fs_time $cmd |& tee -a $GEMSF
     if($status) goto error_exit;
 
     # delete the tmp directory 
     set cmd = (rm -rf ${kvltmpd} )
     echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
-    if($RunIt) $fs_time $cmd |& tee -a $LF
+    if($RunIt) $fs_time $cmd |& tee -a $GEMSF
 
     echo $cmd > $touchdir/hippocampal_subfield.touch
   else
@@ -5259,7 +5271,6 @@ while( $#argv != 0 )
   
     # hippocampal subfield processing
     case "-hippo-subfields":
-
       set DoGEMS = 1;
       breaksw;
 

@@ -1,6 +1,6 @@
 f11554336fc574e368d4ac6cc6d57d8b  ./distribution/ASegStatsLUT.txt
 623451e74b9157f16da1ef8c5c4b7e25  ./distribution/DefectLUT.txt
-97e0186b148e78740d1867c5d9a970d4  ./distribution/FreeSurferColorLUT.txt
+6400bda3309a65527a9f6ded87f54e02  ./distribution/FreeSurferColorLUT.txt
 73b6f347aeced53cf0c12d4872fe8418  ./distribution/FreeSurferEnv.csh
 f7a041a7e73da63af731059dafaacd7b  ./distribution/FreeSurferEnv.sh
 08b742701264dbd462f08c4e421e1d07  ./distribution/Makefile.am
@@ -253,6 +253,7 @@ b8b01f6f060237e8f726891732382d8e  ./distribution/subjects/README
 099d3da359d2a408b5cd2d35c366be5f  ./distribution/subjects/sample-001.mgz
 a962a938738825a5a4fb50204cc63cd9  ./distribution/subjects/sample-002.mgz
 91cf906b323c04a6a4f31eb64e4f7df6  ./distribution/trctrain/Makefile.am
+3be0ee0adba6383204bb3da09eebd1da  ./distribution/trctrain/trctraindata.tar.gz
 7d1b0db7fb9dc2dc867295f32878f688  ./mri_mc/test_volume_reference.mgz
 c0d6c09cc4df2b4558a3e22c7b6a3f78  ./mri_glmfit/teststats.tar.gz
 b6d4f813487e2c5167be4b6d280c5037  ./GEMS/data/CurrentMeshCollection30.gz

@@ -6,9 +6,9 @@
 /*
  * Original Author: Bruce Fischl (Apr 16, 1997)
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/22 16:37:02 $
- *    $Revision: 1.179.2.1 $
+ *    $Author: greve $
+ *    $Date: 2011/05/16 20:53:47 $
+ *    $Revision: 1.179.2.2 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -200,8 +200,8 @@ int main(int argc, char *argv[])
 
   make_cmd_version_string
   (argc, argv,
-   "$Id: mri_convert.c,v 1.179.2.1 2011/03/22 16:37:02 nicks Exp $",
-   "$Name: release_5_1_0 $",
+   "$Id: mri_convert.c,v 1.179.2.2 2011/05/16 20:53:47 greve Exp $",
+   "$Name: stable5 $",
    cmdline);
 
   for(i=0; i<argc; i++)
@@ -320,8 +320,8 @@ int main(int argc, char *argv[])
     handle_version_option
     (
       argc, argv,
-      "$Id: mri_convert.c,v 1.179.2.1 2011/03/22 16:37:02 nicks Exp $",
-      "$Name: release_5_1_0 $"
+      "$Id: mri_convert.c,v 1.179.2.2 2011/05/16 20:53:47 greve Exp $",
+      "$Name: stable5 $"
     );
   if (nargs && argc - nargs == 1)
   {
@@ -1625,7 +1625,7 @@ int main(int argc, char *argv[])
             "= --zero_ge_z_offset option ignored.\n");
   }
 
-  printf("$Id: mri_convert.c,v 1.179.2.1 2011/03/22 16:37:02 nicks Exp $\n");
+  printf("$Id: mri_convert.c,v 1.179.2.2 2011/05/16 20:53:47 greve Exp $\n");
   printf("reading from %s...\n", in_name_only);
 
   if (in_volume_type == OTL_FILE)
@@ -3109,7 +3109,7 @@ int main(int argc, char *argv[])
     }
   }
   // free memory
-  MRIfree(&mri);
+  //MRIfree(&mri); // This causes a seg fault with change of type
   MRIfree(&template);
 
   exit(0);
