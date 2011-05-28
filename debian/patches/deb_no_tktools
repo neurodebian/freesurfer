@@ -1,0 +1,25 @@
+--- a/configure.in
++++ b/configure.in
+@@ -3539,10 +3539,6 @@
+            test_makevol/Makefile
+            test_window_env/Makefile
+            tetgen/Makefile
+-           tkmedit/Makefile
+-           tkregister2/Makefile
+-           tkregister2/cmdl/Makefile
+-           tksurfer/Makefile
+            trc/Makefile
+            tridec/Makefile
+            unix/Makefile
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -14,9 +14,6 @@
+ 	nmovie \
+ 	mris_show \
+ 	stim_polar \
+-	tkmedit \
+-	tkregister2 \
+-	tksurfer \
+ 	mri_probedicom \
+ 	orient_mri \
+ 	qdec
