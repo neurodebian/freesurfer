@@ -10,4 +10,4 @@
 +fi
  AC_SUBST(LIB_G2C_A)
  
- ## as the law of unintended consequences would have it, when linking
+ # as the law of unintended consequences would have it, when linking

@@ -1,19 +1,15 @@
-diff --git a/GEMS/Makefile.am b/GEMS/Makefile.am
-index ed5a4a5..1e469a2 100644
 --- a/GEMS/Makefile.am
 +++ b/GEMS/Makefile.am
-@@ -789,3 +789,6 @@ EXTRA_DIST=\
+@@ -908,3 +908,6 @@
  
  endif
  endif
 +
 +clean-local:
 +	-rm kvlImageThresholdingConsoleGUI.h kvlImageViewingConsoleGUI.h
-diff --git a/orient_mri/Makefile.am b/orient_mri/Makefile.am
-index 441a812..53e5150 100644
 --- a/orient_mri/Makefile.am
 +++ b/orient_mri/Makefile.am
-@@ -142,3 +142,8 @@ vtkOrientMRIInteractorStyleView3D.h
+@@ -142,3 +142,8 @@
  # release' target.
  EXCLUDE_FILES=
  include $(top_srcdir)/Makefile.extra
@@ -22,11 +18,9 @@ index 441a812..53e5150 100644
 +	-rm *Tcl.cxx OrientMRILibInit.cxx
 +
 +
-diff --git a/qdec/Makefile.am b/qdec/Makefile.am
-index 27acb68..3650c28 100644
 --- a/qdec/Makefile.am
 +++ b/qdec/Makefile.am
-@@ -88,6 +88,9 @@ install-exec-hook:qdec
+@@ -88,6 +88,9 @@
  uninstall-hook:
  	rm -f $(DESTDIR)$(bindir)/qdec.bin
  
@@ -36,11 +30,9 @@ index 27acb68..3650c28 100644
  else
  bin_PROGRAMS = 
  
-diff --git a/scuba2/Makefile.am b/scuba2/Makefile.am
-index 23ed49a..c3442bb 100644
 --- a/scuba2/Makefile.am
 +++ b/scuba2/Makefile.am
-@@ -221,6 +221,9 @@ install-exec-hook:scuba2
+@@ -221,6 +221,9 @@
  uninstall-hook:
  	rm -f $(DESTDIR)$(bindir)/scuba2.bin
  
@@ -50,11 +42,9 @@ index 23ed49a..c3442bb 100644
  else
  bin_PROGRAMS = 
  
-diff --git a/vtkutils/Makefile.am b/vtkutils/Makefile.am
-index 4146bc0..8bc2b3c 100644
 --- a/vtkutils/Makefile.am
 +++ b/vtkutils/Makefile.am
-@@ -183,3 +183,6 @@ IconLoaderTest.cxx IconLoaderTestIcons.txt testIconLoader
+@@ -183,3 +183,6 @@
  # release' target.
  EXCLUDE_FILES=
  include $(top_srcdir)/Makefile.extra

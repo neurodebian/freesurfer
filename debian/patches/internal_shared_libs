@@ -664,7 +664,7 @@ Subject: [PATCH 2/2] Shared libs
  			#-lITKCommon -lITKAlgorithms -lITKIO -lITKznz -lITKBasicFilters \
  			$(VTK_LIBS) \
  			#-lvtkCommon -lvtkImaging -lvtkIO -lvtkRendering \
-@@ -593,10 +592,10 @@
+@@ -594,10 +593,10 @@
  						 kvlEstimateAtlasParameters.cxx \
  						 kvlAtlasParameterEstimationConsole.cxx
  kvlEstimateAtlasParameters_LDADD=$(LIBS_ITK) \
@@ -679,7 +679,7 @@ Subject: [PATCH 2/2] Shared libs
  				 -lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
  				$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  				$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
-@@ -605,7 +604,7 @@
+@@ -606,7 +605,7 @@
  				$(VTK_SQLITE_LIB) \
  				-lvtkImaging -lvtkFiltering \
  				-lvtkCommon -lvtksys \
@@ -688,7 +688,7 @@ Subject: [PATCH 2/2] Shared libs
  				-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  				-lvtkWidgets -lvtkHybrid \
  				-lvtkIO -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
-@@ -621,10 +620,10 @@
+@@ -624,10 +623,10 @@
  						kvlImageThresholdingConsole.h
  
  kvlThresholdImage_LDADD=$(LIBS_ITK) \
@@ -703,7 +703,7 @@ Subject: [PATCH 2/2] Shared libs
  				 -lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
  				$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  				$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
-@@ -633,7 +632,7 @@
+@@ -636,7 +635,7 @@
  				$(VTK_SQLITE_LIB) \
  				-lvtkImaging -lvtkFiltering \
  				-lvtkCommon -lvtksys \
@@ -712,7 +712,7 @@ Subject: [PATCH 2/2] Shared libs
  				-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  				-lvtkWidgets -lvtkHybrid \
  				-lvtkIO -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
-@@ -649,10 +648,10 @@
+@@ -654,10 +653,10 @@
  						kvlImageViewingConsole.h
  
  kvlViewImage_LDADD=$(LIBS_ITK) \
@@ -727,7 +727,7 @@ Subject: [PATCH 2/2] Shared libs
  				 -lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
  				$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  				$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
-@@ -661,7 +660,7 @@
+@@ -666,7 +665,7 @@
  				$(VTK_SQLITE_LIB) \
  				-lvtkImaging -lvtkFiltering \
  				-lvtkCommon -lvtksys \
@@ -1487,7 +1487,7 @@ Subject: [PATCH 2/2] Shared libs
  # found and removed after 'make install' is run during the 'make
 --- a/fem_elastic/Makefile.am
 +++ b/fem_elastic/Makefile.am
-@@ -19,79 +19,95 @@
+@@ -19,79 +19,92 @@
  AM_LDFLAGS=$(OS_LDFLAGS) -z muldefs
  endif
  
@@ -1526,8 +1526,7 @@ Subject: [PATCH 2/2] Shared libs
 -	$(top_builddir)/tetgen/libtetgen.a $(BOOST_PO_LIB)
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +	$(top_builddir)/tetgen/libtetgen.la $(BOOST_PO_LIB) \
-+    libfem_elastic.la
-+
++	 libfem_elastic.la
  
  applyMorph_SOURCES=\
  	$(common3d_SOURCES) \
@@ -1544,9 +1543,9 @@ Subject: [PATCH 2/2] Shared libs
  applyMorph_LDADD=\
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 -	$(top_builddir)/tetgen/libtetgen.a $(BOOST_PO_LIB)
-+	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
++	$(addprefix $(top_builddir)/, $(LIBS_MGH))  $(DLIBS_MGH) \
 +	$(top_builddir)/tetgen/libtetgen.la $(BOOST_PO_LIB) \
-+    libfem_elastic.la
++	 libfem_elastic.la
 +
 +# Workaround for fem_elastic/Makefile.am: object `fcreateMorph.$(OBJEXT)' created both with libtool and without
 +# per http://www.gnu.org/software/hello/manual/automake/Objects-created-both-with-libtool-and-without.html
@@ -1574,10 +1573,9 @@ Subject: [PATCH 2/2] Shared libs
 +	$(top_builddir)/tetgen/libtetgen.la \
  	$(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat \
  	-lpetscvec -lpetsc -lpmpich -lmpich -llmpe -lmpe -lflapack -lfblas \
--	$(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
-+	$(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN) \
-+    libfem_elastic.la
-+
+-	$(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A)
++	$(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) \
++	libfem_elastic.la
  else
  surf2vol_LDADD=\
 -    $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
@@ -1588,7 +1586,6 @@ Subject: [PATCH 2/2] Shared libs
 -    -lpetscvec -lpetsc -lmpich  $(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
 +    -lpetscvec -lpetsc -lmpich  $(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN) \
 +    libfem_elastic.la
-+
  endif
  
  exportGcam_SOURCES=\
@@ -1602,13 +1599,13 @@ Subject: [PATCH 2/2] Shared libs
 -	$(top_builddir)/tetgen/libtetgen.a $(BOOST_PO_LIB)
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +	$(top_builddir)/tetgen/libtetgen.la $(BOOST_PO_LIB) \
-+    libfem_elastic.la
++	libfem_elastic.la
  
  # build library...
 -noinst_LIBRARIES= libfem_elastic.a
 -libfem_elastic_a_SOURCES = $(createMorph_SOURCES) $(applyMorph_SOURCES)
-+lib_LTLIBRARIES= libfem_elastic.la
-+libfem_elastic_la_SOURCES = $(dlibcommon3d_SOURCES) $(createMorph_SOURCES) $(applyMorph_SOURCES)
++noinst_LIBRARIES= libfem_elastic.la
++libfem_elastic_la_SOURCES = $(createMorph_SOURCES) $(applyMorph_SOURCES)
  
  endif
  endif
@@ -2463,10 +2460,10 @@ Subject: [PATCH 2/2] Shared libs
  foodir=$(prefix)/docs/xml
 --- a/mri_em_register/Makefile.am
 +++ b/mri_em_register/Makefile.am
-@@ -14,7 +14,7 @@
- mri_em_register_SOURCES=mri_em_register.c\
-                         findtranslation.cpp findtranslation.h\
-                         emregisterutils.cpp emregisterutils.h
+@@ -12,7 +12,7 @@
+ 
+ bin_PROGRAMS = mri_em_register
+ mri_em_register_SOURCES=mri_em_register.c
 -mri_em_register_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
 +mri_em_register_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_em_register_LDFLAGS=$(OS_LDFLAGS)
@@ -2913,7 +2910,7 @@ Subject: [PATCH 2/2] Shared libs
  # Our release target. Include files to be excluded here. They will be
 --- a/mri_make_bem_surfaces/Makefile.am
 +++ b/mri_make_bem_surfaces/Makefile.am
-@@ -8,7 +8,7 @@
+@@ -9,7 +9,7 @@
  bin_PROGRAMS = mri_make_bem_surfaces
  mri_make_bem_surfaces_SOURCES=mri_make_bem_surfaces.c ../utils/machine.c
  # cyclic dependency between rgb and utils on swapInt etc.
@@ -2921,7 +2918,7 @@ Subject: [PATCH 2/2] Shared libs
 +mri_make_bem_surfaces_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_make_bem_surfaces_LDFLAGS=$(OS_LDFLAGS)
  
- # Our release target. Include files to be excluded here. They will be
+ 
 --- a/mri_make_density_map/Makefile.am
 +++ b/mri_make_density_map/Makefile.am
 @@ -6,7 +6,7 @@
@@ -3125,12 +3122,19 @@ Subject: [PATCH 2/2] Shared libs
 @@ -7,7 +7,7 @@
  
  bin_PROGRAMS = mri_ms_fitparms
- mri_ms_fitparms_SOURCES=mri_ms_fitparms.c
+ mri_ms_fitparms_SOURCES=mri_ms_fitparms.c mri_ms_fitparms.help.xml.h
 -mri_ms_fitparms_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
 +mri_ms_fitparms_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_ms_fitparms_LDFLAGS=$(OS_LDFLAGS)
  
- # Our release target. Include files to be excluded here. They will be
+ foodir=$(prefix)/docs/xml
+@@ -21,4 +21,4 @@
+ EXCLUDE_FILES=""
+ include $(top_srcdir)/Makefile.extra
+ 
+-BUILT_SOURCES=mri_ms_fitparms.help.xml.h
+\ No newline at end of file
++BUILT_SOURCES=mri_ms_fitparms.help.xml.h
 --- a/mri_multispectral_segment/Makefile.am
 +++ b/mri_multispectral_segment/Makefile.am
 @@ -7,7 +7,7 @@
@@ -4341,17 +4345,6 @@ Subject: [PATCH 2/2] Shared libs
  mris_info_LDFLAGS=$(OS_LDFLAGS)
  
  # Our release target. Include files to be excluded here. They will be
---- a/mris_interpolate_warp/Makefile.am
-+++ b/mris_interpolate_warp/Makefile.am
-@@ -7,7 +7,7 @@
- 
- bin_PROGRAMS = mris_interpolate_warp
- mris_interpolate_warp_SOURCES=mris_interpolate_warp.c
--mris_interpolate_warp_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+mris_interpolate_warp_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
- mris_interpolate_warp_LDFLAGS=$(OS_LDFLAGS)
- 
- # Our release target. Include files to be excluded here. They will be
 --- a/mris_jacobian/Makefile.am
 +++ b/mris_jacobian/Makefile.am
 @@ -8,7 +8,7 @@
@@ -4735,17 +4728,6 @@ Subject: [PATCH 2/2] Shared libs
  mris_seg2annot_LDFLAGS=$(OS_LDFLAGS)
  # to --------------------------------------------------
  #
---- a/mris_segment/Makefile.am
-+++ b/mris_segment/Makefile.am
-@@ -7,7 +7,7 @@
- 
- bin_PROGRAMS = mris_segment
- mris_segment_SOURCES=mris_segment.c
--mris_segment_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+mris_segment_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
- mris_segment_LDFLAGS=$(OS_LDFLAGS)
- 
- # Our release target. Include files to be excluded here. They will be
 --- a/mris_segment_vals/Makefile.am
 +++ b/mris_segment_vals/Makefile.am
 @@ -8,7 +8,7 @@
@@ -5509,69 +5491,6 @@ Subject: [PATCH 2/2] Shared libs
  	$(LIBS_OPENGL) $(X_LIBS) -lGL
  test_window_env_LDFLAGS=
  if HAVE_MAC_OSX
---- a/tkmedit/Makefile.am
-+++ b/tkmedit/Makefile.am
-@@ -26,13 +26,12 @@
- 	tkmedit.h \
- 	tkmDisplayArea.h \
- 	tkmFunctionalVolume.h \
--	tkmMeditWindow.h \
--	$(top_srcdir)/fsgdf/fsgdf_wrap.c
--tkmedit_LDADD= $(top_builddir)/fsgdf/libfsgdf.a \
--	$(addprefix $(top_builddir)/,$(LIBS_MGH)) \
-+	tkmMeditWindow.h 
-+tkmedit_LDADD= $(top_builddir)/fsgdf/libfsgdf.la \
-+	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
- 	$(LIBS_TCL_OPENGL) \
- 	$(X_LIBS) $(LIBTIFF) \
--	$(top_builddir)/glut/libglut.a
-+	-lglut
- tkmedit_LDFLAGS=$(LDFLAGS_TCL)
- else
- bin_PROGRAMS=
---- a/tkregister2/Makefile.am
-+++ b/tkregister2/Makefile.am
-@@ -15,10 +15,10 @@
- AM_LDFLAGS= $(LDFLAGS_TCL)
- bin_PROGRAMS = tkregister2
- tkregister2_SOURCES=tkregister2.c
--tkregister2_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
-+tkregister2_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
- 	$(LIBS_TCL_OPENGL) \
- 	$(X_LIBS) -lGL \
--	$(top_builddir)/glut/libglut.a
-+	-lglut
- 
- else
- 
---- a/tkregister2/cmdl/Makefile.am
-+++ b/tkregister2/cmdl/Makefile.am
-@@ -7,7 +7,7 @@
- AM_LDFLAGS=
- bin_PROGRAMS = tkregister2_cmdl
- tkregister2_cmdl_SOURCES=../tkregister2.c
--tkregister2_cmdl_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+tkregister2_cmdl_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
- 
- # Our release target. Include files to be excluded here. They will be
- # found and removed after 'make install' is run during the 'make
---- a/tksurfer/Makefile.am
-+++ b/tksurfer/Makefile.am
-@@ -22,11 +22,11 @@
- if ENABLE_TCLTK_APPS
- bin_PROGRAMS=tksurfer
- tksurfer_SOURCES=tksurfer.c
--tksurfer_LDADD= $(top_builddir)/fsgdf/libfsgdf.a \
--  $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
-+tksurfer_LDADD= $(top_builddir)/fsgdf/libfsgdf.la \
-+  $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
- 	$(LIBS_TCL_OPENGL) \
- 	$(X_LIBS) -lGL $(LIBTIFF) \
--	$(top_builddir)/glut/libglut.a
-+	-lglut
- tksurfer_LDFLAGS=$(LDFLAGS_TCL)
- else
- bin_PROGRAMS=
 --- a/trc/Makefile.am
 +++ b/trc/Makefile.am
 @@ -21,35 +21,35 @@
@@ -5852,7 +5771,7 @@ Subject: [PATCH 2/2] Shared libs
  	-ltiff $(VTK_TIFF_LIB) -ljpeg $(VTK_JPEG_LIB) $(VTK_SQLITE_LIB) \
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -275,7 +275,6 @@
+@@ -273,7 +273,6 @@
  	mris_surface_stats
  
  FSGDF=\
@@ -5860,7 +5779,7 @@ Subject: [PATCH 2/2] Shared libs
  	mri_gdfglm \
  	mri_glmfit \
  	mris_glm
-@@ -311,6 +310,7 @@
+@@ -309,6 +308,7 @@
  	log \
  	gpu_utils \
  	opencl_algorithms \
