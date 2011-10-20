@@ -1,0 +1,11 @@
+[Desktop Entry]
+Encoding=UTF-8
+GenericName=Brain Extraction Tool (FSMAJORVERSION)
+Name=Scuba2 vFSMAJORVERSION
+Exec=scuba2-FSMAJORVERSION
+TryExec=scuba2-FSMAJORVERSION
+Icon=freesurfer-FSMAJORVERSION.xpm
+Type=Application
+Terminal=false
+Comment=This program is part of Freesurfer FSMAJORVERSION
+Categories=Utility;Science;MedicalSoftware;

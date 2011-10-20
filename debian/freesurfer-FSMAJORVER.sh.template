@@ -1,0 +1,16 @@
+# Freesurfer configuration file
+
+# Set up FREESURFER_HOME
+
+# Debian has a fixed FREESURFER_HOME for each version
+FREESURFER_HOME=/usr/lib/freesurfer-FSMAJORVERSION
+export FREESURFER_HOME
+
+# add the freesurfer binary path to the search path
+PATH=$PATH:/usr/lib/freesrufer-FSMAJORVERSION
+export PATH
+
+# load user configuration
+if [ -f "${HOME}/.freesurfer.sh" ]; then
+  . "${HOME}/.freesurfer.sh"
+fi
