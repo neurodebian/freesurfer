@@ -2,15 +2,22 @@
 export AUTOMAKE = automake --add-missing -Wno-portability
 export LIBTOOLIZE = libtoolize --force
 
+# Enable extended globbing in the shell to be able to use more
+# sophisticated stuff in dh_install files
+SHELL := /bin/bash -O extglob
+
+FSMAJORVERSION = 5.1
+
 %:
 	dh $@ --with autoreconf
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
+		--prefix=/usr/lib/freesurfer-$(FSMAJORVERSION) \
 		--disable-Werror \
 		--with-cuda=no \
 		--with-vxl-include=/usr \
-		--with-tcl-include=/usr/include/tcl \
+		--with-tcl-include=/usr/include/tcl8.5 \
 		--enable-tcltk-apps \
 		--disable-static \
 		--with-gnu-ld \
@@ -22,7 +29,7 @@ override_dh_auto_configure:
 		--with-cppunit-dir=/usr \
 		--with-qt=/usr/bin \
 		--with-vtk-dir=/usr \
-		--with-vtk-include=/usr/include/vtk-5.6 \
+		--with-vtk-include=/usr/include/vtk-5.4 \
 		--with-kwwidgets-dir=/usr \
 		--with-wxwidgets-dir=/usr \
 		--with-itk-dir=/usr \
@@ -35,6 +42,18 @@ override_dh_auto_build:
 	# come in a separate Debian package for space efficiency
 	grep 'GEMS/data*' freesurfer-data.md5sums |cut -d ' ' -f 3,3| xargs touch
 	grep 'talairach_avi/*' freesurfer-data.md5sums |cut -d ' ' -f 3,3 |xargs touch
+
+	# Set up files which require modifying for FSMAJORVERSION
+	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/freesurfer-FSMAJORVER.dirs.template    > debian/freesurfer-${FSMAJORVERSION}.dirs
+	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/freesurfer-FSMAJORVER.install.template > debian/freesurfer-${FSMAJORVERSION}.install
+
+	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/freesurfer_gui_app_wrapper.template    > debian/freesurfer_gui_app_wrapper
+
+	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/desktop/scuba.desktop.template         > debian/scuba.desktop
+	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/desktop/scuba2.desktop.template        > debian/scuba2.desktop
+
+	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/freesurfer-FSMAJORVER.sh.template      > debian/freesurfer.sh
+
 	dh_auto_build
 
 override_dh_auto_test:

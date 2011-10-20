@@ -28,8 +28,10 @@ Package: freesurfer
 Architecture: all
 Depends: ${misc:Depends}, freesurfer-5.1
 Description: Metapackage for the latest version of Freesurfer
+ This package depends upon the latest version of freesurfer.
 
 Package: freesurfer-5.1
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description:
+Description: Freesurfer 5.1 package
+ This package contains the Freesurfer 5.1 software.
