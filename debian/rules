@@ -29,7 +29,7 @@ override_dh_auto_configure:
 		--with-cppunit-dir=/usr \
 		--with-qt=/usr/bin \
 		--with-vtk-dir=/usr \
-		--with-vtk-include=/usr/include/vtk-5.4 \
+		--with-vtk-include=/usr/include/vtk-5.6 \
 		--with-kwwidgets-dir=/usr \
 		--with-wxwidgets-dir=/usr \
 		--with-itk-dir=/usr \
@@ -49,8 +49,8 @@ override_dh_auto_build:
 
 	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/freesurfer_gui_app_wrapper.template    > debian/freesurfer_gui_app_wrapper
 
-	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/desktop/scuba.desktop.template         > debian/scuba.desktop
-	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/desktop/scuba2.desktop.template        > debian/scuba2.desktop
+	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/desktop/scuba.desktop.template         > debian/desktop/scuba.desktop
+	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/desktop/scuba2.desktop.template        > debian/desktop/scuba2.desktop
 
 	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/freesurfer-FSMAJORVER.sh.template      > debian/freesurfer.sh
 
@@ -72,4 +72,12 @@ override_dh_auto_clean:
 	# remove fake data files
 	-grep 'GEMS/data*' freesurfer-data.md5sums |cut -d ' ' -f 3,3| xargs rm
 	-grep 'talairach_avi/*' freesurfer-data.md5sums |cut -d ' ' -f 3,3 |xargs rm
+
+	# Remove files generated using FSMAJORVERSION
+	rm -f debian/freesurfer-${FSMAJORVERSION}.dirs
+	rm -f debian/freesurfer-${FSMAJORVERSION}.install
+	rm -f debian/freesurfer_gui_app_wrapper
+	rm -f debian/desktop/scuba.desktop
+	rm -f debian/desktop/scuba2.desktop
+	rm -f debian/freesurfer.sh
 
