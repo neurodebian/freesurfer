@@ -25,6 +25,9 @@ override_dh_auto_configure:
 		--with-tiff-dir=/usr \
 		--with-jpeg-dir=/usr \
 		--with-expat-dir=/usr \
+		--with-x \
+		--x-includes=/usr/include/X11 \
+		--x-libraries=/usr \
 		--with-gl-dir=/usr \
 		--with-cppunit-dir=/usr \
 		--with-qt=/usr/bin \
