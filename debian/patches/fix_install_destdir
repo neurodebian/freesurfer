@@ -1,0 +1,128 @@
+Description: Fix install of scripts to use $(DESTDIR)
+
+Author: Mark Hymers <mark.hymers@ynic.york.ac.uk>
+
+--- freesurfer-5.1.0+cvs20110526.orig/freeview/Makefile.am
++++ freesurfer-5.1.0+cvs20110526/freeview/Makefile.am
+@@ -476,7 +476,7 @@ freeview_LDADD		= $(QT_LIBS)	\
+ # put a wrapper around the bin, used to setup tcltktixblt,vtk enviro vars
+ # and if the OS is MACOSX have a different install-hook to create a bundle
+ install-exec-hook:freeview
+-	cp $(top_builddir)/freeview/freeview $(DESTDIR)$(bindir)/freeview.bin
++	mv $(DESTDIR)$(bindir)/freeview $(DESTDIR)$(bindir)/freeview.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/freeview
+ 	echo "source \$$FREESURFER_HOME/bin/tcl_setup" \
+ 		>> $(DESTDIR)$(bindir)/freeview
+--- freesurfer-5.1.0+cvs20110526.orig/GEMS/Makefile.am
++++ freesurfer-5.1.0+cvs20110526/GEMS/Makefile.am
+@@ -762,7 +762,7 @@ kvlEvaluateSegmentation_LDFLAGS = $(OS_L
+ 
+ # put a wrapper around the gui bins, used to setup vtk enviro vars
+ install-exec-hook:kvlThresholdImage kvlEstimateAtlasParameters
+-	cp $(top_builddir)/GEMS/kvlThresholdImage \
++	mv $(DESTDIR)$(bindir)/kvlThresholdImage \
+ 		$(DESTDIR)$(bindir)/kvlThresholdImage.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/kvlThresholdImage
+ 	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+@@ -777,7 +777,7 @@ install-exec-hook:kvlThresholdImage kvlE
+ 	chmod a+x $(DESTDIR)$(bindir)/kvlThresholdImage
+ 	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
+ 	/usr/pubsw/bin/chrpath -d $(DESTDIR)$(bindir)/kvlThresholdImage.bin; fi
+-	cp $(top_builddir)/GEMS/kvlEstimateAtlasParameters \
++	mv $(DESTDIR)$(bindir)/kvlEstimateAtlasParameters \
+ 		$(DESTDIR)$(bindir)/kvlEstimateAtlasParameters.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/kvlEstimateAtlasParameters
+ 	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+@@ -795,7 +795,7 @@ install-exec-hook:kvlThresholdImage kvlE
+ 	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
+ 	/usr/pubsw/bin/chrpath -d \
+ 		$(DESTDIR)$(bindir)/kvlEstimateAtlasParameters.bin; fi
+-	cp $(top_builddir)/GEMS/kvlViewImage \
++	mv $(DESTDIR)$(bindir)/kvlViewImage \
+ 		$(DESTDIR)$(bindir)/kvlViewImage.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/kvlViewImage
+ 	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+@@ -810,7 +810,7 @@ install-exec-hook:kvlThresholdImage kvlE
+ 	chmod a+x $(DESTDIR)$(bindir)/kvlViewImage
+ 	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
+ 	/usr/pubsw/bin/chrpath -d $(DESTDIR)$(bindir)/kvlViewImage.bin; fi
+-	cp $(top_builddir)/GEMS/kvlViewMeshCollectionWithGUI \
++	mv $(DESTDIR)$(bindir)/kvlViewMeshCollectionWithGUI \
+ 		$(DESTDIR)$(bindir)/kvlViewMeshCollectionWithGUI.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/kvlViewMeshCollectionWithGUI
+ 	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+@@ -825,7 +825,7 @@ install-exec-hook:kvlThresholdImage kvlE
+ 	chmod a+x $(DESTDIR)$(bindir)/kvlViewMeshCollectionWithGUI
+ 	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
+ 	/usr/pubsw/bin/chrpath -d $(DESTDIR)$(bindir)/kvlViewMeshCollectionWithGUI.bin; fi
+-	cp $(top_builddir)/GEMS/kvlEvaluateSegmentation \
++	mv $(DESTDIR)$(bindir)/kvlEvaluateSegmentation \
+ 		$(DESTDIR)$(bindir)/kvlEvaluateSegmentation.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/kvlEvaluateSegmentation
+ 	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+--- freesurfer-5.1.0+cvs20110526.orig/scuba/Makefile.am
++++ freesurfer-5.1.0+cvs20110526/scuba/Makefile.am
+@@ -345,7 +345,7 @@ endif
+ if ENABLE_TCLTK_APPS
+ # put a wrapper around the bin, used to setup tcltktixblt enviro vars
+ install-exec-hook:
+-	cp $(top_builddir)/scuba/scuba $(DESTDIR)$(bindir)/scuba.bin
++	mv $(DESTDIR)$(bindir)/scuba $(DESTDIR)$(bindir)/scuba.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/scuba
+ 	echo "source \$$FREESURFER_HOME/bin/tcl_setup" >> $(DESTDIR)$(bindir)/scuba
+ 	echo "scuba.bin \$$argv" >> $(DESTDIR)$(bindir)/scuba
+--- freesurfer-5.1.0+cvs20110526.orig/qdec/Makefile.am
++++ freesurfer-5.1.0+cvs20110526/qdec/Makefile.am
+@@ -66,7 +66,7 @@ QdecLibInit.cxx: QdecLibInit.data
+ 
+ # put a wrapper around the bin, used to setup tcltktixblt,vtk,kww enviro vars
+ install-exec-hook:qdec
+-	cp $(top_builddir)/qdec/qdec $(DESTDIR)$(bindir)/qdec.bin
++	mv $(DESTDIR)$(bindir)/qdec $(DESTDIR)$(bindir)/qdec.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/qdec
+ 	echo "source \$$FREESURFER_HOME/bin/tcl_setup" \
+ 		>> $(DESTDIR)$(bindir)/qdec
+--- freesurfer-5.1.0+cvs20110526.orig/scuba2/Makefile.am
++++ freesurfer-5.1.0+cvs20110526/scuba2/Makefile.am
+@@ -203,7 +203,7 @@ vtkKWScubaView.o: vtkKWScubaView.cxx
+ 
+ # put a wrapper around the bin, used to setup tcltktixblt,vtk,kww enviro vars
+ install-exec-hook:scuba2
+-	cp $(top_builddir)/scuba2/scuba2 $(DESTDIR)$(bindir)/scuba2.bin
++	mv $(DESTDIR)$(bindir)/scuba2 $(DESTDIR)$(bindir)/scuba2.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/scuba2
+ 	echo "source \$$FREESURFER_HOME/bin/tcl_setup" \
+ 		>> $(DESTDIR)$(bindir)/scuba2
+--- freesurfer-5.1.0+cvs20110526.orig/orient_mri/Makefile.am
++++ freesurfer-5.1.0+cvs20110526/orient_mri/Makefile.am
+@@ -65,7 +65,7 @@ OrientMRILibInit.cxx: OrientMRILibInit.d
+ 
+ # put a wrapper around the bin, used to setup tcltktixblt,vtk,kww enviro vars
+ install-exec-hook:orient_mri
+-	cp $(top_builddir)/orient_mri/orient_mri $(DESTDIR)$(bindir)/orient_mri.bin
++	mv $(DESTDIR)$(bindir)/orient_mri $(DESTDIR)$(bindir)/orient_mri.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/orient_mri
+ 	echo "source \$$FREESURFER_HOME/bin/tcl_setup" \
+ 		>> $(DESTDIR)$(bindir)/orient_mri
+--- freesurfer-5.1.0+cvs20110526.orig/freeview_wx/Makefile.am
++++ freesurfer-5.1.0+cvs20110526/freeview_wx/Makefile.am
+@@ -484,7 +484,7 @@ freeview_wx_LDADD=\
+ # put a wrapper around the bin, used to setup tcltktixblt,vtk,kww enviro vars
+ # and if the OS is MACOSX have a different install-hook to create a bundle
+ install-exec-hook:freeview_wx
+-	cp $(top_builddir)/freeview_wx/freeview_wx $(DESTDIR)$(bindir)/freeview_wx.bin
++	cp $(DESTDIR)$(bindir)/freeview_wx $(DESTDIR)$(bindir)/freeview_wx.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/freeview_wx
+ 	echo "source \$$FREESURFER_HOME/bin/tcl_setup" \
+ 		>> $(DESTDIR)$(bindir)/freeview_wx
+--- freesurfer-5.1.0+cvs20110526.orig/mris_decimate_gui/Makefile.am
++++ freesurfer-5.1.0+cvs20110526/mris_decimate_gui/Makefile.am
+@@ -87,7 +87,7 @@ uninstall-hook:
+ 	rm -rf $(DESTDIR)$(bindir)/MrisDecimatey.app
+ else
+ install-exec-hook:mris_decimate_gui
+-	cp $(top_builddir)/mris_decimate_gui/mris_decimate_gui $(DESTDIR)$(bindir)/mris_decimate_gui.bin
++	cp $(DESTDIR)$(bindir)/mris_decimate_gui $(DESTDIR)$(bindir)/mris_decimate_gui.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/mris_decimate_gui
+ 	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+ 		>> $(DESTDIR)$(bindir)/mris_decimate_gui
