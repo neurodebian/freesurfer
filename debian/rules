@@ -22,6 +22,7 @@ override_dh_auto_configure:
 		--disable-static \
 		--with-gnu-ld \
 		--with-nifti-dir=/usr \
+		--with-mni-dir=/usr \
 		--with-tiff-dir=/usr \
 		--with-jpeg-dir=/usr \
 		--with-expat-dir=/usr \
@@ -68,6 +69,8 @@ override_dh_auto_clean:
 	find . -name Makefile.in -delete
 	-rm aclocal.m4 config.h.in INSTALL
 	-rm config/*
+	-rm config.log
+	-rm cpuflags.mak
 	# remove help headers
 	for f in $$(find . -name '*.xml' ! -wholename '*debian*'); do \
 		[ -f $${f}.h ] && rm $${f}.h || :; \
