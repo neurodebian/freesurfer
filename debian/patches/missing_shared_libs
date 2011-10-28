@@ -73,3 +73,19 @@ Subject: Self-contained libs/proper linking for increased happiness
                                  -lvtkVolumeRendering -lvtkRendering -lvtkftgl \
                                  -lvtkWidgets -lvtkHybrid \
                                  -lvtkIO -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
+--- a/nmovie/Makefile.am
++++ b/nmovie/Makefile.am
+@@ -22,11 +22,11 @@
+ if ENABLE_XAWPLUS_APPS
+ nmovie_LDADD= $(addprefix $(top_builddir)/,$(LIBS_MGH)) $(DLIBS_MGH) \
+ 	$(LIBS_OPENGL) $(XAWPLUS_LIBS) $(LIBS_XAWPLUS) -lXext \
+-	$(top_builddir)/glut/libglut.a
++	-lglut
+ else
+ nmovie_LDADD= $(addprefix $(top_builddir)/,$(LIBS_MGH)) $(DLIBS_MGH) \
+ 	$(LIBS_OPENGL) -lXt -lXext -lXaw \
+-	$(top_builddir)/glut/libglut.a
++	-lglut
+ endif
+ nmovie_LDFLAGS=$(X_LIBS)
+ else
