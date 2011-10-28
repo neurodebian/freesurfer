@@ -1,8 +1,6 @@
-diff --git a/utils/Makefile.am b/utils/Makefile.am
-index faa0158..8d0a61f 100644
 --- a/utils/Makefile.am
 +++ b/utils/Makefile.am
-@@ -409,7 +411,7 @@ endif
+@@ -411,7 +411,7 @@
  
  
  

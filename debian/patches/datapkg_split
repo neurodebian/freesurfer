@@ -1,6 +1,6 @@
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -326,7 +326,6 @@
+@@ -334,7 +334,6 @@
  	qdecproject \
  	svm-lib \
  	scripts \
@@ -10,13 +10,14 @@
  	$(MRISSUBDIRS) \
 --- a/configure.in
 +++ b/configure.in
-@@ -3213,20 +3213,6 @@
+@@ -3313,21 +3313,6 @@
             cudatest/volumecopy/Makefile
             cudatest/mrilabeltest/Makefile
             dicom/Makefile
 -           distribution/Makefile
 -           distribution/average/Makefile
 -           distribution/average/surf/Makefile
+-           distribution/average/Yeo_JNeurophysiol11_MNI152/Makefile
 -           distribution/docs/Makefile
 -           distribution/diffusion/Makefile
 -           distribution/diffusion/mgh-dti-seqpack/Makefile

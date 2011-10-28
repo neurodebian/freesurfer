@@ -1,6 +1,6 @@
 --- a/configure.in
 +++ b/configure.in
-@@ -305,6 +305,10 @@
+@@ -326,6 +326,10 @@
      LIB_G2C_A="/usr/lib/libg2c.a"
    fi
  fi
