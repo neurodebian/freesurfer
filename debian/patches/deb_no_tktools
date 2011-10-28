@@ -1,3 +1,7 @@
+From: Michael Hanke <mih@debian.org>
+Subjects: Disable all Tk-related code.
+
+This stuff is ancient, probably useless and covered by a very non-free license.
 --- a/configure.in
 +++ b/configure.in
 @@ -3639,10 +3639,6 @@

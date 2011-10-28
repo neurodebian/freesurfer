@@ -1,3 +1,5 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Force f2c on Debian
 --- a/configure.in
 +++ b/configure.in
 @@ -326,6 +326,10 @@

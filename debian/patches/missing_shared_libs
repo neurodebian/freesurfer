@@ -1,3 +1,5 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Self-contained libs/proper linking for increased happiness
 --- a/vtkutils/Makefile.am
 +++ b/vtkutils/Makefile.am
 @@ -54,6 +54,9 @@
