@@ -5877,3 +5877,16 @@ index 278f261..15d3188 100644
  mris_segment_LDFLAGS=$(OS_LDFLAGS)
  
  # Our release target. Include files to be excluded here. They will be
+diff --git a/mri_multiscale_segment/Makefile.am b/mri_multiscale_segment/Makefile.am
+index 8543935..b7c76e2 100644
+--- a/mri_multiscale_segment/Makefile.am
++++ b/mri_multiscale_segment/Makefile.am
+@@ -33,7 +33,7 @@ AM_CXXFLAGS=-I$(top_srcdir)/include
+ 
+ bin_PROGRAMS = mri_multiscale_segment
+ mri_multiscale_segment_SOURCES=mri_multiscale_segment.c
+-mri_multiscale_segment_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
++mri_multiscale_segment_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
+ mri_multiscale_segment_LDFLAGS=$(OS_LDFLAGS)
+ 
+ # to --------------------------------------------------
