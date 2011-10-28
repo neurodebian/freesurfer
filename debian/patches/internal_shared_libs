@@ -17,8 +17,8 @@ Subject: [PATCH 2/2] Shared libs
  		kvlAtlasMeshCollection.cxx \
  		gzstream.cxx \
  		kvlAtlasMeshCollectionValidator.cxx \
-@@ -54,13 +54,11 @@
- 		kvlAtlasMeshDeformationLevenbergMarquardt.cxx \
+@@ -55,13 +55,11 @@
+                 kvlAtlasMeshDeformationLevenbergMarquardtOptimizer.cxx \
  		kvlAtlasMeshHamiltonianPositionSampler.cxx
  
 -am_libkvlAtlas3DCommon_a_OBJECTS=$(libkvlAtlas3DCommon_a_SOURCES:%.cxx=%.o)
@@ -35,7 +35,7 @@ Subject: [PATCH 2/2] Shared libs
  
  bin_PROGRAMS=\
  			 kvlSmoothMesh \
-@@ -102,7 +100,6 @@
+@@ -103,7 +101,6 @@
  			 kvlBinaryThresholdImage \
  			 kvlUpsample \
  			 kvlRasterizeAtlasMesh \
@@ -43,67 +43,7 @@ Subject: [PATCH 2/2] Shared libs
  			 kvlMaskImage \
  			 kvlApplyTransform
  
-@@ -119,465 +116,467 @@
- 
- # kvlAtlasMeshRasterizorTest_SOURCES=kvlAtlasMeshRasterizorTest.cxx
- # kvlAtlasMeshRasterizorTest_LDADD=$(LIBS_ITK) \
--#					 libkvlAtlas3DCommon.a \
--#					 $(top_builddir)/itkio/libitkio.a \
--#					 $(top_builddir)/itkutils/libitkutils.a \
-+#					 libkvlAtlas3DCommon.la \
-+#					 $(top_builddir)/itkio/libitkio.la \
-+#					 $(top_builddir)/itkutils/libitkutils.la \
- #					 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- #					 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
- # kvlAtlasMeshRasterizorTest_LDFLAGS= $(OS_LDFLAGS)
- 
- # kvlAtlasMeshCollectionTest_SOURCES=kvlAtlasMeshCollectionTest.cxx
- # kvlAtlasMeshCollectionTest_LDADD=$(LIBS_ITK) \
--#					 libkvlAtlas3DCommon.a \
--#					 $(top_builddir)/itkio/libitkio.a \
--#					 $(top_builddir)/itkutils/libitkutils.a \
-+#					 libkvlAtlas3DCommon.la \
-+#					 $(top_builddir)/itkio/libitkio.la \
-+#					 $(top_builddir)/itkutils/libitkutils.la \
- #					 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- #					 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
- # kvlAtlasMeshCollectionTest_LDFLAGS= $(OS_LDFLAGS)
- 
- # kvlLabelImageToCompactMeshRepresentation_SOURCES=kvlLabelImageToCompactMeshRepresentation.cxx
- # kvlLabelImageToCompactMeshRepresentation_LDADD=$(LIBS_ITK) \
--#					 libkvlAtlas3DCommon.a \
--#					 $(top_builddir)/itkio/libitkio.a \
--#					 $(top_builddir)/itkutils/libitkutils.a \
-+#					 libkvlAtlas3DCommon.la \
-+#					 $(top_builddir)/itkio/libitkio.la \
-+#					 $(top_builddir)/itkutils/libitkutils.la \
- #					 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- #					 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
- # kvlLabelImageToCompactMeshRepresentation_LDFLAGS= $(OS_LDFLAGS)
- 
- # kvlValidateMeshCollection_SOURCES=kvlValidateMeshCollection.cxx
- # kvlValidateMeshCollection_LDADD=$(LIBS_ITK) \
--#					 libkvlAtlas3DCommon.a \
--#					 $(top_builddir)/itkio/libitkio.a \
--#					 $(top_builddir)/itkutils/libitkutils.a \
-+#					 libkvlAtlas3DCommon.la \
-+#					 $(top_builddir)/itkio/libitkio.la \
-+#					 $(top_builddir)/itkutils/libitkutils.la \
- #					 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- #					 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
- # kvlValidateMeshCollection_LDFLAGS= $(OS_LDFLAGS)
- 
- # kvlGenerateToyExampleData_SOURCES=kvlGenerateToyExampleData.cxx
- # kvlGenerateToyExampleData_LDADD=$(LIBS_ITK) \
--#					 libkvlAtlas3DCommon.a \
--#					 $(top_builddir)/itkio/libitkio.a \
--#					 $(top_builddir)/itkutils/libitkutils.a \
-+#					 libkvlAtlas3DCommon.la \
-+#					 $(top_builddir)/itkio/libitkio.la \
-+#					 $(top_builddir)/itkutils/libitkutils.la \
- #					 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- #					 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
- # kvlGenerateToyExampleData_LDFLAGS= $(OS_LDFLAGS)
+@@ -165,82 +162,82 @@
  
  kvlSmoothMesh_SOURCES=kvlSmoothMesh.cxx
  kvlSmoothMesh_LDADD=$(LIBS_ITK) \
@@ -213,29 +153,7 @@ Subject: [PATCH 2/2] Shared libs
  				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlBuildAtlasMeshWithoutGUI_LDFLAGS= $(OS_LDFLAGS)
  
- # kvlConstructSparseMeshCollection_SOURCES=kvlConstructSparseMeshCollection.cxx
- # kvlConstructSparseMeshCollection_LDADD=$(LIBS_ITK) \
--#					 libkvlAtlas3DCommon.a \
--#					 $(top_builddir)/itkio/libitkio.a \
--#					 $(top_builddir)/itkutils/libitkutils.a \
-+#					 libkvlAtlas3DCommon.la \
-+#					 $(top_builddir)/itkio/libitkio.la \
-+#					 $(top_builddir)/itkutils/libitkutils.la \
- #					 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- #					 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
- # kvlConstructSparseMeshCollection_LDFLAGS= $(OS_LDFLAGS)
- 
- # kvlConstructMultiResolutionMeshCollection_SOURCES=kvlConstructMultiResolutionMeshCollection.cxx
- # kvlConstructMultiResolutionMeshCollection_LDADD=$(LIBS_ITK) \
--#					 libkvlAtlas3DCommon.a \
--#					 $(top_builddir)/itkio/libitkio.a \
--#					 $(top_builddir)/itkutils/libitkutils.a \
-+#					 libkvlAtlas3DCommon.la \
-+#					 $(top_builddir)/itkio/libitkio.la \
-+#					 $(top_builddir)/itkutils/libitkutils.la \
- #					 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- #					 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
- # kvlConstructMultiResolutionMeshCollection_LDFLAGS= $(OS_LDFLAGS)
+@@ -264,123 +261,123 @@
  
  kvlCropImage_SOURCES=kvlCropImage.cxx
  kvlCropImage_LDADD=$(LIBS_ITK) \
@@ -398,30 +316,7 @@ Subject: [PATCH 2/2] Shared libs
  				 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
  				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlCalculateAtlasMeshCollectionTotalCost_LDFLAGS= $(OS_LDFLAGS)
- 
- # kvlTestImageSmoother_SOURCES=kvlTestImageSmoother.cxx
- # kvlTestImageSmoother_LDADD=$(LIBS_ITK) \
--#					 libkvlAtlas3DCommon.a \
--#					 $(top_builddir)/itkio/libitkio.a \
--#					 $(top_builddir)/itkutils/libitkutils.a \
-+#					 libkvlAtlas3DCommon.la \
-+#					 $(top_builddir)/itkio/libitkio.la \
-+#					 $(top_builddir)/itkutils/libitkutils.la \
- #					 -lITKCommon -lITKIO -lITKznz \
- #					 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
- # kvlTestImageSmoother_LDFLAGS= $(OS_LDFLAGS)
- 
- # kvlGenerateWeightedColorChannels_SOURCES=kvlGenerateWeightedColorChannels.cxx
- # kvlGenerateWeightedColorChannels_LDADD=$(LIBS_ITK) \
--#					 libkvlAtlas3DCommon.a \
--#					 $(top_builddir)/itkio/libitkio.a \
--#					 $(top_builddir)/itkutils/libitkutils.a \
-+#					 libkvlAtlas3DCommon.la \
-+#					 $(top_builddir)/itkio/libitkio.la \
-+#					 $(top_builddir)/itkutils/libitkutils.la \
- #					 -lITKCommon -lITKIO -lITKznz \
- #					 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
- # kvlGenerateWeightedColorChannels_LDFLAGS= $(OS_LDFLAGS)
+@@ -405,181 +402,181 @@
  
  kvlColorCodeProbabilityImages_SOURCES=kvlColorCodeProbabilityImages.cxx
  kvlColorCodeProbabilityImages_LDADD=$(LIBS_ITK) \
@@ -615,8 +510,6 @@ Subject: [PATCH 2/2] Shared libs
  				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlRasterizeAtlasMesh_LDFLAGS= $(OS_LDFLAGS)
  
-+# this one needs e.g. itkLabelObject.h that doesn't come with ITK 3.20
-+# (not sure if it should)
  kvlAutoCrop_SOURCES=kvlAutoCrop.cxx
  kvlAutoCrop_LDADD=$(LIBS_ITK) \
 -				 libkvlAtlas3DCommon.a \
@@ -654,6 +547,7 @@ Subject: [PATCH 2/2] Shared libs
  kvlApplyTransform_LDFLAGS= $(OS_LDFLAGS)
  
  if HAVE_FLTK_LIBS
+ if HAVE_VTK_LIBS
 -noinst_LIBRARIES+=libkvlAtlas3DGUI.a
 -libkvlAtlas3DGUI_a_SOURCES = vtkFlRenderWindowInteractor.cxx \
 +lib_LTLIBRARIES+=libkvlAtlas3DGUI.la
@@ -664,7 +558,7 @@ Subject: [PATCH 2/2] Shared libs
  			#-lITKCommon -lITKAlgorithms -lITKIO -lITKznz -lITKBasicFilters \
  			$(VTK_LIBS) \
  			#-lvtkCommon -lvtkImaging -lvtkIO -lvtkRendering \
-@@ -594,10 +593,10 @@
+@@ -596,10 +593,10 @@
  						 kvlEstimateAtlasParameters.cxx \
  						 kvlAtlasParameterEstimationConsole.cxx
  kvlEstimateAtlasParameters_LDADD=$(LIBS_ITK) \
@@ -679,7 +573,7 @@ Subject: [PATCH 2/2] Shared libs
  				 -lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
  				$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  				$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
-@@ -606,7 +605,7 @@
+@@ -608,7 +605,7 @@
  				$(VTK_SQLITE_LIB) \
  				-lvtkImaging -lvtkFiltering \
  				-lvtkCommon -lvtksys \
@@ -688,7 +582,7 @@ Subject: [PATCH 2/2] Shared libs
  				-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  				-lvtkWidgets -lvtkHybrid \
  				-lvtkIO -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
-@@ -624,10 +623,10 @@
+@@ -626,10 +623,10 @@
  						kvlImageThresholdingConsole.h
  
  kvlThresholdImage_LDADD=$(LIBS_ITK) \
@@ -703,7 +597,7 @@ Subject: [PATCH 2/2] Shared libs
  				 -lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
  				$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  				$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
-@@ -636,7 +635,7 @@
+@@ -638,7 +635,7 @@
  				$(VTK_SQLITE_LIB) \
  				-lvtkImaging -lvtkFiltering \
  				-lvtkCommon -lvtksys \
@@ -712,7 +606,7 @@ Subject: [PATCH 2/2] Shared libs
  				-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  				-lvtkWidgets -lvtkHybrid \
  				-lvtkIO -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
-@@ -654,10 +653,10 @@
+@@ -656,10 +653,10 @@
  						kvlImageViewingConsole.h
  
  kvlViewImage_LDADD=$(LIBS_ITK) \
@@ -727,7 +621,7 @@ Subject: [PATCH 2/2] Shared libs
  				 -lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
  				$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  				$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
-@@ -666,7 +665,7 @@
+@@ -668,7 +665,7 @@
  				$(VTK_SQLITE_LIB) \
  				-lvtkImaging -lvtkFiltering \
  				-lvtkCommon -lvtksys \
@@ -749,7 +643,7 @@ Subject: [PATCH 2/2] Shared libs
  
 --- a/configure.in
 +++ b/configure.in
-@@ -311,43 +311,45 @@
+@@ -332,43 +332,45 @@
  fi
  AC_SUBST(LIB_G2C_A)
  
@@ -831,16 +725,7 @@ Subject: [PATCH 2/2] Shared libs
  AC_SUBST(LIB_LAPACK_A)
  
  
-@@ -1109,7 +1111,7 @@
- fi
- 
- # these are the libs used by freesurfer:
--LIBS_MNI="-lnetcdf -lvolume_io -lminc"
-+LIBS_MNI="-lnetcdf -lvolume_io2 -lminc2"
- 
- AC_SUBST(MNI_CFLAGS)
- AC_SUBST(MNI_LIBS)
-@@ -1877,21 +1879,21 @@
+@@ -1930,21 +1932,21 @@
  fi
  
  # use static lib if found
@@ -877,7 +762,7 @@ Subject: [PATCH 2/2] Shared libs
  
  AM_CONDITIONAL(USE_LOCAL_JPEG, test "$ac_jpeg_libraries" = "NO")
  
-@@ -2069,7 +2071,7 @@
+@@ -2133,7 +2135,7 @@
  
  AC_ARG_WITH(vtk-include,
    [  --with-vtk-include=DIR      root of VTK include directory.],
@@ -886,7 +771,7 @@ Subject: [PATCH 2/2] Shared libs
       ac_vtk_includes="$vtk_i"
    ])
  
-@@ -2511,34 +2513,37 @@
+@@ -2575,34 +2577,37 @@
  
    # these are the minimum ITK libs necessary to support Nrrd IO,
    # notice they are all static (avoiding LD_LIBRARY_PATH usage)
@@ -948,7 +833,7 @@ Subject: [PATCH 2/2] Shared libs
    LIBS_ITK="$LIBS_ITK $LIB_UUID_A"
  else
    AC_MSG_RESULT([Not building ITK apps.])
-@@ -2579,7 +2584,7 @@
+@@ -2643,7 +2648,7 @@
  
  if test ! "$ac_gl_includes" = "NO"; then
    AC_MSG_RESULT(gl directory is $withval)
@@ -957,7 +842,7 @@ Subject: [PATCH 2/2] Shared libs
  else
    AC_MSG_RESULT(OpenGL directory is not supplied)
  fi
-@@ -2678,14 +2683,13 @@
+@@ -2742,14 +2747,13 @@
  
  # stupid circular dependency on iopen swapInt etc.
  LIBS_MGH="\
@@ -979,7 +864,7 @@ Subject: [PATCH 2/2] Shared libs
  
  # use local libjpeg if --with-jpeg-dir not used:
  if test "$ac_jpeg_libraries" = "NO"; then
-@@ -2707,6 +2711,7 @@
+@@ -2771,6 +2775,7 @@
  LIBS_CUDA_MGH=`echo ${LIBS_MGH} | sed 's/libutils/libutils_cuda/g'`
  
  AC_SUBST(LIBS_MGH)
@@ -987,57 +872,7 @@ Subject: [PATCH 2/2] Shared libs
  AC_SUBST(LIBS_CUDA_MGH)
  AC_SUBST(LIB_JPEG)
  AC_SUBST(LIB_TIFF)
-@@ -2770,10 +2775,10 @@
- AC_CHECK_LIB([netcdf], [nccreate],[],
-   [AC_MSG_ERROR([FATAL: netcdf lib not found. \
- Set LDFLAGS or --with-mni-dir.])] )
--AC_CHECK_LIB([minc], [miopen], [],
-+AC_CHECK_LIB([minc2], [miopen], [],
-   [AC_MSG_ERROR([FATAL: minc lib not found. \
- Set LDFLAGS or --with-mni-dir.])] )
--AC_CHECK_LIB([volume_io], [transform_point],[],
-+AC_CHECK_LIB([volume_io2], [transform_point],[],
-   [AC_MSG_ERROR([FATAL: volume_io lib not found. \
- Set LDFLAGS or --with-mni-dir.])] )
- 
-@@ -2971,8 +2976,8 @@
- if test ! "x$tcltk_apps" = "xNO"; then
-   ################## Tcl
-   # check tcl8.5
--#  AC_CHECK_LIB([tcl8.5],[Tcl_Init],
--#    [LIB_TCL=-ltcl8.5],
-+  AC_CHECK_LIB([tcl8.5],[Tcl_Init],
-+    [LIB_TCL=-ltcl8.5],
-   # check tcl8.4
- #    [
-     AC_CHECK_LIB([tcl8.4],[Tcl_Init],
-@@ -2998,7 +3003,7 @@
-           ])
-         ])
-       ])
--#    ])
-+    ])
-   AC_SUBST(LIB_TCL)
- 
-   #################### Tk needs X11 (or Aqua)
-@@ -3006,8 +3011,8 @@
-   CPPFLAGS="$GL_CFLAGS $CPPFLAGS"
-   LDFLAGS="$X_LIBS $LDFLAGS"
-   # check tk8.5
--#  AC_CHECK_LIB([tk8.5],[Tk_Init],
--#    [LIB_TK=-ltk8.5],
-+  AC_CHECK_LIB([tk8.5],[Tk_Init],
-+    [LIB_TK=-ltk8.5],
-   # check tk8.4
- #    [
-     AC_CHECK_LIB([tk8.4],[Tk_Init],
-@@ -3030,11 +3035,14 @@
-           ])
-         ])
-       ])
--#    ])
-+    ])
-   AC_SUBST(LIB_TK)
+@@ -3120,6 +3125,9 @@
  
    ##################### Tix
    LIBS="$X_LIBS $LIB_TK $LIB_TCL $LIBS"
@@ -1047,7 +882,7 @@ Subject: [PATCH 2/2] Shared libs
    # check Tix8.4.2 first, as that is known to work best with tcl/tk 8.5
    AC_CHECK_LIB([Tix8.4.2], [Tix_Init],
    [LIB_TIX=-lTix8.4.2],
-@@ -3066,6 +3074,7 @@
+@@ -3151,6 +3159,7 @@
          ])
        ])
      ])
@@ -1077,7 +912,7 @@ Subject: [PATCH 2/2] Shared libs
  # found and removed after 'make install' is run during the 'make
 --- a/cudatest/Makefile.am
 +++ b/cudatest/Makefile.am
-@@ -57,13 +57,13 @@
+@@ -59,13 +59,13 @@
  
  
  gcamCompare_SOURCES = gcamCompare.cpp kahan.hpp
@@ -1093,7 +928,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_write_test_LDFLAGS=$(OS_LDFLAGS)
  
  gcam_write_test_cuda_SOURCES = gcam_write_test.cpp
-@@ -79,13 +79,13 @@
+@@ -81,13 +81,13 @@
  # --
  
  mri2nc_SOURCES = mri2nc.cpp
@@ -1109,7 +944,7 @@ Subject: [PATCH 2/2] Shared libs
  conv1d_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -101,7 +101,7 @@
+@@ -103,7 +103,7 @@
  # --
  
  convgaussian_test_SOURCES = convgaussian_test.cpp
@@ -1118,7 +953,7 @@ Subject: [PATCH 2/2] Shared libs
  convgaussian_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -117,7 +117,7 @@
+@@ -119,7 +119,7 @@
  # --
  
  gcam_cmp_test_SOURCES = gcam_cmp_test.cpp
@@ -1127,7 +962,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_cmp_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -133,7 +133,7 @@
+@@ -135,7 +135,7 @@
  # --
  
  gcam_lle_test_SOURCES = gcam_lle_test.cpp
@@ -1136,7 +971,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_lle_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -149,7 +149,7 @@
+@@ -151,7 +151,7 @@
  # --
  
  gcam_jacobenergy_test_SOURCES = gcam_jacobenergy_test.cpp
@@ -1145,7 +980,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_jacobenergy_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -165,7 +165,7 @@
+@@ -167,7 +167,7 @@
  # --
  
  gcam_labelenergy_test_SOURCES = gcam_labelenergy_test.cpp
@@ -1154,7 +989,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_labelenergy_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -182,7 +182,7 @@
+@@ -184,7 +184,7 @@
  # --
  
  gcam_smoothnessenergy_test_SOURCES = gcam_smoothnessenergy_test.cpp
@@ -1163,7 +998,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_smoothnessenergy_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -199,7 +199,7 @@
+@@ -201,7 +201,7 @@
  # --
  
  gcam_clear_test_SOURCES = gcam_clear_test.cpp
@@ -1172,7 +1007,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_clear_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -216,7 +216,7 @@
+@@ -218,7 +218,7 @@
  # --
  
  gcam_applygradient_test_SOURCES = gcam_applygradient_test.cpp
@@ -1181,7 +1016,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_applygradient_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -232,7 +232,7 @@
+@@ -234,7 +234,7 @@
  # --
  
  gcam_undogradient_test_SOURCES = gcam_undogradient_test.cpp
@@ -1190,7 +1025,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_undogradient_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -248,7 +248,7 @@
+@@ -250,7 +250,7 @@
  # --
  
  meanfilter_test_SOURCES=meanfilter_test.cpp
@@ -1199,7 +1034,7 @@ Subject: [PATCH 2/2] Shared libs
  meanfilter_test_LDFLAGS=$(OS_LDFLAGS)
  
  meanfilter_test_cuda_SOURCES = meanfilter_test.cpp
-@@ -264,7 +264,7 @@
+@@ -266,7 +266,7 @@
  # --
  
  gcam_smoothnessterm_test_SOURCES = gcam_smoothnessterm_test.cpp
@@ -1208,7 +1043,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_smoothnessterm_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -280,7 +280,7 @@
+@@ -282,7 +282,7 @@
  # --
  
  gcam_jacobterm_test_SOURCES = gcam_jacobterm_test.cpp
@@ -1217,7 +1052,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_jacobterm_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -296,7 +296,7 @@
+@@ -298,7 +298,7 @@
  # --
  
  gcam_llterm_test_SOURCES = gcam_llterm_test.cpp
@@ -1226,7 +1061,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_llterm_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -312,7 +312,7 @@
+@@ -314,7 +314,7 @@
  # --
  
  gcam_labelterm_final_test_SOURCES = gcam_labelterm_final_test.cpp
@@ -1235,7 +1070,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_labelterm_final_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -329,7 +329,7 @@
+@@ -331,7 +331,7 @@
  # --
  
  gcam_labelterm_postantconsist_test_SOURCES = gcam_labelterm_postantconsist_test.cpp
@@ -1244,7 +1079,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_labelterm_postantconsist_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -345,7 +345,7 @@
+@@ -347,7 +347,7 @@
  # --
  
  gcam_labelterm_copydeltas_test_SOURCES = gcam_labelterm_copydeltas_test.cpp
@@ -1253,7 +1088,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_labelterm_copydeltas_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -362,7 +362,7 @@
+@@ -364,7 +364,7 @@
  # --
  
  gcam_labelterm_removeoutliers_test_SOURCES = gcam_labelterm_removeoutliers_test.cpp
@@ -1262,7 +1097,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_labelterm_removeoutliers_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -379,7 +379,7 @@
+@@ -381,7 +381,7 @@
  # --
  
  gcam_labelterm_mainloop_test_SOURCES = gcam_labelterm_mainloop_test.cpp
@@ -1271,7 +1106,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_labelterm_mainloop_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -397,7 +397,7 @@
+@@ -399,7 +399,7 @@
  # --
  
  gcam_labelterm_test_SOURCES = gcam_labelterm_test.cpp
@@ -1280,7 +1115,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_labelterm_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -415,7 +415,7 @@
+@@ -417,7 +417,7 @@
  # --
  
  gcam_addstatus_test_SOURCES = gcam_addstatus_test.cpp
@@ -1289,7 +1124,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_addstatus_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -432,7 +432,7 @@
+@@ -434,7 +434,7 @@
  # --
  
  gcam_removestatus_test_SOURCES = gcam_removestatus_test.cpp
@@ -1298,7 +1133,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_removestatus_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -448,7 +448,7 @@
+@@ -450,7 +450,7 @@
  # --
  
  gcam_smoothgradient_test_SOURCES = gcam_smoothgradient_test.cpp
@@ -1307,7 +1142,7 @@ Subject: [PATCH 2/2] Shared libs
  gcam_smoothgradient_test_LDFLAGS=$(OS_LDFLAGS)
  
  
-@@ -464,7 +464,7 @@
+@@ -466,7 +466,7 @@
  # --
  
  gcam_removesingularities_test_SOURCES = gcam_removesingularities_test.cpp
@@ -1318,18 +1153,18 @@ Subject: [PATCH 2/2] Shared libs
  
 --- a/cudatest/gcatest/Makefile.am
 +++ b/cudatest/gcatest/Makefile.am
-@@ -28,7 +28,7 @@
- 
+@@ -25,7 +25,7 @@
+ bin_PROGRAMS = gca_read_test
  
  gca_read_test_SOURCES = gca_read_test.cpp
 -gca_read_test_LDADD = $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(BOOST_PO_LIB)
 +gca_read_test_LDADD = $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) $(BOOST_PO_LIB)
  gca_read_test_LDFLAGS = $(OS_LDFLAGS)
  
- 
+ endif
 --- a/cudatest/mrilabeltest/Makefile.am
 +++ b/cudatest/mrilabeltest/Makefile.am
-@@ -29,7 +29,7 @@
+@@ -30,7 +30,7 @@
  # ---
  
  mriMarkLabelBorderVoxelTest_SOURCES = mriMarkLabelBorderVoxelTest.cpp
@@ -1338,7 +1173,7 @@ Subject: [PATCH 2/2] Shared libs
  mriMarkLabelBorderVoxelTest_LDFLAGS = $(OS_LDFLAGS)
  
  mriMarkLabelBorderVoxelTest_cuda_SOURCES = mriMarkLabelBorderVoxelTest.cpp
-@@ -45,7 +45,7 @@
+@@ -46,7 +46,7 @@
  # ---
  
  mriVoxInLabelPartialVolumeTest_SOURCES = mriVoxInLabelPartialVolumeTest.cpp
@@ -1611,20 +1446,20 @@ Subject: [PATCH 2/2] Shared libs
  endif
 --- a/freeview/Makefile.am
 +++ b/freeview/Makefile.am
-@@ -392,9 +392,9 @@
+@@ -421,9 +421,9 @@
  freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS) \
  	-framework Cocoa -framework IOKit
- freeview_LDADD		= $(QT_LIBS)	\
+ freeview_LDADD		= $(QT_LIBS) \
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 -	$(top_builddir)/vtkfsio/libvtkfsio.a \
 -	$(top_builddir)/vtkutils/libvtkutils.a \
-+	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
++	$(addprefix $(top_builddir)/, $(LIBS_MGH))  $(DLIBS_MGH) \
 +	$(top_builddir)/vtkfsio/libvtkfsio.la \
 +	$(top_builddir)/vtkutils/libvtkutils.la \
  	$(VTK_COCOA_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
  	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) \
-@@ -402,7 +402,7 @@
+@@ -431,7 +431,7 @@
  	$(VTK_SQLITE_LIB) \
  	-lvtkImaging -lvtkFiltering \
  	-lvtkCommon -lvtksys -lvtkGenericFiltering \
@@ -1633,7 +1468,7 @@ Subject: [PATCH 2/2] Shared libs
  	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  	-lvtkWidgets -lvtkHybrid \
  	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB)
-@@ -458,9 +458,9 @@
+@@ -487,9 +487,9 @@
  freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS)
  freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS)
  freeview_LDADD		= $(QT_LIBS)	\
@@ -1646,7 +1481,7 @@ Subject: [PATCH 2/2] Shared libs
  	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
  	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) \
-@@ -468,10 +468,10 @@
+@@ -497,10 +497,10 @@
  	$(VTK_SQLITE_LIB) \
  	-lvtkImaging -lvtkFiltering \
  	-lvtkCommon -lvtksys -lvtkGenericFiltering \
@@ -1661,7 +1496,7 @@ Subject: [PATCH 2/2] Shared libs
  # and if the OS is MACOSX have a different install-hook to create a bundle
 --- a/freeview/freeview.pro
 +++ b/freeview/freeview.pro
-@@ -269,7 +269,7 @@
+@@ -290,7 +290,7 @@
  LIBS += \
      -lvtkverdict -lvtkGraphics -lvtkmetaio -lvtkpng -lvtkzlib \
      -lvtksqlite -lvtkImaging -lvtkFiltering -lvtkCommon -lvtksys \
@@ -1670,7 +1505,7 @@ Subject: [PATCH 2/2] Shared libs
      -lvtkRendering -lvtkftgl -lvtkWidgets -lvtkHybrid -lvtkIO -lvtkDICOMParser
  
  QMAKE_CXXFLAGS += -Wno-deprecated -DUNICODE -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES \
-@@ -349,7 +349,7 @@
+@@ -370,7 +370,7 @@
  LIBS -= \
      -lvtkverdict -lvtkGraphics -lvtkmetaio -lvtkpng -lvtkzlib \
      -lvtksqlite -lvtkImaging -lvtkFiltering -lvtkCommon -lvtksys \
@@ -2438,7 +2273,7 @@ Subject: [PATCH 2/2] Shared libs
  
 --- a/mri_edit_segmentation_with_surfaces/Makefile.am
 +++ b/mri_edit_segmentation_with_surfaces/Makefile.am
-@@ -8,7 +8,7 @@
+@@ -7,7 +7,7 @@
  
  bin_PROGRAMS = mri_edit_segmentation_with_surfaces
  mri_edit_segmentation_with_surfaces_SOURCES=mri_edit_segmentation_with_surfaces.c
@@ -2446,7 +2281,7 @@ Subject: [PATCH 2/2] Shared libs
 +mri_edit_segmentation_with_surfaces_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_edit_segmentation_with_surfaces_LDFLAGS=$(OS_LDFLAGS)
  
- 
+ # Our release target. Include files to be excluded here. They will be
 --- a/mri_edit_wm_with_aseg/Makefile.am
 +++ b/mri_edit_wm_with_aseg/Makefile.am
 @@ -9,7 +9,7 @@
@@ -2460,10 +2295,10 @@ Subject: [PATCH 2/2] Shared libs
  foodir=$(prefix)/docs/xml
 --- a/mri_em_register/Makefile.am
 +++ b/mri_em_register/Makefile.am
-@@ -12,7 +12,7 @@
- 
- bin_PROGRAMS = mri_em_register
- mri_em_register_SOURCES=mri_em_register.c
+@@ -14,7 +14,7 @@
+ mri_em_register_SOURCES=mri_em_register.c\
+                         findtranslation.cpp findtranslation.h\
+                         emregisterutils.cpp emregisterutils.h
 -mri_em_register_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
 +mri_em_register_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_em_register_LDFLAGS=$(OS_LDFLAGS)
@@ -2526,10 +2361,10 @@ Subject: [PATCH 2/2] Shared libs
  
 --- a/mri_extract_largest_CC/Makefile.am
 +++ b/mri_extract_largest_CC/Makefile.am
-@@ -11,7 +11,7 @@
- 	myutil.h \
- 	subroutines.c \
- 	subroutines.h
+@@ -7,7 +7,7 @@
+ 
+ bin_PROGRAMS = mri_extract_largest_CC 
+ mri_extract_largest_CC_SOURCES=mri_extract_largest_CC.c 
 -mri_extract_largest_CC_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
 +mri_extract_largest_CC_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_extract_largest_CC_LDFLAGS=$(OS_LDFLAGS)
@@ -2557,10 +2392,10 @@ Subject: [PATCH 2/2] Shared libs
  # found and removed after 'make install' is run during the 'make
 --- a/mri_fill/Makefile.am
 +++ b/mri_fill/Makefile.am
-@@ -9,7 +9,7 @@
+@@ -8,7 +8,7 @@
+ bin_PROGRAMS = mri_fill
  
- mri_fill_SOURCES=mri_fill.c \
- 	subroutines.c myutil.c myutil.h subroutines.h
+ mri_fill_SOURCES=mri_fill.c 
 -mri_fill_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
 +mri_fill_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_fill_LDFLAGS=$(OS_LDFLAGS)
@@ -2910,7 +2745,7 @@ Subject: [PATCH 2/2] Shared libs
  # Our release target. Include files to be excluded here. They will be
 --- a/mri_make_bem_surfaces/Makefile.am
 +++ b/mri_make_bem_surfaces/Makefile.am
-@@ -9,7 +9,7 @@
+@@ -8,7 +8,7 @@
  bin_PROGRAMS = mri_make_bem_surfaces
  mri_make_bem_surfaces_SOURCES=mri_make_bem_surfaces.c ../utils/machine.c
  # cyclic dependency between rgb and utils on swapInt etc.
@@ -2918,7 +2753,7 @@ Subject: [PATCH 2/2] Shared libs
 +mri_make_bem_surfaces_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_make_bem_surfaces_LDFLAGS=$(OS_LDFLAGS)
  
- 
+ # Our release target. Include files to be excluded here. They will be
 --- a/mri_make_density_map/Makefile.am
 +++ b/mri_make_density_map/Makefile.am
 @@ -6,7 +6,7 @@
@@ -3082,7 +2917,7 @@ Subject: [PATCH 2/2] Shared libs
 +++ b/mri_ms_EM/Makefile.am
 @@ -8,7 +8,7 @@
  bin_PROGRAMS = mri_ms_EM
- mri_ms_EM_SOURCES=mri_ms_EM.c myutils.c myutil.h \
+ mri_ms_EM_SOURCES=mri_ms_EM.c  \
  	PoissonSolver.c PoissonSolver.h
 -mri_ms_EM_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
 +mri_ms_EM_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
@@ -3091,10 +2926,10 @@ Subject: [PATCH 2/2] Shared libs
  # Our release target. Include files to be excluded here. They will be
 --- a/mri_ms_EM_with_atlas/Makefile.am
 +++ b/mri_ms_EM_with_atlas/Makefile.am
-@@ -10,7 +10,7 @@
- 	myutils.c myutil.h \
- 	PoissonSolver.c PoissonSolver.h \
- 	subroutines.c subroutines.h
+@@ -8,7 +8,7 @@
+ bin_PROGRAMS = mri_ms_EM_with_atlas
+ mri_ms_EM_with_atlas_SOURCES=mri_ms_EM_with_atlas.c \
+ 	PoissonSolver.c PoissonSolver.h 
 -mri_ms_EM_with_atlas_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
 +mri_ms_EM_with_atlas_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_ms_EM_with_atlas_LDFLAGS=$(OS_LDFLAGS)
@@ -3378,7 +3213,7 @@ Subject: [PATCH 2/2] Shared libs
  lta_diff_LDFLAGS=$(OS_LDFLAGS) $(OTHERLDFLAGS)
  
  mri_create_tests_SOURCES=mri_create_tests.cpp Quaternion.cpp \
- 	MyMatrix.cpp MyMRI.cpp
+ 	MyMatrix.cpp MyMRI.cpp CostFunctions.cpp
 -mri_create_tests_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 +mri_create_tests_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
    $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
@@ -5061,24 +4896,20 @@ Subject: [PATCH 2/2] Shared libs
  foodir=$(prefix)/docs/xml
 --- a/nmovie/Makefile.am
 +++ b/nmovie/Makefile.am
-@@ -20,13 +20,13 @@
+@@ -20,11 +20,11 @@
  bin_PROGRAMS = nmovie
  nmovie_SOURCES=nmovie.c
  if ENABLE_XAWPLUS_APPS
 -nmovie_LDADD= $(addprefix $(top_builddir)/,$(LIBS_MGH)) \
-+nmovie_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
- 	$(LIBS_OPENGL) $(XAWPLUS_LIBS) -lXawPlus -lXpm -lXt -lXext \
--	$(top_builddir)/glut/libglut.a
-+	-lglut
++nmovie_LDADD= $(addprefix $(top_builddir)/,$(LIBS_MGH)) $(DLIBS_MGH) \
+ 	$(LIBS_OPENGL) $(XAWPLUS_LIBS) $(LIBS_XAWPLUS) -lXext \
+ 	$(top_builddir)/glut/libglut.a
  else
 -nmovie_LDADD= $(addprefix $(top_builddir)/,$(LIBS_MGH)) \
-+nmovie_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
++nmovie_LDADD= $(addprefix $(top_builddir)/,$(LIBS_MGH)) $(DLIBS_MGH) \
  	$(LIBS_OPENGL) -lXt -lXext -lXaw \
--	$(top_builddir)/glut/libglut.a
-+	-lglut
+ 	$(top_builddir)/glut/libglut.a
  endif
- nmovie_LDFLAGS=$(X_LIBS)
- else
 --- a/optseq2/Makefile.am
 +++ b/optseq2/Makefile.am
 @@ -6,7 +6,7 @@
@@ -5493,8 +5324,8 @@ Subject: [PATCH 2/2] Shared libs
  if HAVE_MAC_OSX
 --- a/trc/Makefile.am
 +++ b/trc/Makefile.am
-@@ -21,35 +21,35 @@
-                dmri_paths dmri_pathstats dmri_mergepaths
+@@ -21,41 +21,41 @@
+                dmri_train dmri_paths dmri_pathstats dmri_mergepaths
  
  dmri_spline_SOURCES=dmri_spline.cxx spline.cxx spline.h
 -dmri_spline_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
@@ -5509,6 +5340,15 @@ Subject: [PATCH 2/2] Shared libs
 +                  $(top_builddir)/fem_elastic/libfem_elastic.la \
 +                  $(top_builddir)/tetgen/libtetgen.la 
  dmri_trk2trk_LDFLAGS=$(OS_LDFLAGS)
+ 
+ dmri_vox2vox_SOURCES=dmri_vox2vox.cxx vial.cxx vial.h
+-dmri_vox2vox_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
+-                  $(top_builddir)/fem_elastic/libfem_elastic.a \
+-                  $(top_builddir)/tetgen/libtetgen.a 
++dmri_vox2vox_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
++                  $(top_builddir)/fem_elastic/libfem_elastic.la \
++                  $(top_builddir)/tetgen/libtetgen.la 
+ dmri_vox2vox_LDFLAGS=$(OS_LDFLAGS)
  
  dmri_train_SOURCES=dmri_train.cxx blood.cxx blood.h spline.cxx spline.h \
                     TrackIO.cxx TrackIO.h ByteSwap.h ErrorCode.h
@@ -5539,17 +5379,6 @@ Subject: [PATCH 2/2] Shared libs
  dmri_mergepaths_LDFLAGS=$(OS_LDFLAGS)
  
  # endif HAVE_ITK_LIBS, HAVE_PETSC_LIBS, HAVE_BOOST_LIBS
---- a/tridec/Makefile.am
-+++ b/tridec/Makefile.am
-@@ -7,7 +7,7 @@
- 
- bin_PROGRAMS = tridec
- tridec_SOURCES=tridec.c
--tridec_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+tridec_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
- tridec_LDFLAGS=$(OS_LDFLAGS)
- 
- # Our release target. Include files to be excluded here. They will be
 --- a/utils/Makefile.am
 +++ b/utils/Makefile.am
 @@ -60,8 +60,10 @@
@@ -5565,7 +5394,7 @@ Subject: [PATCH 2/2] Shared libs
  libutils_main_SOURCES=\
  	afni.c \
  	annotation.c \
-@@ -298,7 +300,7 @@
+@@ -300,7 +302,7 @@
  	$(srcdir)/$(NrrdIO_dir)/write.c \
  	$(srcdir)/$(NrrdIO_dir)/formatNRRD.c
  
@@ -5574,7 +5403,7 @@ Subject: [PATCH 2/2] Shared libs
  	$(libutils_main_SOURCES) \
  	$(libutils_cephes_SOURCES) \
  	$(libutils_nrrdio_SOURCES)
-@@ -342,7 +344,7 @@
+@@ -344,7 +346,7 @@
  		-DFS_CUDA -DCUDA_FORCE_SYNC -DCUDA_SHOW_TIMINGS \
                  --compiler-options -O3
  
@@ -5583,7 +5412,7 @@ Subject: [PATCH 2/2] Shared libs
  
  libutils_cuda_a_SOURCES=\
  	$(libutils_main_SOURCES) \
-@@ -421,11 +423,11 @@
+@@ -423,11 +425,11 @@
  
  fsPrintHelp_SOURCES=fsPrintHelp.c
  fsPrintHelp_CFLAGS=-DBUILD_MAIN
@@ -5771,7 +5600,7 @@ Subject: [PATCH 2/2] Shared libs
  	-ltiff $(VTK_TIFF_LIB) -ljpeg $(VTK_JPEG_LIB) $(VTK_SQLITE_LIB) \
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -273,7 +273,6 @@
+@@ -280,7 +280,6 @@
  	mris_surface_stats
  
  FSGDF=\
@@ -5779,7 +5608,7 @@ Subject: [PATCH 2/2] Shared libs
  	mri_gdfglm \
  	mri_glmfit \
  	mris_glm
-@@ -309,6 +308,7 @@
+@@ -317,6 +316,7 @@
  	log \
  	gpu_utils \
  	opencl_algorithms \
@@ -5936,3 +5765,16 @@ Subject: [PATCH 2/2] Shared libs
  
  # Our release target. Include files to be excluded here. They will be
  # found and removed after 'make install' is run during the 'make
+diff --git a/tridec/Makefile.am b/tridec/Makefile.am
+index 306bdc3..d57601b 100644
+--- a/tridec/Makefile.am
++++ b/tridec/Makefile.am
+@@ -7,7 +7,7 @@ AM_LDFLAGS=
+ 
+ bin_PROGRAMS = tridec
+ tridec_SOURCES=tridec.c
+-tridec_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
++tridec_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
+ tridec_LDFLAGS=$(OS_LDFLAGS)
+ 
+ # Our release target. Include files to be excluded here. They will be

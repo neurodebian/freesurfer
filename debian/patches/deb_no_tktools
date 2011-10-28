@@ -1,6 +1,6 @@
 --- a/configure.in
 +++ b/configure.in
-@@ -3539,10 +3539,6 @@
+@@ -3639,10 +3639,6 @@
             test_makevol/Makefile
             test_window_env/Makefile
             tetgen/Makefile
@@ -25,7 +25,7 @@
  	qdec
 --- a/scripts/Makefile.am
 +++ b/scripts/Makefile.am
-@@ -252,17 +252,6 @@
+@@ -257,17 +257,6 @@
  
  tktoolsdir = $(prefix)/tktools
  tktools_SCRIPTS= \

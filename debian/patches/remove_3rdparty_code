@@ -8,7 +8,7 @@
  	mris2rgb \
  	nmovie \
  	mris_show \
-@@ -306,10 +305,6 @@
+@@ -314,10 +313,6 @@
  	unix \
  	dicom \
  	hipsstubs \
@@ -21,7 +21,7 @@
  	gpu_utils \
 --- a/configure.in
 +++ b/configure.in
-@@ -3217,7 +3217,6 @@
+@@ -3317,7 +3317,6 @@
             dmri_tensoreig/Makefile
             dngtester/Makefile
             dummy/Makefile
@@ -29,7 +29,7 @@
             fem_elastic/Makefile
             fsfast/Makefile
             fsfast/bin/Makefile
-@@ -3225,7 +3224,6 @@
+@@ -3325,7 +3324,6 @@
             fsfast/toolbox/Makefile
             fsgdf/Makefile
             fslutils/Makefile
@@ -37,7 +37,7 @@
             gpu_utils/Makefile
             opencl_algorithms/Makefile
             hiam_make_surfaces/Makefile
-@@ -3247,7 +3245,6 @@
+@@ -3350,7 +3348,6 @@
             include/fs_vnl/Makefile
             itkio/Makefile
             itkutils/Makefile
@@ -45,7 +45,7 @@
             label_area/Makefile
             label_border/Makefile
             label2patch/Makefile
-@@ -3519,7 +3516,6 @@
+@@ -3629,7 +3626,6 @@
             test_makevol/Makefile
             test_window_env/Makefile
             tetgen/Makefile
@@ -53,7 +53,7 @@
             tkmedit/Makefile
             tkregister2/Makefile
             tkregister2/cmdl/Makefile
-@@ -3537,8 +3533,7 @@
+@@ -3647,8 +3643,7 @@
             qdec_glmfit/Makefile
             qdecproject/Makefile
             vtkfsio/Makefile
@@ -61,5 +61,5 @@
 -           xml2/Makefile])
 +           vtkutils/Makefile])
  
- ########################################################################
+ #           mri_edit_seg_with_ribbons/Makefile
  
