@@ -5778,3 +5778,102 @@ index 306bdc3..d57601b 100644
  tridec_LDFLAGS=$(OS_LDFLAGS)
  
  # Our release target. Include files to be excluded here. They will be
+diff --git a/histo_register/SimpleBaseLib/Makefile.am b/histo_register/SimpleBaseLib/Makefile.am
+index 7d041a6..e4b98cf 100644
+--- a/histo_register/SimpleBaseLib/Makefile.am
++++ b/histo_register/SimpleBaseLib/Makefile.am
+@@ -2,12 +2,12 @@
+ # Makefile.am
+ #
+ 
+-noinst_LIBRARIES=libsbl.a
++lib_LTLIBRARIES=libsbl.la
+ 
+-libsbl_a_CXXFLAGS=-I$(top_srcdir)/histo_register/SimpleBaseLib/include/ \
++libsbl_la_CXXFLAGS=-I$(top_srcdir)/histo_register/SimpleBaseLib/include/ \
+ 	$(OPENCV_CXXFLAGS) 
+-libsbl_a_CPPFLAGS=-DUSE_OPENCV -DUSE_ZLIB -DUSE_CDT
+-libsbl_a_SOURCES=\
++libsbl_la_CPPFLAGS=-DUSE_OPENCV -DUSE_ZLIB -DUSE_CDT
++libsbl_la_SOURCES=\
+ 	src/system/Timer.cc \
+ 	src/system/FileSystem.cc \
+ 	src/system/SerialPort.cc \
+diff --git a/mri_elastic_energy/Makefile.am b/mri_elastic_energy/Makefile.am
+index e8d712d..81e6e3f 100644
+--- a/mri_elastic_energy/Makefile.am
++++ b/mri_elastic_energy/Makefile.am
+@@ -33,7 +33,7 @@ AM_CXXFLAGS=-I$(top_srcdir)/include
+ 
+ bin_PROGRAMS = mri_elastic_energy
+ mri_elastic_energy_SOURCES=mri_elastic_energy.c
+-mri_elastic_energy_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
++mri_elastic_energy_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
+ mri_elastic_energy_LDFLAGS=$(OS_LDFLAGS)
+ 
+ # to --------------------------------------------------
+diff --git a/mri_fuse_intensity_images/Makefile.am b/mri_fuse_intensity_images/Makefile.am
+index 29f107b..c448da6 100644
+--- a/mri_fuse_intensity_images/Makefile.am
++++ b/mri_fuse_intensity_images/Makefile.am
+@@ -33,7 +33,7 @@ AM_CXXFLAGS=-I$(top_srcdir)/include
+ 
+ bin_PROGRAMS = mri_fuse_intensity_images
+ mri_fuse_intensity_images_SOURCES=mri_fuse_intensity_images.c
+-mri_fuse_intensity_images_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
++mri_fuse_intensity_images_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
+ mri_fuse_intensity_images_LDFLAGS=$(OS_LDFLAGS)
+ 
+ # to --------------------------------------------------
+diff --git a/mri_ibmc/Makefile.am b/mri_ibmc/Makefile.am
+index f70e441..3869eed 100644
+--- a/mri_ibmc/Makefile.am
++++ b/mri_ibmc/Makefile.am
+@@ -33,7 +33,7 @@ AM_CXXFLAGS=-I$(top_srcdir)/include
+ 
+ bin_PROGRAMS = mri_ibmc
+ mri_ibmc_SOURCES=mri_ibmc.c
+-mri_ibmc_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
++mri_ibmc_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
+ mri_ibmc_LDFLAGS=$(OS_LDFLAGS)
+ 
+ # to --------------------------------------------------
+diff --git a/mri_update_gca/Makefile.am b/mri_update_gca/Makefile.am
+index 225f7da..e39fb62 100644
+--- a/mri_update_gca/Makefile.am
++++ b/mri_update_gca/Makefile.am
+@@ -33,7 +33,7 @@ AM_CXXFLAGS=-I$(top_srcdir)/include
+ 
+ bin_PROGRAMS = mri_update_gca
+ mri_update_gca_SOURCES=mri_update_gca.c
+-mri_update_gca_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
++mri_update_gca_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
+ mri_update_gca_LDFLAGS=$(OS_LDFLAGS)
+ 
+ # to --------------------------------------------------
+diff --git a/mris_interpolate_warp/Makefile.am b/mris_interpolate_warp/Makefile.am
+index 92557f3..097a025 100644
+--- a/mris_interpolate_warp/Makefile.am
++++ b/mris_interpolate_warp/Makefile.am
+@@ -7,7 +7,7 @@ AM_CXXFLAGS=-I$(top_srcdir)/include
+ 
+ bin_PROGRAMS = mris_interpolate_warp
+ mris_interpolate_warp_SOURCES=mris_interpolate_warp.c
+-mris_interpolate_warp_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
++mris_interpolate_warp_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
+ mris_interpolate_warp_LDFLAGS=$(OS_LDFLAGS)
+ 
+ # Our release target. Include files to be excluded here. They will be
+diff --git a/mris_segment/Makefile.am b/mris_segment/Makefile.am
+index 278f261..15d3188 100644
+--- a/mris_segment/Makefile.am
++++ b/mris_segment/Makefile.am
+@@ -7,7 +7,7 @@ AM_CXXFLAGS=-I$(top_srcdir)/include
+ 
+ bin_PROGRAMS = mris_segment
+ mris_segment_SOURCES=mris_segment.c
+-mris_segment_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
++mris_segment_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
+ mris_segment_LDFLAGS=$(OS_LDFLAGS)
+ 
+ # Our release target. Include files to be excluded here. They will be

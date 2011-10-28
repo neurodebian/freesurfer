@@ -1,3 +1,5 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Disable 3rd-party code with its own Debian packages.
 --- a/Makefile.am
 +++ b/Makefile.am
 @@ -10,7 +10,6 @@

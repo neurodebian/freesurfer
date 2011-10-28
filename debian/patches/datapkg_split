@@ -1,3 +1,7 @@
+From: Michael Hanke <mih@debian.org>
+Subjects: Remove traces of data shiped with Freesurfer
+
+The data is shipped in a dedicated package.
 --- a/Makefile.am
 +++ b/Makefile.am
 @@ -334,7 +334,6 @@
