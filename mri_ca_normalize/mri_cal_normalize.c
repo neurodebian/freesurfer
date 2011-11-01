@@ -6,9 +6,9 @@
 /*
  * Original Author: Bruce Fischl
  * CVS Revision Info:
- *    $Author: fischl $
- *    $Date: 2011/02/19 03:11:58 $
- *    $Revision: 1.2 $
+ *    $Author: nicks $
+ *    $Date: 2011/08/31 00:32:41 $
+ *    $Revision: 1.2.2.1 $
  *
  * Copyright (C) 2002-2007,
  * The General Hospital Corporation (Boston, MA).
@@ -121,29 +121,6 @@ static int nregions = 3 ;  /* divide each struct into 3x3x3 regions */
 static char *ctrl_point_fname = NULL ;
 static char *read_ctrl_point_fname = NULL ;
 
-static double MRIrmsDiff(MRI *mri1, MRI *mri2)
-{
-  double  rms, val1, val2 ;
-  int     x, y, z, nvox ;
-
-  for (rms = 0.0, nvox = x = 0 ;  x < mri1->width ; x++)
-    for (y = 0 ; y < mri1->height ; y++)
-      for (z = 0 ; z < mri1->depth ; z++)
-      {
-        val1 = MRIgetVoxVal(mri1, x, y, z, 0) ;
-        val2 = MRIgetVoxVal(mri2, x, y, z, 0) ;
-        if (!FZERO(val1) || !FZERO(val2))
-        {
-          nvox++ ;
-          rms += (val1-val2)*(val1-val2) ;
-        }
-      }
-  if (nvox > 0)
-    rms = sqrt(rms/nvox) ;
-  return(rms) ;
-}
-
-
 #define MAX_TIMEPOINTS 2000
 static char *subjects[MAX_TIMEPOINTS] ;
 int
@@ -162,13 +139,13 @@ main(int argc, char *argv[])
 
   make_cmd_version_string
     (argc, argv,
-     "$Id: mri_cal_normalize.c,v 1.2 2011/02/19 03:11:58 fischl Exp $",
+     "$Id: mri_cal_normalize.c,v 1.2.2.1 2011/08/31 00:32:41 nicks Exp $",
      "$Name: stable5 $", cmdline);
 
   /* rkt: check for and handle version tag */
   nargs = handle_version_option
     (argc, argv,
-     "$Id: mri_cal_normalize.c,v 1.2 2011/02/19 03:11:58 fischl Exp $",
+     "$Id: mri_cal_normalize.c,v 1.2.2.1 2011/08/31 00:32:41 nicks Exp $",
      "$Name: stable5 $");
   if (nargs && argc - nargs == 1)
     exit (0);

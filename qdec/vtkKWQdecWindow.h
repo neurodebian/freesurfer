@@ -11,8 +11,8 @@
  * Original Author: Kevin Teich
  * CVS Revision Info:
  *    $Author: nicks $
- *    $Date: 2011/03/02 00:04:35 $
- *    $Revision: 1.25 $
+ *    $Date: 2011/09/12 19:06:41 $
+ *    $Revision: 1.25.2.1 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -670,6 +670,30 @@ class vtkKWQdecWindow : public vtkKWWindow
   bool mbSurfaceScalarsColorReverse;
   bool mbSurfaceScalarsColorShowPositive;
   bool mbSurfaceScalarsColorShowNegative;
+
+  double mnNegativeMaxRedValue;
+  double mnNegativeMaxGreenValue;
+  double mnNegativeMaxBlueValue;
+
+  double mnNegativeMidRedValue;
+  double mnNegativeMidGreenValue;
+  double mnNegativeMidBlueValue;
+
+  double mnNegativeMinRedValue;
+  double mnNegativeMinGreenValue;
+  double mnNegativeMinBlueValue;
+
+  double mnPositiveMinRedValue;
+  double mnPositiveMinGreenValue;
+  double mnPositiveMinBlueValue;
+
+  double mnPositiveMidRedValue;
+  double mnPositiveMidGreenValue;
+  double mnPositiveMidBlueValue;
+
+  double mnPositiveMaxRedValue;
+  double mnPositiveMaxGreenValue;
+  double mnPositiveMaxBlueValue;
 
   // cluster stats info
   SCS *mClusterStats;

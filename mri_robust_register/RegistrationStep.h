@@ -7,9 +7,9 @@
 /*
  * Original Author: Martin Reuter
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/02 00:04:24 $
- *    $Revision: 1.11 $
+ *    $Author: mreuter $
+ *    $Date: 2011/08/23 18:53:41 $
+ *    $Revision: 1.11.2.1 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -242,11 +242,13 @@ std::pair < vnl_matrix_fixed <double,4,4 >, double >  RegistrationStep<T>::compu
           val = MRILvox(mri_indexing,x,y,z);
 					//std::cout << " val: " << val << endl;
           if (val == -10) MRIFvox(mri_weights, x, y, z) = -0.5; // init value (border)
-          else if (val == -1) MRIFvox(mri_weights, x, y, z) = -1; // zero element (skipped)
+          else if (val == -1) MRIFvox(mri_weights, x, y, z) = -0.75; // zero element (skipped)
+          else if (val == -5) MRIFvox(mri_weights, x, y, z) = -1; // outside element (skipped)
           else
           {
             //std::cout << "val: " << val << "  xyz: " << x << " " << y << " " << z << " " << std::flush;
             assert(val < (int)w.size());
+            assert(val >=0);
 						double wtemp = w[val] * w[val];
             MRIFvox(mri_weights, x, y, z) = wtemp; 
 						// compute distance to center:
@@ -416,6 +418,10 @@ void RegistrationStep<T>::constructAb(MRI *mriS, MRI *mriT,vnl_matrix < T >& A,v
 	MRI * SmT = MRIalloc(mriS->width,mriS->height,mriS->depth,MRI_FLOAT);
 	SmT = MRIsubtract(mriS,mriT,SmT);
 	SmT = MyMRI::getBlur(SmT,SmT);
+  
+//  MRI *Sbl = MRIalloc(mriS->width,mriS->height,mriS->depth,MRI_FLOAT);
+//  Sbl = MRIcopy(mriS,Sbl);
+//  Sbl = MyMRI::getBlur(Sbl,Sbl);
 #endif
   if (verbose > 1) std::cout << " done!" << std::endl;
   //MRIwrite(fx1,"fx.mgz");
@@ -464,6 +470,8 @@ void RegistrationStep<T>::constructAb(MRI *mriS, MRI *mriT,vnl_matrix < T >& A,v
 	int fxw = fx->width ;
 	int fxh = fx->height ;
 	int fxstart = 0;
+  int xp1,yp1,zp1;
+  int ocount=0,ncount=0,zcount = 0;
   for (z = fxstart ; z < fxd ; z++)
     for (x = fxstart ; x < fxw ; x++)
       for (y = fxstart ; y < fxh ; y++)
@@ -471,16 +479,39 @@ void RegistrationStep<T>::constructAb(MRI *mriS, MRI *mriT,vnl_matrix < T >& A,v
         if (isnan(MRIFvox(fx, x, y, z)) ||isnan(MRIFvox(fy, x, y, z)) || isnan(MRIFvox(fz, x, y, z)) || isnan(MRIFvox(ft, x, y, z)) )
         {
           //if (verbose > 0) std::cout << " found a nan value!!!" << std::endl;
+          ncount++;
           continue;
         }
         if (fabs(MRIFvox(fx, x, y, z)) < eps  && fabs(MRIFvox(fy, x, y, z)) < eps &&  fabs(MRIFvox(fz, x, y, z)) < eps )
         {
           //if (verbose > 0) std::cout << " found a zero element !!!" << std::endl;
+          zcount++;
+          continue;
+        }
+        if (dosubsample)
+        {
+          xp1 = 2*x;
+          yp1 = 2*y;
+          zp1 = 2*z;
+        }
+        else 
+        {
+          xp1 = x;
+          yp1 = y;
+          zp1 = z; 
+        }
+        assert(xp1 < mriS->width);
+        assert(yp1 < mriS->height);
+        assert(zp1 < mriS->depth);
+        if ( MRIgetVoxVal(mriS,xp1,yp1,zp1,0) == mriS->outside_val || MRIgetVoxVal(mriT,xp1,yp1,zp1,0) == mriT->outside_val )
+        {
+          //std::cout << "voxel outside (" << xp1 << " " << yp1 << " " << zp1 << " )  mriS: " <<MRIFvox(mriS,xp1,yp1,zp1) << "  mriT: " << MRIFvox(mriT,xp1,yp1,zp1)  << "  ovalS: " << mriS->outside_val << "  ovalT: " << mriT->outside_val<< std::endl;
+          ocount++;
           continue;
         }
         counti++; // start with 1
       }	
-  if (verbose > 1) std::cout << "  need only: " << counti << std::endl;
+  if (verbose > 1 && n > counti) std::cout << "  need only: " << counti << std::endl;
 	if (counti == 0)
 	{
 	   std::cerr << std::endl;
@@ -494,7 +525,8 @@ void RegistrationStep<T>::constructAb(MRI *mriS, MRI *mriT,vnl_matrix < T >& A,v
 		 std::cerr << std::endl;
 		 exit(1);
 	}
-   
+  
+  if (verbose >1) cout << "     -- nans: " << ncount << " zeros: " <<zcount << " outside: " << ocount << endl;
 
   // allocate the space for A and B
   int pnum = 12;
@@ -530,9 +562,14 @@ void RegistrationStep<T>::constructAb(MRI *mriS, MRI *mriT,vnl_matrix < T >& A,v
 	  std::cout << "          Maybe use --subsample <int> " << std::endl;
 	}
 
+//        char ch;
+//        std::cout << "Press a key to continue iterations: ";
+//        std::cin  >> ch;
+
   // Loop and construct A and b
-  int xp1,yp1,zp1;
+  //int xp1,yp1,zp1;
 	long int count = 0;
+  ocount = 0;
   for (z = fxstart ; z < fxd ; z++)
     for (x = fxstart ; x < fxw ; x++)
       for (y = fxstart ; y < fxh ; y++)
@@ -573,7 +610,15 @@ void RegistrationStep<T>::constructAb(MRI *mriS, MRI *mriT,vnl_matrix < T >& A,v
           continue;
         }
 
-       // count++; // start with 1
+        if ( MRIgetVoxVal(mriS,xp1,yp1,zp1,0) == mriS->outside_val || MRIgetVoxVal(mriT,xp1,yp1,zp1,0) == mriT->outside_val )
+        {
+          //std::cout << "voxel outside (" << xp1 << " " << yp1 << " " << zp1 << " )  mriS: " <<MRIFvox(mriS,xp1,yp1,zp1) << "  mriT: " << MRIFvox(mriT,xp1,yp1,zp1)  << "  ovalS: " << mriS->outside_val << "  ovalT: " << mriT->outside_val<< std::endl;
+          MRILvox(mri_indexing, xp1, yp1, zp1) = -5;
+          ocount++;
+          //cout << " " << ocount << flush;
+          continue;
+        }
+
 
         if (xp1 >= mriS->width || yp1 >= mriS->height || zp1 >= mriS->depth)
         {
@@ -581,6 +626,8 @@ void RegistrationStep<T>::constructAb(MRI *mriS, MRI *mriT,vnl_matrix < T >& A,v
           cerr << " outside !!! " << xp1 << " " << yp1 << " " << zp1 << std::endl;
           assert(1==2);
         }
+
+	      assert(counti > count);
 
         MRILvox(mri_indexing, xp1, yp1, zp1) = count;
 
@@ -622,23 +669,25 @@ void RegistrationStep<T>::constructAb(MRI *mriS, MRI *mriT,vnl_matrix < T >& A,v
 					dof = 12;
         }
 
-////          if (iscale) *MATRIX_RELT(A, count, 7) = MRIFvox(Sbl, x, y, z);
- //         if (iscale) *MATRIX_RELT(A, count, dof+1) = MRIFvox(Tbl, x, y, z);
- 
- // !! ISCALECHANGE
-        // if (iscale) *MATRIX_RELT(A, count, dof+1) =  (0.5 / iscalefinal) * ( MRIFvox(Tbl, x, y, z) + MRIFvox(Sbl,x,y,z));
+     // !! ISCALECHANGE
+        //if (iscale) A[count][dof] =  (0.5 / iscalefinal) * ( MRIFvox(Tbl, x, y, z) + MRIFvox(Sbl,x,y,z));
+        //if (iscale) A[count][dof] =  2.0* MRIFvox(ft, x, y, z) / sqrt(iscalefinal);
+        //if (iscale) A[count][dof] = MRIFvox(ft, x, y, z) / iscalefinal;
+        //if (iscale) A[count][dof] = MRIFvox(Sbl,x,y,z); // not symmetric here, but much more stable, we still map both to geometric intensity mean
+        //if (iscale) A[count][dof] = 2.0 * MRIFvox(ft,x,y,z); 
 
-        // if (iscale) A[count][dof] =  (0.5 / iscalefinal) * ( MRIFvox(Tbl, x, y, z) + MRIFvox(Sbl,x,y,z));
-         if (iscale) A[count][dof] =  MRIFvox(ft, x, y, z) / iscalefinal;
-//         if (iscale) A[count][dof]  = MRIFvox(Sbl,x,y,z);
-				 
-//         *MATRIX_RELT(b, count, 1) = - MRIFvox(ft, x, y, z); // ft = T-S => -ft = S-T
-//         b[count] = - MRIFvox(ft, x, y, z); // ft was = T-S => -ft = S-T
-         b[count] =  MRIFvox(SmT, x, y, z); // S-T
+        // intensity model: R(s,IS,IT) = exp(-0.5 s) IT - exp(0.5 s) IS
+        //                  R'  = -0.5 ( exp(-0.5 s) IT + exp(0.5 s) IS)
+        //   ft = 0.5 ( exp(-0.5s) IT + exp(0.5s) IS)  (average of intensity adjusted images)
+        if (iscale) A[count][dof]  = MRIFvox(ft,x,y,z); 
+        				 
+        b[count] =  MRIFvox(SmT, x, y, z); // S-T
 
         count++; // start with 0 above
 
       }
+  //cout << " ocount : " << ocount << endl;    
+  //cout << " counti: " << counti << " count : " << count<< endl;    
 	assert(counti == count);
       
   // free remaining MRI    
@@ -707,6 +756,7 @@ pair < vnl_matrix_fixed <double,4,4 >, double > RegistrationStep<T>::convertP2Md
    // //ret.second = 1.0-*MATRIX_RELT(p, p->rows, 1);		
 //    ret.second = 1.0/(1.0+*MATRIX_RELT(p, p->rows, 1));
     ret.second =  (double) p[p.size()-1];
+//    ret.second =  (double) p[p.size()-1] * (double) p[p.size()-1];
 		
     pt.set_size(p.size()-1);
     for (unsigned int rr = 0; rr< pt.size(); rr++)
