@@ -1,5 +1,2 @@
-debian/tmp/usr/lib/freesurfer-FSMAJORVERSION
-
-debian/freesurfer.sh etc/freesurfer/FSMAJORVERSION/
-debian/desktop/*.desktop usr/share/applications/
-debian/freesurfer_gui_app_wrapper usr/lib/freesurfer-FSMAJORVERSION/
+debian/tmp/usr/lib/freesurfer-FSMAJORVERSION/bin usr/lib/freesurfer-FSMAJORVERSION/
+debian/tmp/usr/lib/freesurfer-FSMAJORVERSION/lib/*.so* usr/lib/freesurfer-FSMAJORVERSION/lib/
