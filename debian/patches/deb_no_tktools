@@ -4,7 +4,7 @@ Subjects: Disable all Tk-related code.
 This stuff is ancient, probably useless and covered by a very non-free license.
 --- a/configure.in
 +++ b/configure.in
-@@ -3639,10 +3639,6 @@
+@@ -3603,10 +3603,6 @@
             test_makevol/Makefile
             test_window_env/Makefile
             tetgen/Makefile
@@ -29,7 +29,7 @@ This stuff is ancient, probably useless and covered by a very non-free license.
  	qdec
 --- a/scripts/Makefile.am
 +++ b/scripts/Makefile.am
-@@ -257,17 +257,6 @@
+@@ -255,17 +255,6 @@
  
  tktoolsdir = $(prefix)/tktools
  tktools_SCRIPTS= \

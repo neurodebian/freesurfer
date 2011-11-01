@@ -4,7 +4,7 @@ Subjects: Remove traces of data shiped with Freesurfer
 The data is shipped in a dedicated package.
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -334,7 +334,6 @@
+@@ -325,7 +325,6 @@
  	qdecproject \
  	svm-lib \
  	scripts \
@@ -14,14 +14,13 @@ The data is shipped in a dedicated package.
  	$(MRISSUBDIRS) \
 --- a/configure.in
 +++ b/configure.in
-@@ -3313,21 +3313,6 @@
+@@ -3287,20 +3287,6 @@
             cudatest/volumecopy/Makefile
             cudatest/mrilabeltest/Makefile
             dicom/Makefile
 -           distribution/Makefile
 -           distribution/average/Makefile
 -           distribution/average/surf/Makefile
--           distribution/average/Yeo_JNeurophysiol11_MNI152/Makefile
 -           distribution/docs/Makefile
 -           distribution/diffusion/Makefile
 -           distribution/diffusion/mgh-dti-seqpack/Makefile

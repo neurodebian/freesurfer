@@ -10,7 +10,7 @@ Subject: Disable 3rd-party code with its own Debian packages.
  	mris2rgb \
  	nmovie \
  	mris_show \
-@@ -314,10 +313,6 @@
+@@ -305,10 +304,6 @@
  	unix \
  	dicom \
  	hipsstubs \
@@ -23,7 +23,7 @@ Subject: Disable 3rd-party code with its own Debian packages.
  	gpu_utils \
 --- a/configure.in
 +++ b/configure.in
-@@ -3317,7 +3317,6 @@
+@@ -3291,7 +3291,6 @@
             dmri_tensoreig/Makefile
             dngtester/Makefile
             dummy/Makefile
@@ -31,7 +31,7 @@ Subject: Disable 3rd-party code with its own Debian packages.
             fem_elastic/Makefile
             fsfast/Makefile
             fsfast/bin/Makefile
-@@ -3325,7 +3324,6 @@
+@@ -3299,7 +3298,6 @@
             fsfast/toolbox/Makefile
             fsgdf/Makefile
             fslutils/Makefile
@@ -39,7 +39,7 @@ Subject: Disable 3rd-party code with its own Debian packages.
             gpu_utils/Makefile
             opencl_algorithms/Makefile
             hiam_make_surfaces/Makefile
-@@ -3350,7 +3348,6 @@
+@@ -3321,7 +3319,6 @@
             include/fs_vnl/Makefile
             itkio/Makefile
             itkutils/Makefile
@@ -47,7 +47,7 @@ Subject: Disable 3rd-party code with its own Debian packages.
             label_area/Makefile
             label_border/Makefile
             label2patch/Makefile
-@@ -3629,7 +3626,6 @@
+@@ -3593,7 +3590,6 @@
             test_makevol/Makefile
             test_window_env/Makefile
             tetgen/Makefile
@@ -55,7 +55,7 @@ Subject: Disable 3rd-party code with its own Debian packages.
             tkmedit/Makefile
             tkregister2/Makefile
             tkregister2/cmdl/Makefile
-@@ -3647,8 +3643,7 @@
+@@ -3611,8 +3607,7 @@
             qdec_glmfit/Makefile
             qdecproject/Makefile
             vtkfsio/Makefile
@@ -63,5 +63,5 @@ Subject: Disable 3rd-party code with its own Debian packages.
 -           xml2/Makefile])
 +           vtkutils/Makefile])
  
- #           mri_edit_seg_with_ribbons/Makefile
+ ########################################################################
  

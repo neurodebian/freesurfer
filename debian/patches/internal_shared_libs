@@ -316,7 +316,7 @@ Subject: [PATCH 2/2] Shared libs
  				 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
  				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlCalculateAtlasMeshCollectionTotalCost_LDFLAGS= $(OS_LDFLAGS)
-@@ -405,181 +402,181 @@
+@@ -405,180 +402,180 @@
  
  kvlColorCodeProbabilityImages_SOURCES=kvlColorCodeProbabilityImages.cxx
  kvlColorCodeProbabilityImages_LDADD=$(LIBS_ITK) \
@@ -547,7 +547,6 @@ Subject: [PATCH 2/2] Shared libs
  kvlApplyTransform_LDFLAGS= $(OS_LDFLAGS)
  
  if HAVE_FLTK_LIBS
- if HAVE_VTK_LIBS
 -noinst_LIBRARIES+=libkvlAtlas3DGUI.a
 -libkvlAtlas3DGUI_a_SOURCES = vtkFlRenderWindowInteractor.cxx \
 +lib_LTLIBRARIES+=libkvlAtlas3DGUI.la
@@ -558,7 +557,7 @@ Subject: [PATCH 2/2] Shared libs
  			#-lITKCommon -lITKAlgorithms -lITKIO -lITKznz -lITKBasicFilters \
  			$(VTK_LIBS) \
  			#-lvtkCommon -lvtkImaging -lvtkIO -lvtkRendering \
-@@ -596,10 +593,10 @@
+@@ -595,10 +592,10 @@
  						 kvlEstimateAtlasParameters.cxx \
  						 kvlAtlasParameterEstimationConsole.cxx
  kvlEstimateAtlasParameters_LDADD=$(LIBS_ITK) \
@@ -573,7 +572,7 @@ Subject: [PATCH 2/2] Shared libs
  				 -lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
  				$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  				$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
-@@ -608,7 +605,7 @@
+@@ -607,7 +604,7 @@
  				$(VTK_SQLITE_LIB) \
  				-lvtkImaging -lvtkFiltering \
  				-lvtkCommon -lvtksys \
@@ -582,7 +581,7 @@ Subject: [PATCH 2/2] Shared libs
  				-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  				-lvtkWidgets -lvtkHybrid \
  				-lvtkIO -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
-@@ -626,10 +623,10 @@
+@@ -625,10 +622,10 @@
  						kvlImageThresholdingConsole.h
  
  kvlThresholdImage_LDADD=$(LIBS_ITK) \
@@ -597,7 +596,7 @@ Subject: [PATCH 2/2] Shared libs
  				 -lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
  				$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  				$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
-@@ -638,7 +635,7 @@
+@@ -637,7 +634,7 @@
  				$(VTK_SQLITE_LIB) \
  				-lvtkImaging -lvtkFiltering \
  				-lvtkCommon -lvtksys \
@@ -606,7 +605,7 @@ Subject: [PATCH 2/2] Shared libs
  				-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  				-lvtkWidgets -lvtkHybrid \
  				-lvtkIO -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
-@@ -656,10 +653,10 @@
+@@ -655,10 +652,10 @@
  						kvlImageViewingConsole.h
  
  kvlViewImage_LDADD=$(LIBS_ITK) \
@@ -621,7 +620,7 @@ Subject: [PATCH 2/2] Shared libs
  				 -lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
  				$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  				$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
-@@ -668,7 +665,7 @@
+@@ -667,7 +664,7 @@
  				$(VTK_SQLITE_LIB) \
  				-lvtkImaging -lvtkFiltering \
  				-lvtkCommon -lvtksys \
@@ -725,7 +724,7 @@ Subject: [PATCH 2/2] Shared libs
  AC_SUBST(LIB_LAPACK_A)
  
  
-@@ -1930,21 +1932,21 @@
+@@ -1905,21 +1907,21 @@
  fi
  
  # use static lib if found
@@ -762,7 +761,7 @@ Subject: [PATCH 2/2] Shared libs
  
  AM_CONDITIONAL(USE_LOCAL_JPEG, test "$ac_jpeg_libraries" = "NO")
  
-@@ -2133,7 +2135,7 @@
+@@ -2108,7 +2110,7 @@
  
  AC_ARG_WITH(vtk-include,
    [  --with-vtk-include=DIR      root of VTK include directory.],
@@ -771,7 +770,7 @@ Subject: [PATCH 2/2] Shared libs
       ac_vtk_includes="$vtk_i"
    ])
  
-@@ -2575,34 +2577,37 @@
+@@ -2550,34 +2552,37 @@
  
    # these are the minimum ITK libs necessary to support Nrrd IO,
    # notice they are all static (avoiding LD_LIBRARY_PATH usage)
@@ -833,7 +832,7 @@ Subject: [PATCH 2/2] Shared libs
    LIBS_ITK="$LIBS_ITK $LIB_UUID_A"
  else
    AC_MSG_RESULT([Not building ITK apps.])
-@@ -2643,7 +2648,7 @@
+@@ -2618,7 +2623,7 @@
  
  if test ! "$ac_gl_includes" = "NO"; then
    AC_MSG_RESULT(gl directory is $withval)
@@ -842,7 +841,7 @@ Subject: [PATCH 2/2] Shared libs
  else
    AC_MSG_RESULT(OpenGL directory is not supplied)
  fi
-@@ -2742,14 +2747,13 @@
+@@ -2717,14 +2722,13 @@
  
  # stupid circular dependency on iopen swapInt etc.
  LIBS_MGH="\
@@ -864,7 +863,7 @@ Subject: [PATCH 2/2] Shared libs
  
  # use local libjpeg if --with-jpeg-dir not used:
  if test "$ac_jpeg_libraries" = "NO"; then
-@@ -2771,6 +2775,7 @@
+@@ -2746,6 +2750,7 @@
  LIBS_CUDA_MGH=`echo ${LIBS_MGH} | sed 's/libutils/libutils_cuda/g'`
  
  AC_SUBST(LIBS_MGH)
@@ -872,7 +871,7 @@ Subject: [PATCH 2/2] Shared libs
  AC_SUBST(LIBS_CUDA_MGH)
  AC_SUBST(LIB_JPEG)
  AC_SUBST(LIB_TIFF)
-@@ -3120,6 +3125,9 @@
+@@ -3095,6 +3100,9 @@
  
    ##################### Tix
    LIBS="$X_LIBS $LIB_TK $LIB_TCL $LIBS"
@@ -882,7 +881,7 @@ Subject: [PATCH 2/2] Shared libs
    # check Tix8.4.2 first, as that is known to work best with tcl/tk 8.5
    AC_CHECK_LIB([Tix8.4.2], [Tix_Init],
    [LIB_TIX=-lTix8.4.2],
-@@ -3151,6 +3159,7 @@
+@@ -3126,6 +3134,7 @@
          ])
        ])
      ])
@@ -1446,20 +1445,20 @@ Subject: [PATCH 2/2] Shared libs
  endif
 --- a/freeview/Makefile.am
 +++ b/freeview/Makefile.am
-@@ -421,9 +421,9 @@
+@@ -392,9 +392,9 @@
  freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS) \
  	-framework Cocoa -framework IOKit
- freeview_LDADD		= $(QT_LIBS) \
+ freeview_LDADD		= $(QT_LIBS)	\
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 -	$(top_builddir)/vtkfsio/libvtkfsio.a \
 -	$(top_builddir)/vtkutils/libvtkutils.a \
-+	$(addprefix $(top_builddir)/, $(LIBS_MGH))  $(DLIBS_MGH) \
++	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +	$(top_builddir)/vtkfsio/libvtkfsio.la \
 +	$(top_builddir)/vtkutils/libvtkutils.la \
  	$(VTK_COCOA_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
  	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) \
-@@ -431,7 +431,7 @@
+@@ -402,7 +402,7 @@
  	$(VTK_SQLITE_LIB) \
  	-lvtkImaging -lvtkFiltering \
  	-lvtkCommon -lvtksys -lvtkGenericFiltering \
@@ -1468,7 +1467,7 @@ Subject: [PATCH 2/2] Shared libs
  	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  	-lvtkWidgets -lvtkHybrid \
  	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB)
-@@ -487,9 +487,9 @@
+@@ -458,9 +458,9 @@
  freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS)
  freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS)
  freeview_LDADD		= $(QT_LIBS)	\
@@ -1481,7 +1480,7 @@ Subject: [PATCH 2/2] Shared libs
  	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
  	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) \
-@@ -497,10 +497,10 @@
+@@ -468,10 +468,10 @@
  	$(VTK_SQLITE_LIB) \
  	-lvtkImaging -lvtkFiltering \
  	-lvtkCommon -lvtksys -lvtkGenericFiltering \
@@ -1496,7 +1495,7 @@ Subject: [PATCH 2/2] Shared libs
  # and if the OS is MACOSX have a different install-hook to create a bundle
 --- a/freeview/freeview.pro
 +++ b/freeview/freeview.pro
-@@ -290,7 +290,7 @@
+@@ -269,7 +269,7 @@
  LIBS += \
      -lvtkverdict -lvtkGraphics -lvtkmetaio -lvtkpng -lvtkzlib \
      -lvtksqlite -lvtkImaging -lvtkFiltering -lvtkCommon -lvtksys \
@@ -1505,7 +1504,7 @@ Subject: [PATCH 2/2] Shared libs
      -lvtkRendering -lvtkftgl -lvtkWidgets -lvtkHybrid -lvtkIO -lvtkDICOMParser
  
  QMAKE_CXXFLAGS += -Wno-deprecated -DUNICODE -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES \
-@@ -370,7 +370,7 @@
+@@ -349,7 +349,7 @@
  LIBS -= \
      -lvtkverdict -lvtkGraphics -lvtkmetaio -lvtkpng -lvtkzlib \
      -lvtksqlite -lvtkImaging -lvtkFiltering -lvtkCommon -lvtksys \
@@ -2273,7 +2272,7 @@ Subject: [PATCH 2/2] Shared libs
  
 --- a/mri_edit_segmentation_with_surfaces/Makefile.am
 +++ b/mri_edit_segmentation_with_surfaces/Makefile.am
-@@ -7,7 +7,7 @@
+@@ -8,7 +8,7 @@
  
  bin_PROGRAMS = mri_edit_segmentation_with_surfaces
  mri_edit_segmentation_with_surfaces_SOURCES=mri_edit_segmentation_with_surfaces.c
@@ -2281,7 +2280,7 @@ Subject: [PATCH 2/2] Shared libs
 +mri_edit_segmentation_with_surfaces_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_edit_segmentation_with_surfaces_LDFLAGS=$(OS_LDFLAGS)
  
- # Our release target. Include files to be excluded here. They will be
+ 
 --- a/mri_edit_wm_with_aseg/Makefile.am
 +++ b/mri_edit_wm_with_aseg/Makefile.am
 @@ -9,7 +9,7 @@
@@ -2295,10 +2294,10 @@ Subject: [PATCH 2/2] Shared libs
  foodir=$(prefix)/docs/xml
 --- a/mri_em_register/Makefile.am
 +++ b/mri_em_register/Makefile.am
-@@ -14,7 +14,7 @@
- mri_em_register_SOURCES=mri_em_register.c\
-                         findtranslation.cpp findtranslation.h\
-                         emregisterutils.cpp emregisterutils.h
+@@ -12,7 +12,7 @@
+ 
+ bin_PROGRAMS = mri_em_register
+ mri_em_register_SOURCES=mri_em_register.c
 -mri_em_register_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
 +mri_em_register_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_em_register_LDFLAGS=$(OS_LDFLAGS)
@@ -2361,10 +2360,10 @@ Subject: [PATCH 2/2] Shared libs
  
 --- a/mri_extract_largest_CC/Makefile.am
 +++ b/mri_extract_largest_CC/Makefile.am
-@@ -7,7 +7,7 @@
- 
- bin_PROGRAMS = mri_extract_largest_CC 
- mri_extract_largest_CC_SOURCES=mri_extract_largest_CC.c 
+@@ -11,7 +11,7 @@
+ 	myutil.h \
+ 	subroutines.c \
+ 	subroutines.h
 -mri_extract_largest_CC_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
 +mri_extract_largest_CC_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_extract_largest_CC_LDFLAGS=$(OS_LDFLAGS)
@@ -2392,10 +2391,10 @@ Subject: [PATCH 2/2] Shared libs
  # found and removed after 'make install' is run during the 'make
 --- a/mri_fill/Makefile.am
 +++ b/mri_fill/Makefile.am
-@@ -8,7 +8,7 @@
- bin_PROGRAMS = mri_fill
+@@ -9,7 +9,7 @@
  
- mri_fill_SOURCES=mri_fill.c 
+ mri_fill_SOURCES=mri_fill.c \
+ 	subroutines.c myutil.c myutil.h subroutines.h
 -mri_fill_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
 +mri_fill_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_fill_LDFLAGS=$(OS_LDFLAGS)
@@ -2745,7 +2744,7 @@ Subject: [PATCH 2/2] Shared libs
  # Our release target. Include files to be excluded here. They will be
 --- a/mri_make_bem_surfaces/Makefile.am
 +++ b/mri_make_bem_surfaces/Makefile.am
-@@ -8,7 +8,7 @@
+@@ -9,7 +9,7 @@
  bin_PROGRAMS = mri_make_bem_surfaces
  mri_make_bem_surfaces_SOURCES=mri_make_bem_surfaces.c ../utils/machine.c
  # cyclic dependency between rgb and utils on swapInt etc.
@@ -2753,7 +2752,7 @@ Subject: [PATCH 2/2] Shared libs
 +mri_make_bem_surfaces_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_make_bem_surfaces_LDFLAGS=$(OS_LDFLAGS)
  
- # Our release target. Include files to be excluded here. They will be
+ 
 --- a/mri_make_density_map/Makefile.am
 +++ b/mri_make_density_map/Makefile.am
 @@ -6,7 +6,7 @@
@@ -2917,7 +2916,7 @@ Subject: [PATCH 2/2] Shared libs
 +++ b/mri_ms_EM/Makefile.am
 @@ -8,7 +8,7 @@
  bin_PROGRAMS = mri_ms_EM
- mri_ms_EM_SOURCES=mri_ms_EM.c  \
+ mri_ms_EM_SOURCES=mri_ms_EM.c myutils.c myutil.h \
  	PoissonSolver.c PoissonSolver.h
 -mri_ms_EM_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
 +mri_ms_EM_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
@@ -2926,10 +2925,10 @@ Subject: [PATCH 2/2] Shared libs
  # Our release target. Include files to be excluded here. They will be
 --- a/mri_ms_EM_with_atlas/Makefile.am
 +++ b/mri_ms_EM_with_atlas/Makefile.am
-@@ -8,7 +8,7 @@
- bin_PROGRAMS = mri_ms_EM_with_atlas
- mri_ms_EM_with_atlas_SOURCES=mri_ms_EM_with_atlas.c \
- 	PoissonSolver.c PoissonSolver.h 
+@@ -10,7 +10,7 @@
+ 	myutils.c myutil.h \
+ 	PoissonSolver.c PoissonSolver.h \
+ 	subroutines.c subroutines.h
 -mri_ms_EM_with_atlas_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
 +mri_ms_EM_with_atlas_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_ms_EM_with_atlas_LDFLAGS=$(OS_LDFLAGS)
@@ -3213,7 +3212,7 @@ Subject: [PATCH 2/2] Shared libs
  lta_diff_LDFLAGS=$(OS_LDFLAGS) $(OTHERLDFLAGS)
  
  mri_create_tests_SOURCES=mri_create_tests.cpp Quaternion.cpp \
- 	MyMatrix.cpp MyMRI.cpp CostFunctions.cpp
+ 	MyMatrix.cpp MyMRI.cpp
 -mri_create_tests_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 +mri_create_tests_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
    $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
@@ -5324,8 +5323,8 @@ Subject: [PATCH 2/2] Shared libs
  if HAVE_MAC_OSX
 --- a/trc/Makefile.am
 +++ b/trc/Makefile.am
-@@ -21,41 +21,41 @@
-                dmri_train dmri_paths dmri_pathstats dmri_mergepaths
+@@ -21,35 +21,35 @@
+                dmri_paths dmri_pathstats dmri_mergepaths
  
  dmri_spline_SOURCES=dmri_spline.cxx spline.cxx spline.h
 -dmri_spline_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
@@ -5340,15 +5339,6 @@ Subject: [PATCH 2/2] Shared libs
 +                  $(top_builddir)/fem_elastic/libfem_elastic.la \
 +                  $(top_builddir)/tetgen/libtetgen.la 
  dmri_trk2trk_LDFLAGS=$(OS_LDFLAGS)
- 
- dmri_vox2vox_SOURCES=dmri_vox2vox.cxx vial.cxx vial.h
--dmri_vox2vox_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
--                  $(top_builddir)/fem_elastic/libfem_elastic.a \
--                  $(top_builddir)/tetgen/libtetgen.a 
-+dmri_vox2vox_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
-+                  $(top_builddir)/fem_elastic/libfem_elastic.la \
-+                  $(top_builddir)/tetgen/libtetgen.la 
- dmri_vox2vox_LDFLAGS=$(OS_LDFLAGS)
  
  dmri_train_SOURCES=dmri_train.cxx blood.cxx blood.h spline.cxx spline.h \
                     TrackIO.cxx TrackIO.h ByteSwap.h ErrorCode.h
@@ -5394,7 +5384,7 @@ Subject: [PATCH 2/2] Shared libs
  libutils_main_SOURCES=\
  	afni.c \
  	annotation.c \
-@@ -300,7 +302,7 @@
+@@ -298,7 +300,7 @@
  	$(srcdir)/$(NrrdIO_dir)/write.c \
  	$(srcdir)/$(NrrdIO_dir)/formatNRRD.c
  
@@ -5403,7 +5393,7 @@ Subject: [PATCH 2/2] Shared libs
  	$(libutils_main_SOURCES) \
  	$(libutils_cephes_SOURCES) \
  	$(libutils_nrrdio_SOURCES)
-@@ -344,7 +346,7 @@
+@@ -342,7 +344,7 @@
  		-DFS_CUDA -DCUDA_FORCE_SYNC -DCUDA_SHOW_TIMINGS \
                  --compiler-options -O3
  
@@ -5412,7 +5402,7 @@ Subject: [PATCH 2/2] Shared libs
  
  libutils_cuda_a_SOURCES=\
  	$(libutils_main_SOURCES) \
-@@ -423,11 +425,11 @@
+@@ -421,11 +423,11 @@
  
  fsPrintHelp_SOURCES=fsPrintHelp.c
  fsPrintHelp_CFLAGS=-DBUILD_MAIN
@@ -5600,7 +5590,7 @@ Subject: [PATCH 2/2] Shared libs
  	-ltiff $(VTK_TIFF_LIB) -ljpeg $(VTK_JPEG_LIB) $(VTK_SQLITE_LIB) \
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -280,7 +280,6 @@
+@@ -273,7 +273,6 @@
  	mris_surface_stats
  
  FSGDF=\
@@ -5608,7 +5598,7 @@ Subject: [PATCH 2/2] Shared libs
  	mri_gdfglm \
  	mri_glmfit \
  	mris_glm
-@@ -317,6 +316,7 @@
+@@ -308,6 +307,7 @@
  	log \
  	gpu_utils \
  	opencl_algorithms \
@@ -5765,11 +5755,9 @@ Subject: [PATCH 2/2] Shared libs
  
  # Our release target. Include files to be excluded here. They will be
  # found and removed after 'make install' is run during the 'make
-diff --git a/tridec/Makefile.am b/tridec/Makefile.am
-index 306bdc3..d57601b 100644
 --- a/tridec/Makefile.am
 +++ b/tridec/Makefile.am
-@@ -7,7 +7,7 @@ AM_LDFLAGS=
+@@ -7,7 +7,7 @@
  
  bin_PROGRAMS = tridec
  tridec_SOURCES=tridec.c
@@ -5778,115 +5766,3 @@ index 306bdc3..d57601b 100644
  tridec_LDFLAGS=$(OS_LDFLAGS)
  
  # Our release target. Include files to be excluded here. They will be
-diff --git a/histo_register/SimpleBaseLib/Makefile.am b/histo_register/SimpleBaseLib/Makefile.am
-index 7d041a6..e4b98cf 100644
---- a/histo_register/SimpleBaseLib/Makefile.am
-+++ b/histo_register/SimpleBaseLib/Makefile.am
-@@ -2,12 +2,12 @@
- # Makefile.am
- #
- 
--noinst_LIBRARIES=libsbl.a
-+lib_LTLIBRARIES=libsbl.la
- 
--libsbl_a_CXXFLAGS=-I$(top_srcdir)/histo_register/SimpleBaseLib/include/ \
-+libsbl_la_CXXFLAGS=-I$(top_srcdir)/histo_register/SimpleBaseLib/include/ \
- 	$(OPENCV_CXXFLAGS) 
--libsbl_a_CPPFLAGS=-DUSE_OPENCV -DUSE_ZLIB -DUSE_CDT
--libsbl_a_SOURCES=\
-+libsbl_la_CPPFLAGS=-DUSE_OPENCV -DUSE_ZLIB -DUSE_CDT
-+libsbl_la_SOURCES=\
- 	src/system/Timer.cc \
- 	src/system/FileSystem.cc \
- 	src/system/SerialPort.cc \
-diff --git a/mri_elastic_energy/Makefile.am b/mri_elastic_energy/Makefile.am
-index e8d712d..81e6e3f 100644
---- a/mri_elastic_energy/Makefile.am
-+++ b/mri_elastic_energy/Makefile.am
-@@ -33,7 +33,7 @@ AM_CXXFLAGS=-I$(top_srcdir)/include
- 
- bin_PROGRAMS = mri_elastic_energy
- mri_elastic_energy_SOURCES=mri_elastic_energy.c
--mri_elastic_energy_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+mri_elastic_energy_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
- mri_elastic_energy_LDFLAGS=$(OS_LDFLAGS)
- 
- # to --------------------------------------------------
-diff --git a/mri_fuse_intensity_images/Makefile.am b/mri_fuse_intensity_images/Makefile.am
-index 29f107b..c448da6 100644
---- a/mri_fuse_intensity_images/Makefile.am
-+++ b/mri_fuse_intensity_images/Makefile.am
-@@ -33,7 +33,7 @@ AM_CXXFLAGS=-I$(top_srcdir)/include
- 
- bin_PROGRAMS = mri_fuse_intensity_images
- mri_fuse_intensity_images_SOURCES=mri_fuse_intensity_images.c
--mri_fuse_intensity_images_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+mri_fuse_intensity_images_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
- mri_fuse_intensity_images_LDFLAGS=$(OS_LDFLAGS)
- 
- # to --------------------------------------------------
-diff --git a/mri_ibmc/Makefile.am b/mri_ibmc/Makefile.am
-index f70e441..3869eed 100644
---- a/mri_ibmc/Makefile.am
-+++ b/mri_ibmc/Makefile.am
-@@ -33,7 +33,7 @@ AM_CXXFLAGS=-I$(top_srcdir)/include
- 
- bin_PROGRAMS = mri_ibmc
- mri_ibmc_SOURCES=mri_ibmc.c
--mri_ibmc_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+mri_ibmc_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
- mri_ibmc_LDFLAGS=$(OS_LDFLAGS)
- 
- # to --------------------------------------------------
-diff --git a/mri_update_gca/Makefile.am b/mri_update_gca/Makefile.am
-index 225f7da..e39fb62 100644
---- a/mri_update_gca/Makefile.am
-+++ b/mri_update_gca/Makefile.am
-@@ -33,7 +33,7 @@ AM_CXXFLAGS=-I$(top_srcdir)/include
- 
- bin_PROGRAMS = mri_update_gca
- mri_update_gca_SOURCES=mri_update_gca.c
--mri_update_gca_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+mri_update_gca_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
- mri_update_gca_LDFLAGS=$(OS_LDFLAGS)
- 
- # to --------------------------------------------------
-diff --git a/mris_interpolate_warp/Makefile.am b/mris_interpolate_warp/Makefile.am
-index 92557f3..097a025 100644
---- a/mris_interpolate_warp/Makefile.am
-+++ b/mris_interpolate_warp/Makefile.am
-@@ -7,7 +7,7 @@ AM_CXXFLAGS=-I$(top_srcdir)/include
- 
- bin_PROGRAMS = mris_interpolate_warp
- mris_interpolate_warp_SOURCES=mris_interpolate_warp.c
--mris_interpolate_warp_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+mris_interpolate_warp_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
- mris_interpolate_warp_LDFLAGS=$(OS_LDFLAGS)
- 
- # Our release target. Include files to be excluded here. They will be
-diff --git a/mris_segment/Makefile.am b/mris_segment/Makefile.am
-index 278f261..15d3188 100644
---- a/mris_segment/Makefile.am
-+++ b/mris_segment/Makefile.am
-@@ -7,7 +7,7 @@ AM_CXXFLAGS=-I$(top_srcdir)/include
- 
- bin_PROGRAMS = mris_segment
- mris_segment_SOURCES=mris_segment.c
--mris_segment_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+mris_segment_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
- mris_segment_LDFLAGS=$(OS_LDFLAGS)
- 
- # Our release target. Include files to be excluded here. They will be
-diff --git a/mri_multiscale_segment/Makefile.am b/mri_multiscale_segment/Makefile.am
-index 8543935..b7c76e2 100644
---- a/mri_multiscale_segment/Makefile.am
-+++ b/mri_multiscale_segment/Makefile.am
-@@ -33,7 +33,7 @@ AM_CXXFLAGS=-I$(top_srcdir)/include
- 
- bin_PROGRAMS = mri_multiscale_segment
- mri_multiscale_segment_SOURCES=mri_multiscale_segment.c
--mri_multiscale_segment_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+mri_multiscale_segment_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
- mri_multiscale_segment_LDFLAGS=$(OS_LDFLAGS)
- 
- # to --------------------------------------------------

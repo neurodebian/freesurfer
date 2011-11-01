@@ -25,7 +25,7 @@ Subject: Self-contained libs/proper linking for increased happiness
  
 --- a/GEMS/Makefile.am
 +++ b/GEMS/Makefile.am
-@@ -682,10 +682,10 @@
+@@ -681,10 +681,10 @@
                                         kvlViewMeshCollectionWithGUI.cxx \
                                         kvlAtlasMeshViewingConsole.cxx
  kvlViewMeshCollectionWithGUI_LDADD=$(LIBS_ITK) \
@@ -40,7 +40,7 @@ Subject: Self-contained libs/proper linking for increased happiness
                                   -lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
                                  $(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
                                  $(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
-@@ -694,7 +694,7 @@
+@@ -693,7 +693,7 @@
                                  $(VTK_SQLITE_LIB) \
                                  -lvtkImaging -lvtkFiltering \
                                  -lvtkCommon -lvtksys \
@@ -49,7 +49,7 @@ Subject: Self-contained libs/proper linking for increased happiness
                                  -lvtkVolumeRendering -lvtkRendering -lvtkftgl \
                                  -lvtkWidgets -lvtkHybrid \
                                  -lvtkIO -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
-@@ -738,10 +738,10 @@
+@@ -737,10 +737,10 @@
                                    kvlEvaluateSegmentation.cxx \
                                    kvlSegmentationEvaluationConsole.cxx
  kvlEvaluateSegmentation_LDADD=$(LIBS_ITK) \
@@ -64,7 +64,7 @@ Subject: Self-contained libs/proper linking for increased happiness
                                   -lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
                                  $(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
                                  $(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
-@@ -750,7 +750,7 @@
+@@ -749,7 +749,7 @@
                                  $(VTK_SQLITE_LIB) \
                                  -lvtkImaging -lvtkFiltering \
                                  -lvtkCommon -lvtksys \
