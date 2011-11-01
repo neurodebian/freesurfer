@@ -1,0 +1,25 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Disables pieces that FTBFS with recent compilers.
+
+Needs to be fixed at some point.
+
+diff --git a/Makefile.am b/Makefile.am
+index 069694e..f1c97cf 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -286,7 +286,6 @@ STATSDIRS=\
+ 	stat_normalize
+ 
+ MISCDIRS=\
+-	GEMS \
+ 	histo_compute_joint_density \
+ 	histo_register_block \
+ 	regdat2xfm \
+@@ -336,7 +335,6 @@ SUBDIRS=\
+ 	$(DMRISUBDIRS) \
+ 	fsfast \
+ 	matlab \
+-	scuba \
+ 	scuba2 \
+ 	freeview \
+ 	qdec_glmfit \
