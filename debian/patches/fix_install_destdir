@@ -4,7 +4,7 @@ Author: Mark Hymers <mark.hymers@ynic.york.ac.uk>
 
 --- a/freeview/Makefile.am
 +++ b/freeview/Makefile.am
-@@ -505,7 +505,7 @@
+@@ -476,7 +476,7 @@
  # put a wrapper around the bin, used to setup tcltktixblt,vtk enviro vars
  # and if the OS is MACOSX have a different install-hook to create a bundle
  install-exec-hook:freeview
@@ -15,7 +15,7 @@ Author: Mark Hymers <mark.hymers@ynic.york.ac.uk>
  		>> $(DESTDIR)$(bindir)/freeview
 --- a/GEMS/Makefile.am
 +++ b/GEMS/Makefile.am
-@@ -762,7 +762,7 @@
+@@ -761,7 +761,7 @@
  
  # put a wrapper around the gui bins, used to setup vtk enviro vars
  install-exec-hook:kvlThresholdImage kvlEstimateAtlasParameters
@@ -24,7 +24,7 @@ Author: Mark Hymers <mark.hymers@ynic.york.ac.uk>
  		$(DESTDIR)$(bindir)/kvlThresholdImage.bin
  	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/kvlThresholdImage
  	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
-@@ -777,7 +777,7 @@
+@@ -776,7 +776,7 @@
  	chmod a+x $(DESTDIR)$(bindir)/kvlThresholdImage
  	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
  	/usr/pubsw/bin/chrpath -d $(DESTDIR)$(bindir)/kvlThresholdImage.bin; fi
@@ -33,7 +33,7 @@ Author: Mark Hymers <mark.hymers@ynic.york.ac.uk>
  		$(DESTDIR)$(bindir)/kvlEstimateAtlasParameters.bin
  	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/kvlEstimateAtlasParameters
  	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
-@@ -795,7 +795,7 @@
+@@ -794,7 +794,7 @@
  	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
  	/usr/pubsw/bin/chrpath -d \
  		$(DESTDIR)$(bindir)/kvlEstimateAtlasParameters.bin; fi
@@ -42,7 +42,7 @@ Author: Mark Hymers <mark.hymers@ynic.york.ac.uk>
  		$(DESTDIR)$(bindir)/kvlViewImage.bin
  	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/kvlViewImage
  	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
-@@ -810,7 +810,7 @@
+@@ -809,7 +809,7 @@
  	chmod a+x $(DESTDIR)$(bindir)/kvlViewImage
  	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
  	/usr/pubsw/bin/chrpath -d $(DESTDIR)$(bindir)/kvlViewImage.bin; fi
@@ -51,7 +51,7 @@ Author: Mark Hymers <mark.hymers@ynic.york.ac.uk>
  		$(DESTDIR)$(bindir)/kvlViewMeshCollectionWithGUI.bin
  	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/kvlViewMeshCollectionWithGUI
  	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
-@@ -825,7 +825,7 @@
+@@ -824,7 +824,7 @@
  	chmod a+x $(DESTDIR)$(bindir)/kvlViewMeshCollectionWithGUI
  	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
  	/usr/pubsw/bin/chrpath -d $(DESTDIR)$(bindir)/kvlViewMeshCollectionWithGUI.bin; fi

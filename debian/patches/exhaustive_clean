@@ -2,7 +2,7 @@ From: Michael Hanke <mih@debian.org>
 Subject: Let clean do it properly
 --- a/GEMS/Makefile.am
 +++ b/GEMS/Makefile.am
-@@ -914,6 +914,9 @@
+@@ -912,6 +912,9 @@
  endif
  endif
  

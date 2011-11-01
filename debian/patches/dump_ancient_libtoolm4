@@ -7,11 +7,9 @@ Subject: [PATCH 1/2] Remove ancient libtool macros
  acinclude.m4 | 5918 ----------------------------------------------------------
  1 files changed, 0 insertions(+), 5918 deletions(-)
 
-diff --git a/acinclude.m4 b/acinclude.m4
-index 175dafa..cc20b1b 100644
 --- a/acinclude.m4
 +++ b/acinclude.m4
-@@ -568,5921 +568,3 @@ CPPFLAGS=${ax_save_CPPFLAGS}
+@@ -568,5921 +568,3 @@
  LDFLAGS=${ax_save_LDFLAGS}
  LIBS=${ax_save_LIBS}
  ])
@@ -5933,6 +5931,3 @@ index 175dafa..cc20b1b 100644
 -])
 -AC_MSG_RESULT([$SED])
 -])
--- 
-1.7.2.3
-
