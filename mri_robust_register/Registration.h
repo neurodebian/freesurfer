@@ -8,8 +8,8 @@
  * Original Author: Martin Reuter
  * CVS Revision Info:
  *    $Author: mreuter $
- *    $Date: 2011/03/28 22:12:45 $
- *    $Revision: 1.37.2.1 $
+ *    $Date: 2011/08/23 18:53:41 $
+ *    $Revision: 1.37.2.3 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -66,13 +66,13 @@ class Registration
  template <class T> friend class RegistrationStep;
 public:
   Registration(): sat(-1),iscale(false),transonly(false),rigid(true),
-      robust(true),rtype(1),subsamplesize(-1),debug(0),verbose(1),initorient(false),
+      robust(true),rtype(1),subsamplesize(-1),minsize(-1),maxsize(-1),debug(0),verbose(1),initorient(false),
       inittransform(true),highit(-1),mri_source(NULL),mri_target(NULL),iscaleinit(1.0),
       iscalefinal(1.0),doubleprec(false),wlimit(0.175),symmetry(true),resample(false),
 			mri_weights(NULL), mri_hweights(NULL),mri_indexing(NULL)
   {};
   Registration(MRI * s, MRI *t): sat(-1),iscale(false),transonly(false),rigid(true),
-      robust(true),rtype(1),subsamplesize(-1),debug(0),verbose(1),initorient(false),
+      robust(true),rtype(1),subsamplesize(-1),minsize(-1),maxsize(-1),debug(0),verbose(1),initorient(false),
       inittransform(true),highit(-1),mri_source(MRIcopy(s,NULL)),mri_target(MRIcopy(t,NULL)),
       iscaleinit(1.0),iscalefinal(1.0),doubleprec(false),wlimit(0.175),symmetry(true),resample(false),
 			mri_weights(NULL),mri_hweights(NULL),mri_indexing(NULL)
@@ -136,9 +136,17 @@ public:
   void setSource (MRI * s, bool conform = false, bool keeptype = false);
   void setTarget (MRI * t, bool conform = false, bool keeptype = false);
   void setSourceAndTarget(MRI * s, MRI * t, bool keeptype = false);
-  void setSubsamplesize (int sss)
+  void setSubsampleSize (int sss)
   {
     subsamplesize = sss;
+  };
+  void setMinSize (int s)
+  {
+    minsize = s;
+  };
+  void setMaxSize (int s)
+  {
+    maxsize = s;
   };
   void setName(const std::string &n);
 	
@@ -239,6 +247,8 @@ protected:
   bool robust;
   int rtype;
   int subsamplesize;
+  int minsize;
+  int maxsize;
   std::string name;
   std::string nbase;
   int debug;
@@ -270,6 +280,7 @@ private:
   // IterativeRegistrationHelper
   void computeIterativeRegistration(int n,double epsit,MRI * mriS, MRI* mriT, const vnl_matrix < double > &Minit, double iscaleinit);	
 	template < class T > void iterativeRegistrationHelper( int nmax,double epsit, MRI * mriS, MRI* mriT, const vnl_matrix < double >& m, double scaleinit);
+  bool reorientSource();
 
 
   // construct Ab and R:
@@ -289,7 +300,9 @@ private:
   void findSatMultiRes(const vnl_matrix < double > &mi, double scaleinit );
 
   // gaussian pyramid:
+  std::pair < int, int > getGPLimits(MRI *mriS, MRI *mriT, int min, int max);
   std::vector < MRI* > buildGaussianPyramid (MRI * mri_in, int min = 16, int max = -1);
+  std::vector < MRI* > buildGPLimits (MRI * mri_in,std::pair< int, int > limits);
   void freeGaussianPyramid(std::vector< MRI* >& p);
   void saveGaussianPyramid(std::vector< MRI* >& p, const std::string & prefix);
 
@@ -328,11 +341,20 @@ void Registration::iterativeRegistrationHelper( int nmax,double epsit, MRI * mri
   else if (!Minit.empty()) fmd.first = getMinitResampled();
   else fmd.first = initializeTransform(mriS,mriT);
 
-  if (scaleinit != 1.0) fmd.second = scaleinit;
-	else fmd.second = iscaleinit;
+  // ISCALECHANGE:
+  // intensity model: R(s,IS,IT) = exp(-0.5 s) IT - exp(0.5 s) IS
+  //                  R'  = -0.5 ( exp(-0.5 s) IT + exp(0.5 s) IS)
+  //  thus iscalefinal= exp(0.5 s) * (1/exp(-0.5 s)) = exp(s)
+  //     ==> s = log (iscalefinal)
+  iscalefinal = 1.0;
+  if (scaleinit != 1.0) iscalefinal = scaleinit;
+	else iscalefinal = iscaleinit;
+  fmd.second = log(iscalefinal);
+  
 
   if (verbose > 1)
   {
+    std::cout << "   - initial iscale: " << iscalefinal << std::endl;
     std::cout << "   - initial transform:\n" ;
 		std::cout << fmd.first << std::endl;
   }
@@ -345,7 +367,10 @@ void Registration::iterativeRegistrationHelper( int nmax,double epsit, MRI * mri
   vnl_matrix_fixed<double , 4, 4> mhi;mhi.set_identity();
   vnl_matrix_fixed<double , 4, 4> mi;
 	
-  double diff = 100;
+  double diff = 100.0;
+  double idiff = 0.0;
+  double ieps = 0.001; // exp(ieps) = 1.0010005, so stop if below 0.1% change
+
   int i = 1;
 	
   // here create RegistrationStep of the specific type: double or float:
@@ -353,9 +378,9 @@ void Registration::iterativeRegistrationHelper( int nmax,double epsit, MRI * mri
 	RStep.setFloatSVD(true); // even with double, use float for SVD to save some memory
 	T tt;	
 		
-  while (diff > epsit && i<=nmax)
+  while ((diff > epsit ||  idiff >ieps)&& i<=nmax  )
   {
-    if (verbose >0) std::cout << " Iteration(" << typeid(tt).name() << "): " << i << std::flush;
+    if (verbose >0) std::cout << " Iteration(" << typeid(tt).name() << "): " << i << std::endl;
 		if (verbose == 1 && subsamplesize > 0)
     if (mriS->width > subsamplesize || mriS->height > subsamplesize || mriS->depth > subsamplesize)
       std::cout << " (subsample " << subsamplesize << ") " << std::flush;
@@ -365,7 +390,7 @@ void Registration::iterativeRegistrationHelper( int nmax,double epsit, MRI * mri
     {
       // here symmetrically warp both images SQRT(M)
       // this keeps the problem symmetric
-      if (verbose >1) std::cout << "   - warping source and target (sqrt)" << std::endl;
+      if (verbose >1) std::cout << "   - resampling MOV and DST (sqrt)" << std::endl;
       // half way voxelxform
       //mh  = MyMatrix::MatrixSqrtAffine(fmd.first); // does not seem to work (creates imag results ...)?
       mh  = MyMatrix::MatrixSqrt(fmd.first); //!! symmetry slighlty destroyed here? !!
@@ -423,6 +448,8 @@ void Registration::iterativeRegistrationHelper( int nmax,double epsit, MRI * mri
       // for transforming target we need mh2^-1 = mh * m^-1
       mi  = vnl_inverse(fmd.first);
       mhi = mh*mi;
+      //vnl_matlab_print(vcl_cerr,mh,"mh",vnl_matlab_print_format_long);std::cerr << std::endl;
+      //vnl_matlab_print(vcl_cerr,mhi,"mhi",vnl_matlab_print_format_long);std::cerr << std::endl;
       if (mri_Swarp) MRIfree(&mri_Swarp);
       mri_Swarp = MRIclone(mriS,NULL);
       mri_Swarp = MyMRI::MRIlinearTransform(mriS,mri_Swarp, mh);
@@ -430,83 +457,95 @@ void Registration::iterativeRegistrationHelper( int nmax,double epsit, MRI * mri
       mri_Twarp = MRIclone(mriS,NULL); // bring them to same space (just use src geometry) !! symmetry slightly destroyed here!!
       mri_Twarp = MyMRI::MRIlinearTransform(mriT,mri_Twarp, mhi);
     }
-    else // HACK !!! not tested: !!!!
+    else // resample at target location (using target geometry)
     {
-      if (verbose >1) std::cout << "   - warping source to target " << std::endl;
+      if (verbose >1) std::cout << "   - resampling MOV to DST " << std::endl;
       if (mri_Swarp) MRIfree(&mri_Swarp);
       mri_Swarp = MRIclone(mriT,NULL);
       mri_Swarp = MyMRI::MRIlinearTransform(mriS,mri_Swarp, fmd.first);
       mh = fmd.first;
       if (! mri_Twarp ) mri_Twarp = MRIcopy(mriT,NULL);
-      MRIwrite(mri_Swarp,"mri_Swarp.mgz");
-      MRIwrite(mri_Twarp,"mri_Twarp.mgz");
     }
-
+      
     // adjust intensity 	
     if (iscale)
     {
-      if (verbose >1) std::cout << "   - adjusting intensity ( "<< fmd.second << " ) " << std::endl;
+      if (verbose >1) std::cout << "   - adjusting intensity ( "<< iscalefinal << " ) " << std::endl;
 			// ISCALECHANGE:
       double si = sqrt(iscalefinal);
       MyMRI::MRIvalscale(mri_Swarp,mri_Swarp,si);
       MyMRI::MRIvalscale(mri_Twarp,mri_Twarp,1.0/si);
     }
+    
+    if (debug > 0)
+    {
+      // write hw images before next registration step: 
+      MRIwrite(mri_Swarp,(name+"-mriS-hw.mgz").c_str());
+      MRIwrite(mri_Twarp,(name+"-mriT-hw.mgz").c_str());
+      char ch;
+      std::cout << "Press a key to continue iterations: ";
+      std::cin  >> ch;
+    }
 
-    // ========================================================
+    // ==========================================================================
+    //
     // compute Registration
+    //
     if (verbose >1) std::cout << "   - compute new registration" << std::endl;
     cmd = RStep.computeRegistrationStep(mri_Swarp,mri_Twarp);
 		wcheck = RStep.getwcheck();
 		wchecksqrt = RStep.getwchecksqrt();
-    // ========================================================
+    // ==========================================================================
 
    // store M and d
     if (verbose >1) std::cout << "   - store transform" << std::endl;
-    //std::cout << std::endl << " current : Matrix: " << std::endl;
-    //MatrixPrintFmt(stdout,"% 2.8f",cmd.first);
-    //std::cout << " intens: " << cmd.second << std::endl;
 		vnl_matrix_fixed < double, 4, 4 > fmdtmp(fmd.first);
-    //fmd.first = MatrixMultiply(cmd.first,fmd.first,fmd.first); //old
-    mh2 = vnl_inverse(mhi); // M = mh2 * mh
-    // new M = mh2 * cm * mh
-    fmd.first = (mh2 * cmd.first) * mh;
+    if (symmetry)
+    {
+      mh2 = vnl_inverse(mhi); // M = mh2 * mh
+      // new M = mh2 * cm * mh
+      fmd.first = (mh2 * cmd.first) * mh;
+    }
+    else fmd.first = cmd.first * mh;
 
     // ISCALECHANGE:
-		fmd.second -= cmd.second;
-	  iscalefinal = fmd.second;
+    if (iscale)
+    {
+      fmd.second -= cmd.second; // adjust log
+      iscalefinal = exp(fmd.second); // compute full factor (source to target)
+      idiff = fabs(cmd.second);
+      std::ostringstream istar;
+      if (idiff <= ieps) istar << " <= " << ieps << "  :-)" ;
+      if (verbose >0 ) std::cout << "     -- intensity log diff: abs(" << cmd.second << ") " << istar.str() << std::endl;
+    }
 		
     if (!rigid) diff = MyMatrix::getFrobeniusDiff(fmd.first, fmdtmp);
     else        diff = sqrt(MyMatrix::RigidTransDistSq(fmd.first, fmdtmp));
     if (verbose >1) std::cout << "     -- old diff. to prev. transform: " << diff << std::endl;
     diff = sqrt(MyMatrix::AffineTransDistSq(fmd.first, fmdtmp, 100));
 		std::ostringstream star;
-		if (diff < epsit) star << "  < " << epsit << "  :-)" ;
+    if (diff <= epsit) star << "  <= " << epsit << "   :-)" ;
 		else if (i == nmax) star<< " max it: " << nmax << " reached!";
     if (verbose >0) std::cout << "     -- diff. to prev. transform: " << diff << star.str() << std::endl;
     //std::cout << " intens: " << fmd.second << std::endl;
 		i++;
 		
-//     if (debug > 0)
-//     {
-//       // write weights and warped images after last step:
-// 
-//       MRIwrite(mri_Swarp,(name+"-mriS-mapped.mgz").c_str());
-//       MRIwrite(mri_Twarp,(name+"-mriT-mapped.mgz").c_str());
-//       if (robust)
-//       {
-//         if (mri_hweights) MRIfree(&mri_hweights);
+//    if (debug > 0)
+//    {
+//      // write weights
+//      if (robust)
+//      {
+//        if (mri_hweights) MRIfree(&mri_hweights);
 // 		    assert(RStep.getWeights());
 // 	      mri_hweights = MRIcopy(RStep.getWeights(),NULL);
-//         // in the half-way space:
-//         string n = name+string("-mriS-weights.mgz");
-//         MRIwrite(mri_hweights,n.c_str());
-//       }
-//       MRI* salign = MRIclone(mriS,NULL);
-//       salign = MyMRI::MRIlinearTransform(mri_Swarp, salign,fmd.first);
-//       MRIwrite(salign,(name+"-mriS-align.mgz").c_str());
-//       MRIfree(&salign);
-// 	assert(1==2);
-//     } // end if debug
+//        std::string n = name+std::string("-weights.mgz");
+//        MRIwrite(mri_hweights,n.c_str());
+//      }
+//      //MRI* salign = MRIclone(mriS,NULL);
+//      //salign = MyMRI::MRIlinearTransform(mri_Swarp, salign,fmd.first);
+//      //MRIwrite(salign,(name+"-mriS-align.mgz").c_str());
+//      //MRIfree(&salign);
+//    } // end if debug
 	
   } // end while loop
   
@@ -553,33 +592,36 @@ void Registration::iterativeRegistrationHelper( int nmax,double epsit, MRI * mri
     mri_weights = MRIalloc(mriT->width,mriT->height,mriT->depth,MRI_FLOAT);
     MRIcopyHeader(mriT,mri_weights);
     mri_weights->type = MRI_FLOAT;
-    mri_weights = MyMRI::MRIlinearTransform(mri_hweights,mri_weights,mh2);
+    if (symmetry)
+       mri_weights = MyMRI::MRIlinearTransform(mri_hweights,mri_weights,mh2);
+    else
+       mri_weights = MRIcopy(mri_hweights,mri_weights);
   }
-  mov2weights = mh; 
-  dst2weights = mhi;
 
-  if (diff > epsit) // adjust mh and mhi to new midpoint
-  {
-    if (verbose >1) std::cout << "     -- adjusting half-way maps " << std::endl;
-    vnl_matrix_fixed < double, 4, 4 > ch = MyMatrix::MatrixSqrt(fmd.first);
-    // do not just assume c = ch*ch, rather c = ch2 * ch
-    // for transforming target we need ch2^-1 = ch * c^-1
-    vnl_matrix_fixed < double, 4, 4 >  ci  = vnl_inverse(cmd.first);
-    vnl_matrix_fixed < double, 4, 4 >  chi = ch*ci;
-    // append ch or chi to mh mhi
-		mh  = ch * mh;
-		mhi = chi * mhi;
-    mov2weights = mh; 
-    dst2weights = mhi;
-  }
+  //vnl_matlab_print(vcl_cerr,fmd.first,"fmd",vnl_matlab_print_format_long);std::cerr << std::endl;
+  //vnl_matlab_print(vcl_cerr,cmd.first,"cmd",vnl_matlab_print_format_long);std::cerr << std::endl;
+  //vnl_matlab_print(vcl_cerr,mh,"mov1hw",vnl_matlab_print_format_long);std::cerr << std::endl;
+  //vnl_matlab_print(vcl_cerr,mhi,"dst1hw",vnl_matlab_print_format_long);std::cerr << std::endl;
+
+  // adjust half way maps to new midpoint based on final transform
+  if (verbose >1) std::cout << "     -- adjusting half-way maps " << std::endl;
+  vnl_matrix_fixed < double, 4, 4 > ch = MyMatrix::MatrixSqrt(fmd.first);
+  // do not just assume c = ch*ch, rather c = ch2 * ch
+  // for transforming target we need ch2^-1 = ch * c^-1
+  vnl_matrix_fixed < double, 4, 4 >  ci  = vnl_inverse(fmd.first);
+  vnl_matrix_fixed < double, 4, 4 >  chi = ch*ci;
+  mov2weights = ch; 
+  dst2weights = chi;
+
+  //vnl_matlab_print(vcl_cerr,mov2weights,"mov2hw",vnl_matlab_print_format_long);std::cerr << std::endl;
+  //vnl_matlab_print(vcl_cerr,dst2weights,"dst2hw",vnl_matlab_print_format_long);std::cerr << std::endl;
+
 
   MRIfree(&mri_Twarp);
   MRIfree(&mri_Swarp);
 
   Mfinal = fmd.first;
-  iscalefinal = fmd.second;
 
- // return pair < MATRIX *, double> (MatrixCopy(Mfinal,NULL),iscalefinal);
 }
 
 

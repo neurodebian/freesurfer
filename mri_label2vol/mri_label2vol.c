@@ -14,8 +14,8 @@
  * Original Author: Douglas N. Greve
  * CVS Revision Info:
  *    $Author: greve $
- *    $Date: 2011/03/22 18:09:04 $
- *    $Revision: 1.34.2.1 $
+ *    $Date: 2011/09/30 15:19:36 $
+ *    $Revision: 1.34.2.4 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -77,7 +77,7 @@ static int *NthLabelMap(MRI *aseg, int *nlabels);
 
 int main(int argc, char *argv[]) ;
 
-static char vcid[] = "$Id: mri_label2vol.c,v 1.34.2.1 2011/03/22 18:09:04 greve Exp $";
+static char vcid[] = "$Id: mri_label2vol.c,v 1.34.2.4 2011/09/30 15:19:36 greve Exp $";
 char *Progname = NULL;
 
 char *LabelList[100];
@@ -145,11 +145,11 @@ int main(int argc, char **argv) {
   char cmdline[CMD_LINE_LEN] ;
 
   make_cmd_version_string (argc, argv,
-                           "$Id: mri_label2vol.c,v 1.34.2.1 2011/03/22 18:09:04 greve Exp $", "$Name: stable5 $", cmdline);
+                           "$Id: mri_label2vol.c,v 1.34.2.4 2011/09/30 15:19:36 greve Exp $", "$Name: stable5 $", cmdline);
 
   /* rkt: check for and handle version tag */
   nargs = handle_version_option (argc, argv,
-                                 "$Id: mri_label2vol.c,v 1.34.2.1 2011/03/22 18:09:04 greve Exp $", "$Name: stable5 $");
+                                 "$Id: mri_label2vol.c,v 1.34.2.4 2011/09/30 15:19:36 greve Exp $", "$Name: stable5 $");
   if (nargs && argc - nargs == 1)
     exit (0);
   argc -= nargs;
@@ -271,7 +271,8 @@ int main(int argc, char **argv) {
     if (UseNewASeg2Vol) {
       OutVol = MRIaseg2vol(ASeg, R,TempVol, FillThresh, &HitVol);
       MRIaddCommandLine(OutVol, cmdline) ;
-      MRIwrite(OutVol,OutVolId);
+      err=MRIwrite(OutVol,OutVolId);
+      if(err) exit(1);
       if (HitVolId != NULL) {
         MRIaddCommandLine(HitVol, cmdline) ;
         MRIwrite(HitVol,HitVolId);
@@ -400,7 +401,10 @@ int main(int argc, char **argv) {
   } // End loop over labels
   printf("\n");
 
-  if(DoLabelStatVol) MRIwrite(LabelStatVol,LabelStatVolFSpec);
+  if(DoLabelStatVol){
+    err=MRIwrite(LabelStatVol,LabelStatVolFSpec);
+    if(err) exit(1);
+  }
 
   if(HitVolId != NULL) MRIwrite(HitVol,HitVolId);
   printf("PVF %s\n",PVFVolId);
@@ -455,9 +459,10 @@ int main(int argc, char **argv) {
 
   // Save out volume
   MRIaddCommandLine(OutVol, cmdline) ;
-  MRIwrite(OutVol,OutVolId);
+  err=MRIwrite(OutVol,OutVolId);
+  if(err) exit(1);
 
-  printf("done \n");
+  printf("mri_label2vol done \n");
   return(0);
 }
 /* ------------------------------------------------------------------ */
@@ -885,6 +890,7 @@ static void print_help(void) {
     "  --label lh-avg_central_sulcus.label \n"
     "  --label lh-avg_calcarine_sulcus.label \n"
     "  --temp $SUBJECTS_DIR/bert/orig\n"
+    "  --identity\n"
     "  --o cent_calc.img\n"
     "\n"
     "The voxels corresponding to lh-avg_central_sulcus.label will have a of \n"
@@ -1120,7 +1126,8 @@ static int load_annotation(char *annotfile, MRIS *Surf) {
       annotid = annotation_to_index(annot);
     if (annotidmax < annotid) annotidmax = annotid;
   }
-
+  // add one to account for the 0 id
+  annotidmax++;
   printf("annotidmax = %d\n",annotidmax);
   return(annotidmax);
 }

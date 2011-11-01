@@ -8,8 +8,8 @@
  * Original Author: REPLACE_WITH_FULL_NAME_OF_CREATING_AUTHOR 
  * CVS Revision Info:
  *    $Author: nicks $
- *    $Date: 2011/03/02 00:04:35 $
- *    $Revision: 1.29 $
+ *    $Date: 2011/09/28 21:14:00 $
+ *    $Revision: 1.29.2.1 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -28,11 +28,11 @@
 //
 // Warning: Do not edit the following four lines.  CVS maintains them.
 // Revision Author: $Author: nicks $
-// Revision Date  : $Date: 2011/03/02 00:04:35 $
-// Revision       : $Revision: 1.29 $
+// Revision Date  : $Date: 2011/09/28 21:14:00 $
+// Revision       : $Revision: 1.29.2.1 $
 //
 ////////////////////////////////////////////////////////////////////
-char *NMOVIE_VERSION = "$Revision: 1.29 $";
+char *NMOVIE_VERSION = "$Revision: 1.29.2.1 $";
 #include <stdio.h>
 #include <image.h>
 #include <stdlib.h>
@@ -68,6 +68,9 @@ char *NMOVIE_VERSION = "$Revision: 1.29 $";
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <X11/extensions/XShm.h>
+
+// Centos 6 doesnt seem to have Xpm
+void XpmReadFileToPixmap(){};
 
 static int nocolor = 0 ;
 
@@ -632,7 +635,7 @@ int main(int argc, char **argv) {
   /* rkt: check for and handle version tag */
   nargs = handle_version_option
           (argc, argv,
-           "$Id: nmovie.c,v 1.29 2011/03/02 00:04:35 nicks Exp $",
+           "$Id: nmovie.c,v 1.29.2.1 2011/09/28 21:14:00 nicks Exp $",
            "$Name: stable5 $");
   if (nargs && argc - nargs == 1)
     exit (0);
