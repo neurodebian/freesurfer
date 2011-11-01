@@ -3,11 +3,9 @@ Subject: Disables pieces that FTBFS with recent compilers.
 
 Needs to be fixed at some point.
 
-diff --git a/Makefile.am b/Makefile.am
-index 069694e..f1c97cf 100644
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -286,7 +286,6 @@ STATSDIRS=\
+@@ -281,7 +281,6 @@
  	stat_normalize
  
  MISCDIRS=\
@@ -15,7 +13,7 @@ index 069694e..f1c97cf 100644
  	histo_compute_joint_density \
  	histo_register_block \
  	regdat2xfm \
-@@ -336,7 +335,6 @@ SUBDIRS=\
+@@ -327,7 +326,6 @@
  	$(DMRISUBDIRS) \
  	fsfast \
  	matlab \
@@ -23,3 +21,23 @@ index 069694e..f1c97cf 100644
  	scuba2 \
  	freeview \
  	qdec_glmfit \
+--- a/configure.in
++++ b/configure.in
+@@ -3292,9 +3292,6 @@
+ # output
+ #########################################################################
+ AC_OUTPUT([Makefile
+-           GEMS/Makefile
+-           GEMS/data/Makefile
+-           GEMS/scripts/Makefile
+            check_siemens_dir/Makefile
+            cudatest/Makefile
+            cudatest/gcatest/Makefile
+@@ -3591,7 +3588,6 @@
+            repair_siemens_file/Makefile
+            rgb/Makefile
+            scripts/Makefile
+-           scuba/Makefile
+            scuba2/Makefile
+            freeview/Makefile
+            connectgraph/Makefile
