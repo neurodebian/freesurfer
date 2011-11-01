@@ -7,7 +7,7 @@ FREESURFER_HOME=/usr/lib/freesurfer-FSMAJORVERSION
 export FREESURFER_HOME
 
 # add the freesurfer binary path to the search path
-PATH=$PATH:/usr/lib/freesrufer-FSMAJORVERSION
+PATH=$PATH:/usr/lib/freesurfer-FSMAJORVERSION
 export PATH
 
 # load user configuration

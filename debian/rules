@@ -48,15 +48,15 @@ override_dh_auto_build:
 	grep 'talairach_avi/*' freesurfer-data.md5sums |cut -d ' ' -f 3,3 |xargs touch
 
 	# Set up files which require modifying for FSMAJORVERSION
-	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/freesurfer-FSMAJORVER.dirs.template    > debian/freesurfer-${FSMAJORVERSION}.dirs
-	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/freesurfer-FSMAJORVER.install.template > debian/freesurfer-${FSMAJORVERSION}.install
-
-	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/freesurfer_gui_app_wrapper.template    > debian/freesurfer_gui_app_wrapper
-
-	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/desktop/scuba.desktop.template         > debian/desktop/scuba.desktop
-	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/desktop/scuba2.desktop.template        > debian/desktop/scuba2.desktop
-
-	sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" debian/freesurfer-FSMAJORVER.sh.template      > debian/freesurfer.sh
+	for tmpl in debian/*template; do \
+		ofile=$$(basename $$tmpl); \
+		if [ "$${ofile%*FSMAJORVER*}" = "$$ofile" ]; then \
+			sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" $${tmpl} > debian/$${ofile%*.template}; \
+		else \
+			ofile=$${ofile/FSMAJORVER/$(FSMAJORVERSION)}; \
+			sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" $${tmpl} > debian/$${ofile%*.template}; \
+		fi; \
+	done
 
 	dh_auto_build
 
@@ -80,10 +80,7 @@ override_dh_auto_clean:
 	-grep 'talairach_avi/*' freesurfer-data.md5sums |cut -d ' ' -f 3,3 |xargs rm
 
 	# Remove files generated using FSMAJORVERSION
-	rm -f debian/freesurfer-${FSMAJORVERSION}.dirs
-	rm -f debian/freesurfer-${FSMAJORVERSION}.install
-	rm -f debian/freesurfer_gui_app_wrapper
-	rm -f debian/desktop/scuba.desktop
-	rm -f debian/desktop/scuba2.desktop
-	rm -f debian/freesurfer.sh
-
+	for tmpl in debian/*template; do \
+		tmpl=$${tmpl%*.template}; \
+		rm -f $${tmpl/FSMAJORVER/$(FSMAJORVERSION)}; \
+	done
