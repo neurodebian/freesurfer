@@ -5598,7 +5598,7 @@ Subject: [PATCH 2/2] Shared libs
  	mri_gdfglm \
  	mri_glmfit \
  	mris_glm
-@@ -308,6 +307,7 @@
+@@ -309,6 +308,7 @@
  	log \
  	gpu_utils \
  	opencl_algorithms \
