@@ -10,3 +10,5 @@ install_path_mri_cvs_register
 missing_shared_libs
 deb_no_tktools
 fix_install_destdir
+disable_to_be_fixed_pieces
+
