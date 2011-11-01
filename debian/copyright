@@ -1,4 +1,4 @@
-Format-Specification: http://svn.debian.org/wsvn/dep/web/deps/dep5.mdwn?op=file&rev=181
+Format: http://dep.debian.net/deps/dep5/
 Upstream-Name: freesurfer
 Upstream-Contact: freesurfer@nmr.mgh.harvard.edu
 Source: https://surfer.nmr.mgh.harvard.edu/fswiki/ReadOnlyCVS
@@ -12,8 +12,35 @@ License: FreeSurfer Software License Agreement ("Agreement")
 Files: debian/*
 Copyright: 2011, Michael Hanke <mih@debian.org>
            2011, Yaroslav Halchenko <debian@onerussian.com>
-License: TODO
+License: BSD
 
+License: BSD
+ Copyright (c) The Regents of the University of California.
+ All rights reserved.
+ .
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ 3. Neither the name of the University nor the names of its contributors
+    may be used to endorse or promote products derived from this software
+    without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ SUCH DAMAGE.
 
 License: FreeSurfer Software License Agreement ("Agreement")
                      Version 1.0 (February 2011)
@@ -205,8 +232,3 @@ License: FreeSurfer Software License Agreement ("Agreement")
   principles of conflicts of law. This Agreement shall supercede and
   replace any license terms that you may have agreed to previously with
   respect to FreeSurfer.
-
-Files: TODO
-
-
-
