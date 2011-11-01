@@ -60,6 +60,19 @@ override_dh_auto_build:
 
 	dh_auto_build
 
+override_dh_auto_install:
+	dh_auto_install
+	# fix tcsh interpreter location
+	for f in $$(egrep -lR '^#![ ]*/bin/tcsh' debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/bin debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/fsfast/bin); do \
+		echo "Fixing tcsh interpreter location in '$$f'" ; \
+		sed -i -e 's|^#![ ]*/bin/tcsh|#!/usr/bin/tcsh|' $$f ; \
+	done
+	# fix csh interpreter location
+	for f in $$(egrep -lR '^#![ ]*/bin/csh' debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/bin debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/fsfast/bin); do \
+		echo "Fixing csh interpreter location in '$$f'" ; \
+		sed -i -e 's|^#![ ]*/bin/csh|#!/bin/csh|' $$f ; \
+	done
+
 override_dh_auto_test:
 	: # none for now
 
