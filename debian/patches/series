@@ -1,3 +1,4 @@
+relocate_license_file
 dump_ancient_libtoolm4
 qt_build_compat
 datapkg_split
