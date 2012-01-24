@@ -23,7 +23,7 @@ Subject: Disable 3rd-party code with its own Debian packages.
  	gpu_utils \
 --- a/configure.in
 +++ b/configure.in
-@@ -3292,7 +3292,6 @@
+@@ -3328,7 +3328,6 @@
             dmri_tensoreig/Makefile
             dngtester/Makefile
             dummy/Makefile
@@ -31,7 +31,7 @@ Subject: Disable 3rd-party code with its own Debian packages.
             fem_elastic/Makefile
             fsfast/Makefile
             fsfast/bin/Makefile
-@@ -3300,7 +3299,6 @@
+@@ -3336,7 +3335,6 @@
             fsfast/toolbox/Makefile
             fsgdf/Makefile
             fslutils/Makefile
@@ -39,7 +39,7 @@ Subject: Disable 3rd-party code with its own Debian packages.
             gpu_utils/Makefile
             opencl_algorithms/Makefile
             hiam_make_surfaces/Makefile
-@@ -3322,7 +3320,6 @@
+@@ -3358,7 +3356,6 @@
             include/fs_vnl/Makefile
             itkio/Makefile
             itkutils/Makefile
@@ -47,7 +47,7 @@ Subject: Disable 3rd-party code with its own Debian packages.
             label_area/Makefile
             label_border/Makefile
             label2patch/Makefile
-@@ -3594,7 +3591,6 @@
+@@ -3630,7 +3627,6 @@
             test_makevol/Makefile
             test_window_env/Makefile
             tetgen/Makefile
@@ -55,7 +55,7 @@ Subject: Disable 3rd-party code with its own Debian packages.
             tkmedit/Makefile
             tkregister2/Makefile
             tkregister2/cmdl/Makefile
-@@ -3612,8 +3608,7 @@
+@@ -3648,8 +3644,7 @@
             qdec_glmfit/Makefile
             qdecproject/Makefile
             vtkfsio/Makefile
