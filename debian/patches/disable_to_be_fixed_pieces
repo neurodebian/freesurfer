@@ -23,7 +23,7 @@ Needs to be fixed at some point.
  	qdec_glmfit \
 --- a/configure.in
 +++ b/configure.in
-@@ -3292,9 +3292,6 @@
+@@ -3328,9 +3328,6 @@
  # output
  #########################################################################
  AC_OUTPUT([Makefile
@@ -33,7 +33,7 @@ Needs to be fixed at some point.
             check_siemens_dir/Makefile
             cudatest/Makefile
             cudatest/gcatest/Makefile
-@@ -3591,7 +3588,6 @@
+@@ -3627,7 +3624,6 @@
             repair_siemens_file/Makefile
             rgb/Makefile
             scripts/Makefile
