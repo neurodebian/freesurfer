@@ -8,8 +8,8 @@
 # Original Author: Doug Greve
 # CVS Revision Info:
 #    $Author: nicks $
-#    $Date: 2011/10/17 21:03:38 $
-#    $Revision: 1.379.2.22 $
+#    $Date: 2011/12/12 17:07:48 $
+#    $Revision: 1.379.2.31 $
 #
 # Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
 #
@@ -26,7 +26,7 @@
 #
 umask 002;
 
-set VERSION = '$Id: recon-all,v 1.379.2.22 2011/10/17 21:03:38 nicks Exp $';
+set VERSION = '$Id: recon-all,v 1.379.2.31 2011/12/12 17:07:48 nicks Exp $';
 set ProgName = `basename $0`;
 
 set inputargs = ($argv);
@@ -92,8 +92,12 @@ set DoGcut = 0;         # 1=run mri_gcut after mri_watershed
 set NuIterations = 2;   # Number of iterations for nu intensity correction
 set ConformMin = 0;     # 1=conformed to min dimension
 set HiRes = 0;          # 1=hires option (conformed to min dimension)
-set Norm3dIters = ();   # passed as -n to mri_normalize
-set NormMaxGrad = 1;    # passed as -g to mri_normalize (input: -normmaxgrad)
+set Norm3dIters = ();   # passed as -n to *both* mri_normalize runs
+set NormMaxGrad = 1;    # passed as -g to *both* mri_normalize runs
+set Norm1_b = ();       # passed as -b to the *first* mri_normalize only
+set Norm1_n = ();       # passed as -n to the *first* mri_normalize only
+set Norm2_b = ();       # passed as -b to the *second* mri_normalize only
+set Norm2_n = ();       # passed as -n to the *second* mri_normalize only
 set WMSeg_wlo = ();  # from -seg-ghi and -seg-wlo, passed to mri_segment
 set WMSeg_ghi = ();  #                             and mris_make_surfaces
 set FixWithGA = 1;   # for topology fixer
@@ -134,7 +138,7 @@ set NoNormMGZ = 0; # set to 1 when -nosubcortseg or -noaseg flag is used,
                    # which causes norm.mgz not to used during inorm2 step
 set NoWMSA = 0;      # if 1, then -nowmsa flag is added to mri_ca_label
 set DoQdecCache = 0; # if 1, then create smoothed fsaverage surface files
-set measurelist = ( thickness area area.pial volume curv sulc white.K white.H jacobian_white  )
+set measurelist = ( thickness area area.pial volume curv sulc white.K white.H jacobian_white w-g.pct.mgh )
                      # ^ these are the files smoothed by DoQdecCache (-qcache)
 set UserMeasureList = 0; # if 1, then 'measurelist' gets additional -measure args
 set measuredir = (); # for specifying an alternate path to measure files
@@ -268,6 +272,7 @@ set DoMorphRGB       = 0;
 set DoWhiteSurfs     = 0;
 set DoCortParc       = 0;
 set DoPialSurfs      = 0;
+set DoPctSurfCon     = 0;
 set DoSurfVolume     = 0;
 set DoCortParc2      = 0;
 set DoParcStats      = 0;
@@ -917,10 +922,12 @@ if ($DoCreateBaseInput && $DoCreateBaseSubj) then
   set lta1forms=();
   set ltaAforms=();
   set headInVols=(); 
+  set rawInVols=();
   foreach s ($BaseSubjsList)
     if($RunIt) echo "${s}" >> ${BaseSubjsListFname};
     set normInVols = ($normInVols ${SUBJECTS_DIR}/${s}/mri/norm.mgz)
     set headInVols = ($headInVols ${SUBJECTS_DIR}/${s}/mri/T1.mgz)
+    set rawInVols = ($rawInVols ${SUBJECTS_DIR}/${s}/mri/rawavg.mgz)
     set subjInVols = ($subjInVols ${SUBJECTS_DIR}/${s}/mri/${BaseSubjInvol})
     set ltaname = ${s}_to_${subjid}.lta
     set ltaXforms = ($ltaXforms ${subjdir}/mri/transforms/${ltaname})
@@ -975,17 +982,31 @@ if ($DoCreateBaseInput && $DoCreateBaseSubj) then
     endif  
   endif
   
-  # create the 'mean/median' input volume:
+  # create the 'mean/median' input (orig) volume:
   set cmd = (mri_robust_template --mov ${subjInVols})
   set cmd = ($cmd --average ${robust_template_avg_arg})
   set cmd = ($cmd --ixforms ${ltaXforms})
   set cmd = ($cmd --noit)
-  set cmd = ($cmd --template ${subjdir}/mri/orig/001.mgz)
+  set cmd = ($cmd --template ${subjdir}/mri/orig.mgz)
   echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
   if($RunIt) then
     $fs_time $cmd |& tee -a $LF
     if($status) goto error_exit;
   endif
+  
+  # create the 'mean/median' rawavg volume
+  # (here we assume same RAS space for rawavg and orig)
+  set cmd = (mri_robust_template --mov ${rawInVols})
+  set cmd = ($cmd --average ${robust_template_avg_arg})
+  set cmd = ($cmd --ixforms ${ltaXforms})
+  set cmd = ($cmd --noit)
+  set cmd = ($cmd --template ${subjdir}/mri/rawavg.mgz)
+  echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
+  if($RunIt) then
+    $fs_time $cmd |& tee -a $LF
+    if($status) goto error_exit;
+  endif
+
   # now create the inverse transforms
   cd $subjdir/mri/transforms > /dev/null
   $PWD |& tee -a $LF
@@ -1027,12 +1048,22 @@ if($DoMotionCor) then
     # use orig/00?.mgz from cross:
     set CrossList = `ls ${SUBJECTS_DIR}/${tpNid}/mri/orig/[0-9][0-9][0-9].mgz`;
     set origvol = $subjdir/mri/orig.mgz
+    set rawvol  = $subjdir/mri/rawavg.mgz
 
     if($#CrossList == 1) then
       # if only single input, directly resample to base space
       set cmd = (mri_convert -at $tpNtobase_regfile -odt uchar)
+      set cmd = ($cmd -rt cubic)
       set cmd = ($cmd ${SUBJECTS_DIR}/${tpNid}/mri/orig/001.mgz)
       set cmd = ($cmd ${origvol})
+      echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
+      if($RunIt) $fs_time $cmd |& tee -a $LF
+      if($status) goto error_exit;
+      # also create rawavg (usually float) image
+      set cmd = (mri_convert -at $tpNtobase_regfile )
+      set cmd = ($cmd -rt cubic)
+      set cmd = ($cmd ${SUBJECTS_DIR}/${tpNid}/mri/orig/001.mgz)
+      set cmd = ($cmd ${rawvol})
       echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
       if($RunIt) $fs_time $cmd |& tee -a $LF
       if($status) goto error_exit;
@@ -1156,15 +1187,15 @@ if($DoMotionCor) then
       set cmd = ($cmd --iscalein ${LongIscales})
     endif
     set cmd = ($cmd --noit)
-    set cmd = ($cmd --template ${origvol})
+    set cmd = ($cmd --template ${rawvol})
     echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
     if($RunIt) then
       $fs_time $cmd |& tee -a $LF
       if($status) goto error_exit;
     endif
 
-    # make sure it is uchar:
-    set cmd = (mri_convert -odt uchar ${origvol} ${origvol})
+    # make sure orig is uchar:
+    set cmd = (mri_convert -odt uchar ${rawvol} ${origvol})
     echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
     if($RunIt) then
       $fs_time $cmd |& tee -a $LF
@@ -1175,6 +1206,14 @@ if($DoMotionCor) then
 
   endif #longitudinal
 
+  # base processing (we do not need to do anything,
+  #   as rawavg and orig should be there)
+  if ($DoCreateBaseSubj) then
+    set origvol = $subjdir/mri/orig.mgz
+    goto motioncor_post_process
+  endif
+  
+  
   # default processing:
   set cmd = ();
 
@@ -1291,6 +1330,7 @@ if($DoMotionCor) then
   # At this point, rawavg.mgz exists. Use it to create orig.mgz,
   # conform to COR FOV but keep mgz format.
   set cmd = (mri_convert $rawavg $origvol)
+  set cmd = ($cmd -rt cubic)
   if($ConformMin) then
     set cmd = ($cmd --conform_min)
   else
@@ -1346,6 +1386,7 @@ talairach:
     |& tee -a $LF |& tee -a $CF
   echo "#@# Talairach `date`" |& tee -a $SF |& tee -a $LF |& tee -a $CF
   cd $subjdir/mri > /dev/null
+  $PWD |& tee -a $LF
   set xfm = transforms/talairach.xfm
   set xfma = transforms/talairach.auto.xfm
   if ($longitudinal) then
@@ -1360,11 +1401,23 @@ talairach:
     set cmd = (cp $longbasedir/mri/$tal_xfm $subjdir/mri/$xfma)
   else
     # default processing:
-    set tal_input = orig.mgz
     if ($DoTalairachUseNu) then
       # note that this only works if nu exists
       # this is used as an alternative if tal is giving bad results
       set tal_input = nu.mgz
+    else
+      # default: run one pass of nu_correct, as its been found that scans
+      # with strong bias fields can cause talairach_avi to fail.  note that
+      # this orig_nu gets deleted, as it doesnt do as much correction as
+      # the nuintensitycor stage (which does more passes and uses talairach.xfm
+      # to find the wm ball so as to do histogramming).
+      set tal_input = orig_nu.mgz
+      set cmd = (mri_nu_correct.mni \
+        --n 1 --proto-iters 1000 --distance 50 --no-rescale \
+        --i orig.mgz --o orig_nu.mgz)
+      echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+      if($RunIt) $fs_time $cmd >& orig_nu.log
+      if($status) goto error_exit;
     endif
     if ($UseMincMritotal) then
       # use the MINC mritotal utility
@@ -1381,10 +1434,12 @@ talairach:
       set cmd = ($cmd $xopts)
     endif
   endif
-  $PWD |& tee -a $LF
   echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
   if($RunIt) $fs_time $cmd |& tee -a $LF
   if($status) goto error_exit;
+  if (-e orig_nu.mgz) then
+    rm -vf orig_nu.mgz orig_nu.log
+  endif
 
   if( -e $xfm && ! $DoCleanTal) then
     echo "\nINFO: $xfm already exists!" \
@@ -1572,6 +1627,9 @@ if($DoNormalization) then
       echo "Recompute intensity norm to create $longbaseid ctrl_vol.mgz" \
         |& tee -a $LF
       set cmd = (mri_normalize)
+      if($#Norm3dIters)  set cmd = ($cmd -n $Norm3dIters)
+      if($#Norm1_b)      set cmd = ($cmd -b $Norm1_b)
+      if($#Norm1_n)      set cmd = ($cmd -n $Norm1_n)
       if($IsMPRAGE)      set cmd = ($cmd -mprage)
       if($IsWashuMPRAGE) set cmd = ($cmd -washu_mprage)
       set cmd = ($cmd \
@@ -1603,6 +1661,8 @@ if($DoNormalization) then
     set cmd = (mri_normalize -g $NormMaxGrad);
     if($UseControlPoints) set cmd = ($cmd -f $ControlPointsFile)
     if($#Norm3dIters)     set cmd = ($cmd -n $Norm3dIters)
+    if($#Norm1_b)         set cmd = ($cmd -b $Norm1_b)
+    if($#Norm1_n)         set cmd = ($cmd -n $Norm1_n)
     if($IsMPRAGE)         set cmd = ($cmd -mprage)
     if($IsWashuMPRAGE)    set cmd = ($cmd -washu_mprage)
     if($ConformMin)       set cmd = ($cmd -noconform)
@@ -2292,6 +2352,9 @@ if($DoNormalization2) then
   set xopts = `fsr-getxopts mri_normalize $XOptsFile`;
   set cmd = (mri_normalize);
   if($UseControlPoints)   set cmd = ($cmd -f $ControlPointsFile)
+  if($#Norm3dIters)       set cmd = ($cmd -n $Norm3dIters)
+  if($#Norm2_b)           set cmd = ($cmd -b $Norm2_b)
+  if($#Norm2_n)           set cmd = ($cmd -n $Norm2_n)
   if($IsMPRAGE)           set cmd = ($cmd -mprage)
   if($IsWashuMPRAGE)      set cmd = ($cmd -washu_mprage)
   if($ConformMin)         set cmd = ($cmd -noconform)
@@ -3046,6 +3109,24 @@ foreach hemi ($hemilist)
     if($status) goto error_exit;
     if(-e .xdebug_mris_calc) rm -f .xdebug_mris_calc
     echo $cmd > $touchdir/$hemi.surfvolume.touch
+  endif
+
+  # ---------- WM/GM Contrast (pctsurfcon) ---------------------------
+  if($DoPctSurfCon) then
+    echo "#-----------------------------------------" \
+      |& tee -a $LF |& tee -a $CF
+    echo "#@# WM/GM Contrast $hemi `date`" \
+      |& tee -a $SF |& tee -a $LF |& tee -a $CF
+    cd $subjdir/scripts > /dev/null
+    set xopts = `fsr-getxopts pctsurfcon $XOptsFile`;
+    set cmd = (pctsurfcon --s $subjid)
+    if($hemi == lh) set cmd = ($cmd --lh-only)
+    if($hemi == rh) set cmd = ($cmd --rh-only)
+    $PWD |& tee -a $LF
+    echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+    if($RunIt) $fs_time $cmd |& tee -a $LF
+    if($status) goto error_exit;
+    echo $cmd > $touchdir/$hemi.pctsurfcon.touch
   endif
 
   # ---------- Surface Anatomical Stats ---------------------------
@@ -4035,6 +4116,9 @@ while( $#argv != 0 )
       set DoNuMakeUchar = 0;
       breaksw
 
+    # note: norm3diters and normmaxgrads is applied to both runs of 
+    # mri_normalize.  use -norm1-b, -norm1-n, -norm2-b, -norm2-n to 
+    # distinguish -b and -n of the two mri_normalize runs
     case "-norm3diters":
       if ( $#argv < 1) goto arg1err;
       set Norm3dIters = $argv[1]; shift;
@@ -4043,6 +4127,22 @@ while( $#argv != 0 )
     case "-normmaxgrad":
       if ( $#argv < 1) goto arg1err;
       set NormMaxGrad = $argv[1]; shift;
+      breaksw
+    case "-norm1-b":
+      if ( $#argv < 1) goto arg1err;
+      set Norm1_b = $argv[1]; shift;
+      breaksw
+    case "-norm1-n":
+      if ( $#argv < 1) goto arg1err;
+      set Norm1_n = $argv[1]; shift;
+      breaksw
+    case "-norm2-b":
+      if ( $#argv < 1) goto arg1err;
+      set Norm2_b = $argv[1]; shift;
+      breaksw
+    case "-norm2-n":
+      if ( $#argv < 1) goto arg1err;
+      set Norm2_n = $argv[1]; shift;
       breaksw
 
     case "-normalization":
@@ -4527,6 +4627,14 @@ while( $#argv != 0 )
       set DoPialSurfs = 0;
       breaksw
 
+    case "-pctsurfcon":
+      set DoPctSurfCon = 1;
+      breaksw
+    case "-nopctsurfcon":
+    case "-no-pctsurfcon":
+      set DoPctSurfCon = 0;
+      breaksw
+
     case "-cortparc":
       set DoCortParc = 1;
       breaksw
@@ -4716,6 +4824,7 @@ while( $#argv != 0 )
       set DoJacobianWhite  = 1;
       set DoCortParc       = 1;
       set DoPialSurfs      = 1;
+      set DoPctSurfCon     = 1;
       set DoParcStats      = 1;
       set DoCortParc2      = 1;
       set DoParcStats2     = 1;
@@ -4760,6 +4869,7 @@ while( $#argv != 0 )
       set DoSmooth2        = 1;
       set DoInflate2       = 1;
       set DoWhiteSurfs     = 1;
+      set DoCurvStats      = 1;
       breaksw
 
     case "-autorecon2-volonly":
@@ -4810,7 +4920,7 @@ while( $#argv != 0 )
       set DoInflate1       = 1;
       breaksw
 
-    case "-autorecon2-aseg":
+    case "-autorecon2-noaseg":
       set DoNormalization2 = 1;
       set DoSegmentation   = 1;
       set DoFill           = 1;
@@ -4834,7 +4944,6 @@ while( $#argv != 0 )
       set DoInflate1       = 1;
       set DoQSphere        = 1;
       set DoFix            = 1;
-      set DoMaskBFS        = 1;
       set DoWhiteSurfs     = 1;
       set DoSmooth2        = 1;
       set DoInflate2       = 1;
@@ -4842,8 +4951,6 @@ while( $#argv != 0 )
       set DoCurvStats      = 1;
       breaksw
 
-    case "-autorecon2-pial":
-    case "-autorecon3-pial":
     case "-autorecon-pial":
       set DoMaskBFS        = 1;
       set DoWhiteSurfs     = 1;
@@ -4858,9 +4965,15 @@ while( $#argv != 0 )
       set DoJacobianWhite  = 1;
       set DoCortParc       = 1;
       set DoPialSurfs      = 1;
+      set DoPctSurfCon     = 1;
       set DoParcStats      = 1;
       set DoCortParc2      = 1;
       set DoParcStats2     = 1;
+      set DoCortRibbonVolMask = 1;
+      set DoAParc2ASeg     = 1;
+      set DoWMParc         = 1;
+      set DoBaLabels       = 1;
+      set DoLabelExvivoEC  = 1;
       breaksw
 
     case "-autorecon3":
@@ -4871,6 +4984,7 @@ while( $#argv != 0 )
       set DoJacobianWhite  = 1;
       set DoCortParc       = 1;
       set DoPialSurfs      = 1;
+      set DoPctSurfCon     = 1;
       set DoParcStats      = 1;
       set DoCortParc2      = 1;
       set DoParcStats2     = 1;
@@ -4907,6 +5021,7 @@ while( $#argv != 0 )
       set DoJacobianWhite  = 1;
       set DoCortParc       = 1;
       set DoPialSurfs      = 1;
+      set DoPctSurfCon     = 1;
       set DoParcStats      = 1;
       set DoCortParc2      = 1;
       set DoParcStats2     = 1;
@@ -5571,6 +5686,7 @@ check_params:
     exit(1);
   endif
 
+  mkdir -p $subjdir/scripts
   set XOptsPreExist = $subjdir/scripts/expert-options
   if(-e $XOptsPreExist) then
     # There is a pre-existing xopts file
@@ -5653,7 +5769,8 @@ check_params:
      ! $DoMakefile && ! $DoAsegStatsDiff && ! $DoAparcStatsDiff && \
      ! $DoSurfVolume && ! $DoASegMerge && ! $DoCurvStats && ! $DoLabelV1 && \
      ! $DoCreateBaseSubj && ! $DoBaLabels && ! $DoShowEdits && \
-     ! $DoLabelExvivoEC && ! $DoSurfSegEdit && ! $DoPialSurfs && ! $DoGEMS) then
+     ! $DoLabelExvivoEC && ! $DoSurfSegEdit && ! $DoPialSurfs && \
+     ! $DoGEMS && ! $DoPctSurfCon ) then
      echo "ERROR: nothing to do"
      exit 1;
   endif
@@ -5721,8 +5838,8 @@ usage_exit:
   echo "  -autorecon2-wm : process stages 15-23"
   echo "  -autorecon2-inflate1 : 6-18"
   echo "  -autorecon2-perhemi : tess, sm1, inf1, q, fix, sm2, inf2, finalsurf, ribbon"
-  echo "  -autorecon3    : process stages 24-31"
-  echo "                     if edits made to correct pial, then run -autorecon2-pial"
+  echo "  -autorecon3    : process stages 24-34"
+  echo "                     if edits made to correct pial, then run -autorecon-pial"
   echo "  -hemi ?h       : just do lh or rh (default is to do both)"
   echo ""
   echo "  Autorecon Processing Stages (see -autorecon# flags above):"
@@ -5759,9 +5876,10 @@ usage_exit:
   echo "    28. Cortical Parcellation (Labeling)"
   echo "    29. Cortical Parcellation Statistics"
   echo "    30. Pial Surfs"
-  echo "    31. Cortical Ribbon Mask"
-  echo "    32. Cortical Parcellation mapped to ASeg"
-  echo "    33  Brodmann and exvio EC labels"
+  echo "    31. WM/GM Contrast"
+  echo "    32. Cortical Ribbon Mask"
+  echo "    33. Cortical Parcellation mapped to ASeg"
+  echo "    34  Brodmann and exvio EC labels"
   echo ""
   echo " Step-wise Directives"
   echo "  See -help"
@@ -5784,6 +5902,14 @@ usage_exit:
   echo "                    correction (default is $NuIterations)"
   echo "  -norm3diters niters : number of 3d iterations for mri_normalize"
   echo "  -normmaxgrad maxgrad : max grad (-g) for mri_normalize. Default is 1."
+  echo "  -norm1-b N : in the _first_ usage of mri_normalize, use control "
+  echo "               point with intensity N below target (default=10.0) "
+  echo "  -norm2-b N : in the _second_ usage of mri_normalize, use control "
+  echo "               point with intensity N below target (default=10.0) "
+  echo "  -norm1-n N : in the _first_ usage of mri_normalize, do N number "
+  echo "               of iterations"
+  echo "  -norm2-n N : in the _second_ usage of mri_normalize, do N number "
+  echo "               of iterations"
   echo "  -cm           : conform volumes to the min voxel size "
   echo "  -no-fix-with-ga : do not use genetic algorithm when fixing topology"
   echo "  -fix-diag-only  : topology fixer runs until ?h.defect_labels files"
@@ -5926,8 +6052,6 @@ Deprecated.  Same as -autorecon2, as control points affect subcortical.
 Fill through make white surfaces. Used after editing wm volume after running
 -autorecon2.
 
--autorecon2-pial
--autorecon3-pial
 -autorecon-pial
 
 Makes final surfaces (white and pial). Used after editing brain.finalsurfs
@@ -5957,6 +6081,7 @@ Run times are approximate for an AMD Opteron 64bit 2.5GHz processor:
   -<no>gcareg             8 min
   -<no>canorm             1 min
   -<no>careg             10 hours
+  -<no>careginv           1 min
   -<no>rmneck             3 min
   -<no>skull-lta          9 min
   -<no>calabel           30 min
@@ -6090,11 +6215,30 @@ Default is 2.
 
 -norm3diters niters
 
-Use niters 3d normalization iterations (passes as -n to mri_normalize).
+Use niters 3d normalization iterations (passes as -n to _both_ runs of
+mri_normalize).
 
 -normmaxgrad maxgrad
 
-Passes "-g maxgrad" to mri_normalize. Max grad default is 1.
+Passes "-g maxgrad" to _both_ runs of mri_normalize. Max grad default is 1.
+
+-norm1-b N
+
+In the _first_ usage of mri_normalize (during creation of T1.mgz), use 
+control point with intensity N below target (default=10.0)
+
+-norm1-n N
+
+In the _first_ usage of mri_normalize, do N number of iterations
+
+-norm2-b N
+
+In the _second_ usage of mri_normalize (during creation of brain.mgz), use 
+control point with intensity N below target (default=10.0)
+
+-norm2-n N
+
+In the _second_ usage of mri_normalize, do N number of iterations
 
 -noaseg
 
@@ -6561,9 +6705,24 @@ Calls mris_make_surfaces.  See also "Final Surfaces".
 
 Final Surfaces (-<no>finalsurfs)
 
-!!! DEPRECATED !!! This flag is intended only to emulate the old-style single-run
+!!! DEPRECATED !!! This flag is intended to emulate the old-style single-run
 mris_make_surfaces, where the white and pial surfaces are created at the same
 time without aid from the cortical parcellation data.
+
+WM/GM Contrast (-<no>pctsurfcon)
+
+Computes the vertex-by-vertex percent contrast between white and gray matter.
+The computation is:
+
+         100*(W-G)
+   pct = ---------
+         0.5*(W+G)
+
+The white matter is sampled 1mm below the white surface. The gray matter is
+sampled 30% the thickness into the cortex. The volume that is sampled is
+rawavg.mgz.  The output is stored in the surf dir of the given subject as
+?h.w-g.pct.mgh.  Non-cortical regions (medial wall) are zeroed.
+A stats file named ?h.w-g.pct.stats is also computed.
 
 Surface Volume (-surfvolume)
 

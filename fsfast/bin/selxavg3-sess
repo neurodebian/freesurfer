@@ -6,8 +6,8 @@
 # Original Author: Doug Greve
 # CVS Revision Info:
 #    $Author: greve $
-#    $Date: 2010/08/25 19:07:25 $
-#    $Revision: 1.57 $
+#    $Date: 2011/12/09 20:06:47 $
+#    $Revision: 1.57.2.1 $
 #
 # Copyright (C) 2002-2007,
 # The General Hospital Corporation (Boston, MA). 
@@ -23,7 +23,7 @@
 #
 
 
-set VERSION = '$Id: selxavg3-sess,v 1.57 2010/08/25 19:07:25 greve Exp $'
+set VERSION = '$Id: selxavg3-sess,v 1.57.2.1 2011/12/09 20:06:47 greve Exp $'
 
 set inputargs = ($argv);
 set DateStr = "`date '+%y%m%d%H%M%S'`"
@@ -94,6 +94,7 @@ if($#analysis) then
   # analysis, not flac file
   set analysisname = $analysis
   set fsd = `getana -a $analysis -t fsd`;
+  set PerSession = `getana -a $analysis -t IsPerSession`
   set IsNative = `getana -a $analysis -t IsNative`
   set IsSurface = `getana -a $analysis -t IsSurface`
   if($IsSurface) then
@@ -274,6 +275,8 @@ foreach sess ($SessList)
   endif
 
   echo "%--------------------------------" >> $MLF
+  echo "sxa3pwd = '`pwd`'">> $MLF
+  echo "sxa3cmd = '$0 $inputargs'">> $MLF
   echo "which fast_selxavg3"               >> $MLF
   echo "okfile         = '$okfile';"       >> $MLF
   echo "if(fast_fileexists(okfile)) delete(okfile); end" >> $MLF

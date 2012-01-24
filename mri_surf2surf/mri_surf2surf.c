@@ -10,9 +10,9 @@
 /*
  * Original Author: Douglas Greve
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/16 21:23:49 $
- *    $Revision: 1.90 $
+ *    $Author: greve $
+ *    $Date: 2011/11/17 21:35:11 $
+ *    $Revision: 1.90.2.1 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -348,7 +348,7 @@ MATRIX *MRIleftRightRevMatrix(MRI *mri);
 
 int main(int argc, char *argv[]) ;
 
-static char vcid[] = "$Id: mri_surf2surf.c,v 1.90 2011/03/16 21:23:49 nicks Exp $";
+static char vcid[] = "$Id: mri_surf2surf.c,v 1.90.2.1 2011/11/17 21:35:11 greve Exp $";
 char *Progname = NULL;
 
 char *srcsurfregfile = NULL;
@@ -471,7 +471,7 @@ int main(int argc, char **argv)
   /* rkt: check for and handle version tag */
   nargs = handle_version_option (
     argc, argv,
-    "$Id: mri_surf2surf.c,v 1.90 2011/03/16 21:23:49 nicks Exp $",
+    "$Id: mri_surf2surf.c,v 1.90.2.1 2011/11/17 21:35:11 greve Exp $",
     "$Name: stable5 $");
   if (nargs && argc - nargs == 1) {
     exit (0);
@@ -831,7 +831,8 @@ int main(int argc, char **argv)
   }
 
   if(strcmp(srcsubject,trgsubject) || strcmp(srchemi,trghemi) ||
-      strcmp(srcsurfregfile,trgsurfregfile)) {
+     strcmp(srcsurfregfile,trgsurfregfile) ||
+     (!strcmp(srcsubject,"ico") && !strcmp(trgsubject,"ico") && SrcIcoOrder != TrgIcoOrder)){
     /* ------- Source and Target Subjects or Hemis are different ------ */
     /* ------- Load the registration surface for target subject ------- */
     if (!strcmp(trgsubject,"ico")) {
