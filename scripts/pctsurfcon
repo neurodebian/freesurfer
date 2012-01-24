@@ -5,9 +5,9 @@
 #
 # Original Author: Doug Greve
 # CVS Revision Info:
-#    $Author: mreuter $
-#    $Date: 2011/03/16 16:32:11 $
-#    $Revision: 1.11 $
+#    $Author: nicks $
+#    $Date: 2011/11/10 20:37:10 $
+#    $Revision: 1.11.2.1 $
 #
 # Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
 #
@@ -22,13 +22,14 @@
 #
 
 #
-set VERSION = '$Id: pctsurfcon,v 1.11 2011/03/16 16:32:11 mreuter Exp $';
+set VERSION = '$Id: pctsurfcon,v 1.11.2.1 2011/11/10 20:37:10 nicks Exp $';
 set inputargs = ($argv);
 
 set subject = ();
 set fsvol = rawavg;
 set mov = ();
 set reg = ();
+set UseMask = 1;
 
 set DoLH = 1;
 set DoRH = 1;
@@ -104,6 +105,7 @@ foreach hemi ($hemilist)
     --projdist -$WMProjAbs --o $wm)
   if($#reg == 0) set cmd = ($cmd --regheader $subject);
   if($#reg != 0) set cmd = ($cmd --reg $reg);
+  if($UseMask) set cmd = ($cmd --cortex);
   echo $cmd
   $cmd
   if($status) exit 1;
@@ -116,6 +118,7 @@ foreach hemi ($hemilist)
   if($#GMProjAbs) set cmd = ($cmd --projdist $GMProjAbs)
   if($#reg == 0) set cmd = ($cmd --regheader $subject);
   if($#reg != 0) set cmd = ($cmd --reg $reg);
+  if($UseMask) set cmd = ($cmd --cortex);
   echo $cmd
   $cmd
   if($status) exit 1;
@@ -189,6 +192,10 @@ while( $#argv != 0 )
     case "--b":
       if ( $#argv < 1) goto arg1err;
       set OutBase = $argv[1]; shift;
+      breaksw
+
+    case "--no-mask":
+      set UseMask = 0;
       breaksw
 
     case "--lh-only":
@@ -324,6 +331,7 @@ usage_exit:
   echo "  --gm-proj-abs  dist : GM projection distance (default is to use frac)"
   echo "  --wm-proj-abs  dist : WM projection distance (default is $WMProjAbs mm)"
   echo "  --neg : compute G-W instead of W-G"
+  echo "  --no-mask : do not mask out non-cortical regions"
   echo ""
   echo "Even more arguments"
   echo ""
@@ -349,7 +357,7 @@ matter. The computation is:
          0.5*(W+G)
 
 The white matter is sampled 1mm below the white surface. This distance
-is changeable with --wm-proj-abs. The gray matter is sampled half the
+is changeable with --wm-proj-abs. The gray matter is sampled 30% the
 thickness into the cortex. This fraction is changeable with
 --gm-proj-frac. The volume that is sampled is rawavg.mgz, but this
 can be changed with --fsvol.
@@ -358,7 +366,8 @@ The output is stored in the surf dir of the given subject as
 ?h.w-g.pct.mgh. This can be changed to ?h.outbase.mgh with 
 --o outbase.
 
-Note: no attempt is made to zero out the non-cortex region.
+Note: the non-cortex region is zeroed-out by default. This can be
+overridden with the --no-mask flag.
 
 Example:
 
