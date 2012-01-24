@@ -1,3 +1,9 @@
+freesurfer (5.1.0+dev+cvs20120104-1) UNRELEASED; urgency=low
+
+  * New upstream snapshot from 'stable5' CVS branch.
+
+ -- Mark Hymers <mhy@debian.org>  Tue, 24 Jan 2012 15:05:16 +0000
+
 freesurfer (5.1.0+cvs20111031-1) UNRELEASED; urgency=low
 
   * New upstream snapshot from 'stable5' CVS branch.
