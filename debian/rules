@@ -38,6 +38,7 @@ override_dh_auto_configure:
 		--with-wxwidgets-dir=/usr \
 		--with-itk-dir=/usr \
 		--with-fltk-dir=/usr \
+		--with-opencv=/usr \
 		CFLAGS="-I/usr/include/libxml2 -I/usr/include/GL" \
 		LDFLAGS="-Wl,--allow-shlib-undefined"
 
