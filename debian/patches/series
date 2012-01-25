@@ -7,6 +7,7 @@ dont_build_3rdparty
 exhaustive_clean
 use_f2c_not_g2c
 internal_shared_libs
+fixgtsdetection
 install_path_mri_cvs_register
 missing_shared_libs
 deb_no_tktools
