@@ -40,6 +40,8 @@ override_dh_auto_configure:
 		--with-fltk-dir=/usr \
 		--with-opencv=/usr \
 		--with-gts-dir=/usr \
+		--with-boost-dir=/usr \
+		--with-petsc-dir=/usr \
 		CFLAGS="-I/usr/include/libxml2 -I/usr/include/GL" \
 		LDFLAGS="-Wl,--allow-shlib-undefined"
 
