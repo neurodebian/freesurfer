@@ -13,3 +13,4 @@ deb_no_tktools
 fix_install_destdir
 disable_to_be_fixed_pieces
 mris_decimate_gui_wx2.8
+petsc_link_fix
