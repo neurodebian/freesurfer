@@ -1467,8 +1467,12 @@ Subject: [PATCH 2/2] Shared libs
  	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  	-lvtkWidgets -lvtkHybrid \
  	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB)
-@@ -458,9 +458,9 @@
- freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS)
+@@ -455,12 +455,12 @@
+ 	$(VXL_CFLAGS)
+ 
+ freeview_CXXFLAGS = $(QT_CXXFLAGS) $(AM_CXXFLAGS)
+-freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS)
++freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS) -I/usr/include/qt4 -I/usr/include/qt4/QtCore -I/usr/include/qt4/QtGui
  freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS)
  freeview_LDADD		= $(QT_LIBS)	\
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
