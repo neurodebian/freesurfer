@@ -21,7 +21,7 @@ Build-Depends: debhelper (>= 7.0.50~), dh-autoreconf,
                libnifti-dev,
                texlive-fonts-recommended,
                libcv-dev (>=2.2), libhighgui-dev,
-               libgts-dev
+               libgts-dev, libboost-all-dev, libpetsc3.1-dev
 Standards-Version: 3.9.2
 Homepage: http://surfer.nmr.mgh.harvard.edu/
 Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/freesurfer.git
