@@ -126,3 +126,15 @@ Author: Mark Hymers <mark.hymers@ynic.york.ac.uk>
  	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/mris_decimate_gui
  	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
  		>> $(DESTDIR)$(bindir)/mris_decimate_gui
+--- a/mris_volmask/Makefile.am
++++ b/mris_volmask/Makefile.am
+@@ -69,8 +69,7 @@
+ # put a wrapper around the bin, used to setup VTK enviro vars
+ if HAVE_VTK_LIBS
+ install-exec-hook:
+-	cp $(top_builddir)/mris_volmask/mris_volmask_vtk \
+-		$(DESTDIR)$(bindir)/mris_volmask_vtk.bin
++	mv $(DESTDIR)$(bindir)/mris_volmask_vtk $(DESTDIR)$(bindir)/mris_volmask_vtk.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/mris_volmask_vtk
+ 	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+ 		>> $(DESTDIR)$(bindir)/mris_volmask_vtk
