@@ -39,6 +39,7 @@ override_dh_auto_configure:
 		--with-itk-dir=/usr \
 		--with-fltk-dir=/usr \
 		--with-opencv=/usr \
+		--with-gts-dir=/usr \
 		CFLAGS="-I/usr/include/libxml2 -I/usr/include/GL" \
 		LDFLAGS="-Wl,--allow-shlib-undefined"
 
