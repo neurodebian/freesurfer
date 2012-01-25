@@ -5341,7 +5341,7 @@ Subject: [PATCH 2/2] Shared libs
 -                  $(top_builddir)/tetgen/libtetgen.a 
 +dmri_trk2trk_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +                  $(top_builddir)/fem_elastic/libfem_elastic.la \
-+                  $(top_builddir)/tetgen/libtetgen.la 
++                  $(top_builddir)/tetgen/libtetgen.la -lmpi_cxx
  dmri_trk2trk_LDFLAGS=$(OS_LDFLAGS)
  
  dmri_train_SOURCES=dmri_train.cxx blood.cxx blood.h spline.cxx spline.h \
@@ -5357,7 +5357,7 @@ Subject: [PATCH 2/2] Shared libs
 -                  $(top_builddir)/tetgen/libtetgen.a 
 +dmri_paths_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +                  $(top_builddir)/fem_elastic/libfem_elastic.la \
-+                  $(top_builddir)/tetgen/libtetgen.la 
++                  $(top_builddir)/tetgen/libtetgen.la -lmpi_cxx
  dmri_paths_LDFLAGS=$(OS_LDFLAGS)
  
  dmri_pathstats_SOURCES=dmri_pathstats.cxx spline.cxx spline.h \
