@@ -38,7 +38,7 @@ Package: freesurfer-5.1
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
  freesurfer-common-5.1 (= ${source:Version}), ${python:Depends},
- tcsh, csh | c-shell, python
+ tcsh, python
 Description: Freesurfer 5.1 package
  This package contains the Freesurfer 5.1 software.
 
@@ -53,7 +53,7 @@ Package: freesurfer-fsfast-5.1
 Section: contrib/science
 Architecture: all
 Depends: ${misc:Depends}, matlab-freesurfer-5.1 (= ${source:Version}),
- tcsh | csh | c-shell, tclsh, python
+ tcsh, tclsh, python
 Description: Freesurfer's fMRI processing toolbox
  This package contains the FSFAST toolbox from Freesurfer 5.1.
 
