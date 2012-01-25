@@ -42,6 +42,7 @@ override_dh_auto_configure:
 		--with-gts-dir=/usr \
 		--with-boost-dir=/usr \
 		--with-petsc-dir=/usr \
+		--with-petsc-include=/usr/include/petsc \
 		CFLAGS="-I/usr/include/libxml2 -I/usr/include/GL" \
 		LDFLAGS="-Wl,--allow-shlib-undefined"
 
