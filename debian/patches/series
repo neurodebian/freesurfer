@@ -12,7 +12,6 @@ install_path_mri_cvs_register
 missing_shared_libs
 deb_no_tktools
 fix_install_destdir
-disable_to_be_fixed_pieces
 mris_decimate_gui_wx2.8
 petsc_link_fix
 femelasticbotch
@@ -20,3 +19,4 @@ petscupdate
 renamehsizet
 fixanndetection
 dynamicfltk
+debian-changes-5.1.0+dev+cvs20120104-1
