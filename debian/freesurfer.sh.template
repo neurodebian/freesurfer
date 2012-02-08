@@ -11,8 +11,8 @@ PATH=$PATH:/usr/lib/freesurfer-FSMAJORVERSION/bin
 export PATH
 
 # let freesurfer know where its libraries are
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/freesurfer-FSMAJORVERSION/lib
-export PATH
+LD_LIBRARY_PATH="/usr/lib/freesurfer-FSMAJORVERSION/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH
 
 # load user configuration
 if [ -f "${HOME}/.freesurfer.sh" ]; then
