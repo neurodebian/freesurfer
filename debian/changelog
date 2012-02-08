@@ -1,3 +1,9 @@
+freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze1) squeeze-devel; urgency=low
+
+  * Rebuild for YNiC Squeeze backport.
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Wed, 08 Feb 2012 13:02:06 +0000
+
 freesurfer (5.1.0+dev+cvs20120104-1) UNRELEASED; urgency=low
 
   * New upstream snapshot from 'stable5' CVS branch.
