@@ -80,6 +80,13 @@ override_dh_auto_install:
 		sed -i -e 's|^#![ ]*/bin/csh|#!/bin/csh|' $$f ; \
 	done
 
+	# Fix up some data file paths
+	rm -f debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data/GEMS/CurrentMeshCollection30.gz
+	rm -f debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data/GEMS/imageDump.mgz
+	mkdir -p debian/tmp/usr/share/freesurfer-$(FSMAJORVERSION)/data
+	mv debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data/GEMS debian/tmp/usr/share/freesurfer-$(FSMAJORVERSION)/data/
+	rmdir debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data
+
 override_dh_auto_test:
 	: # none for now
 
