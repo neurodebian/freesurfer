@@ -1,0 +1,15 @@
+Index: freesurfer/mri_mc/mris_extract_main_component.c
+===================================================================
+--- freesurfer.orig/mri_mc/mris_extract_main_component.c	2012-06-28 12:54:35.000000000 +0100
++++ freesurfer/mri_mc/mris_extract_main_component.c	2012-06-28 12:54:51.000000000 +0100
+@@ -56,8 +56,8 @@
+   mris_in=MRISread(argv[1]);
+   mris_out=MRISextractMainComponent(mris_in,0,1,0);
+   MRISwrite(mris_out,argv[2]);
+-  MRISfree(&mris_out);
+-  MRISfree(&mris_in);
++  //MRISfree(&mris_out);
++  //MRISfree(&mris_in);
+   fprintf(stderr,"\ndone\n\n");
+   return 0;
+ }

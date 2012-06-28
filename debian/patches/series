@@ -19,3 +19,5 @@ petscupdate
 renamehsizet
 fixanndetection
 dynamicfltk
+no_morph_utils_warning
+prevent_segfaults
