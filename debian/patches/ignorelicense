@@ -1,0 +1,11 @@
+--- a/utils/chklc.c
++++ b/utils/chklc.c
+@@ -74,6 +74,8 @@
+   char* lfilename;
+   char  str[STRLEN] ;
+ 
++  return;
++
+   sprintf(str, "S%sER%sRONT%sOR", "URF", "_F", "DO") ;
+   if (getenv(str) != NULL) return ;
+ 
