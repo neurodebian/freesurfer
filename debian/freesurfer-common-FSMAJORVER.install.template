@@ -4,3 +4,4 @@ debian/freesurfer_gui_app_wrapper usr/share/freesurfer-FSMAJORVERSION/
 debian/tmp/usr/lib/freesurfer-FSMAJORVERSION/lib/images usr/share/freesurfer-FSMAJORVERSION/lib/
 debian/tmp/usr/lib/freesurfer-FSMAJORVERSION/lib/resource usr/share/freesurfer-FSMAJORVERSION/lib/
 debian/tmp/usr/lib/freesurfer-FSMAJORVERSION/lib/tcl usr/share/freesurfer-FSMAJORVERSION/lib/
+debian/tmp/usr/lib/freesurfer-FSMAJORVERSION/docs usr/share/freesurfer-FSMAJORVERSION/

@@ -1,3 +1,9 @@
+freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze2) squeeze-devel; urgency=low
+
+  * Install XML doc files.
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Fri, 13 Jul 2012 11:30:23 +0100
+
 freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze1) squeeze-devel; urgency=low
 
   * Rebuild for YNiC Squeeze backport.
