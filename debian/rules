@@ -105,7 +105,9 @@ override_dh_auto_clean:
 	# remove fake data files
 	-grep 'GEMS/data*' freesurfer-data.md5sums |cut -d ' ' -f 3,3| xargs rm
 	-grep 'talairach_avi/*' freesurfer-data.md5sums |cut -d ' ' -f 3,3 |xargs rm
-
+	# remove files which upstream doesn't and which otherwise upset 3.0 (quilt)
+	-rm -f GEMS/kvlAtlasMeshViewingConsoleGUI.h
+	-rm -f GEMS/kvlSegmentationEvaluationConsoleGUI.h
 	# Remove files generated using FSMAJORVERSION
 	for tmpl in debian/*template; do \
 		tmpl=$${tmpl%*.template}; \
