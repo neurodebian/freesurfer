@@ -1,12 +1,11 @@
-Format: http://dep.debian.net/deps/dep5/
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: freesurfer
 Upstream-Contact: freesurfer@nmr.mgh.harvard.edu
 Source: https://surfer.nmr.mgh.harvard.edu/fswiki/ReadOnlyCVS
 
 Files: *
 Copyright: 2011, The General Hospital Corporation (Boston, MA) "MGH"
-License: FreeSurfer Software License Agreement ("Agreement")
-
+License: FreeSurfer-Software-License-Agreement
 
 
 Files: debian/*
@@ -42,7 +41,7 @@ License: BSD
  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
-License: FreeSurfer Software License Agreement ("Agreement")
+License: FreeSurfer-Software-License-Agreement
                      Version 1.0 (February 2011)
   .
   This Agreement covers contributions to and downloads from the
