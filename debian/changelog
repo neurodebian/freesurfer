@@ -1,3 +1,9 @@
+freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze3) squeeze-devel; urgency=low
+
+  * Look for flirt.sch in the data directory.  Helps close YNiC RT: #1299. 
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Fri, 07 Sep 2012 21:02:15 +0100
+
 freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze2) squeeze-devel; urgency=low
 
   * Install XML doc files.
