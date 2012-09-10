@@ -1,3 +1,9 @@
+freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze5) squeeze-devel; urgency=low
+
+  * Add n3-bin, mni-autoreg and minc-tools to Depends.
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Mon, 10 Sep 2012 22:50:23 +0100
+
 freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze4) squeeze-devel; urgency=low
 
   * Fix MINC share location.

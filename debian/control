@@ -38,7 +38,7 @@ Package: freesurfer-5.1
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
  freesurfer-common-5.1 (= ${source:Version}), ${python:Depends},
- tcsh, python
+ tcsh, python, minc-tools, n3-bin, mni-autoreg
 Description: Freesurfer 5.1 package
  This package contains the Freesurfer 5.1 software.
 
