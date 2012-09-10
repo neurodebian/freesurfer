@@ -1,0 +1,67 @@
+--- a/scripts/mri_motion_correct
++++ b/scripts/mri_motion_correct
+@@ -195,26 +195,26 @@ check_size()
+ # ---------------------------------------------------------------------
+ # definitions
+ 
+-mni_bin_dir=$MINC_BIN_DIR
+-mni_lib_dir=$MINC_LIB_DIR
+-perl_lib_dir=/usr/lib/perl5
++#mni_bin_dir=/usr/bin
++#mni_lib_dir=$MINC_LIB_DIR
++#perl_lib_dir=/usr/lib/perl5
+ 
+-mri_convert_default_dir=${FREESURFER_HOME}/bin/Linux/mri_convert
++#mri_convert_default_dir=${FREESURFER_HOME}/bin/mri_convert
+ 
+ # ----- update variables -----
+-PATH=${mni_bin_dir}:${PATH}:${mri_convert_default_dir}
++#PATH=${mni_bin_dir}:${PATH}:${mri_convert_default_dir}
+ 
+-if [ $LD_LIBRARY_PATH ] ; then
+-    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${mni_lib_dir}
+-else
+-    LD_LIBRARY_PATH=$mni_lib_dir
+-fi
+-
+-if [ $PERLLIB ] ; then
+-    PERLLIB=${PERLLIB}:${perl_lib_dir}
+-else
+-    PERLLIB=$perl_lib_dir
+-fi
++#if [ $LD_LIBRARY_PATH ] ; then
++#    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${mni_lib_dir}
++#else
++#    LD_LIBRARY_PATH=$mni_lib_dir
++#fi
++
++#if [ $PERLLIB ] ; then
++#    PERLLIB=${PERLLIB}:${perl_lib_dir}
++#else
++#    PERLLIB=$perl_lib_dir
++#fi
+ 
+ # ----- check for "which" -----
+ have_which=
+--- a/scripts/talairach
++++ b/scripts/talairach
+@@ -89,7 +89,7 @@ endif
+ 
+ echo "--------------------------------------------"
+ set cmd = (mritotal -verbose -debug -clobber \
+-	    -modeldir ${MINC_BIN_DIR}/../share/mni_autoreg \
++	    -modeldir /usr/share/mni_autoreg \
+ 	    -protocol $Protocol \
+ 	    $tmpdir/src.mnc $XFM)
+ echo $cmd |& tee -a
+--- a/scripts/talairach2
++++ b/scripts/talairach2
+@@ -91,7 +91,7 @@ endif
+ 
+ echo "--------------------------------------------"
+ set cmd = (mritotal -verbose -debug -clobber \
+-	    -modeldir ${MINC_BIN_DIR}/../share/mni_autoreg \
++	    -modeldir /usr/share/mni_autoreg \
+ 	    -protocol icbm \
+ 	    nu.mnc transforms/talairach.xfm)
+ echo $cmd
