@@ -44,7 +44,7 @@ Description: Freesurfer 5.1 package
 
 Package: freesurfer-common-5.1
 Architecture: all
-Depends: ${misc:Depends}, tclsh
+Depends: ${misc:Depends}, tclsh, mni-autoreg-model
 Description: Common data files for Freesurfer
  This package contains architecture independent data files of the
  Freesurfer 5.1 software.
