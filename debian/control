@@ -24,6 +24,7 @@ Build-Depends: debhelper (>= 7.0.50~), dh-autoreconf,
                libgts-dev, libboost-all-dev, libpetsc3.1-dev,
                libann-dev,
                libfltk1.1-dev
+Build-Conflicts: libvtk5-dev (<< 5.6), tcl-dev (<< 8.5)
 Standards-Version: 3.9.2
 Homepage: http://surfer.nmr.mgh.harvard.edu/
 Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/freesurfer.git
