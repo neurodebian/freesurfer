@@ -7,7 +7,7 @@ Subject: Self-contained libs/proper linking for increased happiness
  	IconLoader.cxx
  
 +libvtkutils_la_LIBADD= \
-+	-lKWWidgets -ltcl -lvtkCommon -lvtkCommonTCL -lvtkFiltering -lvtkGraphics -lvtkHybrid -lvtkRendering
++	-lKWWidgets -ltcl8.5 -lvtkCommon -lvtkCommonTCL -lvtkFiltering -lvtkGraphics -lvtkHybrid -lvtkRendering
 +
  # We use vtkWrapTcl to create the Tcl wrapped code for this object.
  vtkKWRGBATransferFunctionEditorTcl.cxx: vtkKWRGBATransferFunctionEditor.h
