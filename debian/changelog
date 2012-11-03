@@ -1,3 +1,9 @@
+freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze7) squeeze-devel; urgency=low
+
+  * Fix ups for qdec crashes.
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Sat, 03 Nov 2012 23:06:26 +0000
+
 freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze6) squeeze-devel; urgency=low
 
   * Rebuild without using tcl8.4 to avoid both 8.4 and 8.5 linking into
