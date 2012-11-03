@@ -24,5 +24,6 @@ prevent_segfaults
 ignorelicense
 upstreamfixup
 fix_flirtsch_location
+fix_minc_share_location
 remove_qdec_bashism
 qdec_disable_titles
