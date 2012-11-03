@@ -24,3 +24,4 @@ prevent_segfaults
 ignorelicense
 upstreamfixup
 fix_flirtsch_location
+remove_qdec_bashism
