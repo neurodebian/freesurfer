@@ -1,11 +1,14 @@
 --- a/qdecproject/QdecProject.cxx
 +++ b/qdecproject/QdecProject.cxx
-@@ -655,8 +655,9 @@
+@@ -654,9 +654,10 @@
+   {
      fprintf(stdout,".");
      fflush(stdout);
-     string id = theSubjects[i]->GetId();
 +    // Don't use >& as it's not POSIX... (e.g. dash fails with bad fd warning)
+     string id = theSubjects[i]->GetId();
      string sCommand = "ls " +
 -      this->GetSubjectsDir() + "/" + id + " >& /dev/null";
 +      this->GetSubjectsDir() + "/" + id + " >/dev/null 2>&1";
      int rSystem = system( sCommand.c_str() );
+     if ( 0 != rSystem )
+     {

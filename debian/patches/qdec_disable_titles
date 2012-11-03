@@ -1,0 +1,42 @@
+Description: Disable updating titles in qdec
+
+There's some form of string handling bug in the X and Y axis setting code in
+qdec which causes a crash with an X11 error.  For now, just disable it until
+we've tracked down what the issue is.
+
+--- a/vtkutils/vtkKWBltGraph.cxx
++++ b/vtkutils/vtkKWBltGraph.cxx
+@@ -305,7 +305,7 @@
+ void
+ vtkKWBltGraph::UpdateXAxisTitle () {
+ 
+-  if( this->IsCreated() ) {
++  /*if( this->IsCreated() ) {
+ 
+     // Set the title in the graph.
+     if( NULL != XAxisTitle ) {
+@@ -316,13 +316,13 @@
+                     this->GetWidgetName() );
+     }
+ 
+-  }
++  }*/
+ }
+ 
+ void
+ vtkKWBltGraph::UpdateYAxisTitle () {
+ 
+-  if( this->IsCreated() ) {
++  /*if( this->IsCreated() ) {
+ 
+     // Set the title in the graph.
+     if( NULL != YAxisTitle ) {
+@@ -333,7 +333,7 @@
+                     this->GetWidgetName() );
+     }
+ 
+-  }
++  }*/
+ }
+ 
+ void

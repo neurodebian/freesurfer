@@ -25,3 +25,4 @@ ignorelicense
 upstreamfixup
 fix_flirtsch_location
 remove_qdec_bashism
+qdec_disable_titles
