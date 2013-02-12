@@ -1,8 +1,12 @@
 freesurfer (5.1.0+dev+cvs20120104-1) UNRELEASED; urgency=low
 
-  * Removing upstreamfixup patch (files seems to be present)
+  * debian/patches:
+    - removed upstreamfixup patch (files seems to be present)
+  * debian/repack.sh:
+    - move .gca files into -data as well
+    - remove sourceless ./talairach_avi/RLB700_preprocessing_statistics.pdf
 
- -- Yaroslav Halchenko <debian@onerussian.com>  Tue, 12 Feb 2013 12:21:16 -0500
+ -- Yaroslav Halchenko <debian@onerussian.com>  Tue, 12 Feb 2013 12:38:30 -0500
 
 freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze3) squeeze-devel; urgency=low
 

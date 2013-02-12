@@ -49,7 +49,7 @@ mkdir -p ${nonfree_dir}/scripts
 # major hunk of data
 mv dev/distribution $data_dir
 # copy data files that are scattered around
-for i in $(find dev -type f -regextype posix-egrep -regex '.*\.(img|gz|mgh|mgz)'); do
+for i in $(find dev -type f -regextype posix-egrep -regex '.*\.(img|gz|mgh|mgz|gca)'); do
 	mkdir -p ${data_dir}/$(dirname ${i#dev/*})
 	mv $i ${data_dir}/${i#dev/*}
 done
@@ -62,12 +62,13 @@ mv dev/talairach_avi/3T18yoSchwartzReactN32_as_orig* \
 find dev/fsfast/docs/ -name '*.pdf' -delete
 find dev/ -name 'callgrind*' -delete
 find dev/ -name '*.bak' -delete
+find GEMS/ -name '*.o' -delete
 rm dev/INSTALL
 rm dev/config/*
 rm dev/qdec/qdec-boad-wink.wnk
 rm dev/fsfast/docs/MGH-NMR-StdProc-Handbook.doc
 # docs with no sources
-rm -rf dev/docs
+rm -rf dev/docs ./talairach_avi/RLB700_preprocessing_statistics.pdf
 # generated wrappers
 find dev -name '*Tcl.cxx' -delete
 # generated Makefiles
