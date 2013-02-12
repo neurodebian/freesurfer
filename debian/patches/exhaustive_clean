@@ -37,7 +37,7 @@ Subject: Let clean do it properly
  
 --- a/scuba2/Makefile.am
 +++ b/scuba2/Makefile.am
-@@ -221,6 +221,9 @@
+@@ -223,6 +223,9 @@
  uninstall-hook:
  	rm -f $(DESTDIR)$(bindir)/scuba2.bin
  

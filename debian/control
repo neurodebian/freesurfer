@@ -15,12 +15,14 @@ Build-Depends: debhelper (>= 7.0.50~), dh-autoreconf,
                libxinerama-dev,
                xviewg-dev,
                libinsighttoolkit3-dev,
-               libkwwidgets1-dev,
+               libwxgtk2.8-dev, libkwwidgets1-dev,
                fluid,
                tcsh,
                libnifti-dev,
                texlive-fonts-recommended,
-               libcv-dev (>=2.2), libhighgui-dev
+               libcv-dev (>=2.2), libhighgui-dev,
+               libgts-dev, libboost-all-dev, libpetsc3.1-dev,
+               libann-dev
 Standards-Version: 3.9.2
 Homepage: http://surfer.nmr.mgh.harvard.edu/
 Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/freesurfer.git
@@ -36,7 +38,7 @@ Package: freesurfer-5.1
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
  freesurfer-common-5.1 (= ${source:Version}), ${python:Depends},
- tcsh, csh | c-shell, python
+ tcsh, python
 Description: Freesurfer 5.1 package
  This package contains the Freesurfer 5.1 software.
 
@@ -51,7 +53,7 @@ Package: freesurfer-fsfast-5.1
 Section: contrib/science
 Architecture: all
 Depends: ${misc:Depends}, matlab-freesurfer-5.1 (= ${source:Version}),
- tcsh | csh | c-shell, tclsh, python
+ tcsh, tclsh, python
 Description: Freesurfer's fMRI processing toolbox
  This package contains the FSFAST toolbox from Freesurfer 5.1.
 

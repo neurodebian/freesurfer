@@ -14,7 +14,7 @@ The data is shipped in a dedicated package.
  	$(MRISSUBDIRS) \
 --- a/configure.in
 +++ b/configure.in
-@@ -3288,20 +3288,6 @@
+@@ -3324,20 +3324,6 @@
             cudatest/volumecopy/Makefile
             cudatest/mrilabeltest/Makefile
             dicom/Makefile

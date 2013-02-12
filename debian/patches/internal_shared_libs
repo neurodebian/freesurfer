@@ -724,7 +724,7 @@ Subject: [PATCH 2/2] Shared libs
  AC_SUBST(LIB_LAPACK_A)
  
  
-@@ -1905,21 +1907,21 @@
+@@ -1932,21 +1934,21 @@
  fi
  
  # use static lib if found
@@ -761,7 +761,7 @@ Subject: [PATCH 2/2] Shared libs
  
  AM_CONDITIONAL(USE_LOCAL_JPEG, test "$ac_jpeg_libraries" = "NO")
  
-@@ -2108,7 +2110,7 @@
+@@ -2144,7 +2146,7 @@
  
  AC_ARG_WITH(vtk-include,
    [  --with-vtk-include=DIR      root of VTK include directory.],
@@ -770,7 +770,7 @@ Subject: [PATCH 2/2] Shared libs
       ac_vtk_includes="$vtk_i"
    ])
  
-@@ -2550,34 +2552,37 @@
+@@ -2586,34 +2588,37 @@
  
    # these are the minimum ITK libs necessary to support Nrrd IO,
    # notice they are all static (avoiding LD_LIBRARY_PATH usage)
@@ -832,7 +832,7 @@ Subject: [PATCH 2/2] Shared libs
    LIBS_ITK="$LIBS_ITK $LIB_UUID_A"
  else
    AC_MSG_RESULT([Not building ITK apps.])
-@@ -2618,7 +2623,7 @@
+@@ -2654,7 +2659,7 @@
  
  if test ! "$ac_gl_includes" = "NO"; then
    AC_MSG_RESULT(gl directory is $withval)
@@ -841,7 +841,7 @@ Subject: [PATCH 2/2] Shared libs
  else
    AC_MSG_RESULT(OpenGL directory is not supplied)
  fi
-@@ -2717,14 +2722,13 @@
+@@ -2753,14 +2758,13 @@
  
  # stupid circular dependency on iopen swapInt etc.
  LIBS_MGH="\
@@ -863,7 +863,7 @@ Subject: [PATCH 2/2] Shared libs
  
  # use local libjpeg if --with-jpeg-dir not used:
  if test "$ac_jpeg_libraries" = "NO"; then
-@@ -2746,6 +2750,7 @@
+@@ -2782,6 +2786,7 @@
  LIBS_CUDA_MGH=`echo ${LIBS_MGH} | sed 's/libutils/libutils_cuda/g'`
  
  AC_SUBST(LIBS_MGH)
@@ -871,7 +871,7 @@ Subject: [PATCH 2/2] Shared libs
  AC_SUBST(LIBS_CUDA_MGH)
  AC_SUBST(LIB_JPEG)
  AC_SUBST(LIB_TIFF)
-@@ -3095,6 +3100,9 @@
+@@ -3131,6 +3136,9 @@
  
    ##################### Tix
    LIBS="$X_LIBS $LIB_TK $LIB_TCL $LIBS"
@@ -881,7 +881,7 @@ Subject: [PATCH 2/2] Shared libs
    # check Tix8.4.2 first, as that is known to work best with tcl/tk 8.5
    AC_CHECK_LIB([Tix8.4.2], [Tix_Init],
    [LIB_TIX=-lTix8.4.2],
-@@ -3126,6 +3134,7 @@
+@@ -3162,6 +3170,7 @@
          ])
        ])
      ])
@@ -1467,8 +1467,12 @@ Subject: [PATCH 2/2] Shared libs
  	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  	-lvtkWidgets -lvtkHybrid \
  	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB)
-@@ -458,9 +458,9 @@
- freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS)
+@@ -455,12 +455,12 @@
+ 	$(VXL_CFLAGS)
+ 
+ freeview_CXXFLAGS = $(QT_CXXFLAGS) $(AM_CXXFLAGS)
+-freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS)
++freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS) -I/usr/include/qt4 -I/usr/include/qt4/QtCore -I/usr/include/qt4/QtGui
  freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS)
  freeview_LDADD		= $(QT_LIBS)	\
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
@@ -5016,7 +5020,7 @@ Subject: [PATCH 2/2] Shared libs
  
 --- a/scuba/Makefile.am
 +++ b/scuba/Makefile.am
-@@ -23,7 +23,7 @@
+@@ -25,7 +25,7 @@
  # these warnings appear with gcc 4.#
  AM_CXXFLAGS=-Wno-non-virtual-dtor
  
@@ -5025,7 +5029,7 @@ Subject: [PATCH 2/2] Shared libs
  
  UTILITIES_SRCS=Volume3.cpp Volume3.h \
  	Point2.h \
-@@ -110,7 +110,7 @@
+@@ -112,7 +112,7 @@
  	$(CHART_SRCS) \
  	$(SCUBA1_SRCS) \
  	scuba.cpp
@@ -5034,7 +5038,7 @@ Subject: [PATCH 2/2] Shared libs
  	$(LIBTIFF) $(LIBS_TCL_OPENGL) $(X_LIBS) -lX11 -lXmu -lGL
  scuba_LDFLAGS=$(AM_LDFLAGS)
  
-@@ -182,164 +182,164 @@
+@@ -184,164 +184,164 @@
  testIDTracker_SOURCES=test_IDTracker.cpp \
  	$(UTILITIES_SRCS) $(BASIC_SRCS)
  testIDTracker_LDADD=$(LIBS_TCL_OPENGL) \
@@ -5233,7 +5237,7 @@ Subject: [PATCH 2/2] Shared libs
  if ENABLE_TCLTK_APPS
 --- a/scuba2/Makefile.am
 +++ b/scuba2/Makefile.am
-@@ -66,14 +66,14 @@
+@@ -68,14 +68,14 @@
  	ScubaLibInit.cxx
  
  scuba2_LDADD=  \
@@ -5337,7 +5341,7 @@ Subject: [PATCH 2/2] Shared libs
 -                  $(top_builddir)/tetgen/libtetgen.a 
 +dmri_trk2trk_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +                  $(top_builddir)/fem_elastic/libfem_elastic.la \
-+                  $(top_builddir)/tetgen/libtetgen.la 
++                  $(top_builddir)/tetgen/libtetgen.la -lmpi_cxx
  dmri_trk2trk_LDFLAGS=$(OS_LDFLAGS)
  
  dmri_train_SOURCES=dmri_train.cxx blood.cxx blood.h spline.cxx spline.h \
@@ -5353,7 +5357,7 @@ Subject: [PATCH 2/2] Shared libs
 -                  $(top_builddir)/tetgen/libtetgen.a 
 +dmri_paths_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +                  $(top_builddir)/fem_elastic/libfem_elastic.la \
-+                  $(top_builddir)/tetgen/libtetgen.la 
++                  $(top_builddir)/tetgen/libtetgen.la -lmpi_cxx
  dmri_paths_LDFLAGS=$(OS_LDFLAGS)
  
  dmri_pathstats_SOURCES=dmri_pathstats.cxx spline.cxx spline.h \

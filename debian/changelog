@@ -1,3 +1,27 @@
+freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze3) squeeze-devel; urgency=low
+
+  * Look for flirt.sch in the data directory.  Helps close YNiC RT: #1299. 
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Fri, 07 Sep 2012 21:02:15 +0100
+
+freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze2) squeeze-devel; urgency=low
+
+  * Install XML doc files.
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Fri, 13 Jul 2012 11:30:23 +0100
+
+freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze1) squeeze-devel; urgency=low
+
+  * Rebuild for YNiC Squeeze backport.
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Wed, 08 Feb 2012 13:02:06 +0000
+
+freesurfer (5.1.0+dev+cvs20120104-1) UNRELEASED; urgency=low
+
+  * New upstream snapshot from 'stable5' CVS branch.
+
+ -- Mark Hymers <mhy@debian.org>  Tue, 24 Jan 2012 15:05:16 +0000
+
 freesurfer (5.1.0+cvs20111031-1) UNRELEASED; urgency=low
 
   * New upstream snapshot from 'stable5' CVS branch.

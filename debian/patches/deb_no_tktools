@@ -4,7 +4,7 @@ Subjects: Disable all Tk-related code.
 This stuff is ancient, probably useless and covered by a very non-free license.
 --- a/configure.in
 +++ b/configure.in
-@@ -3604,10 +3604,6 @@
+@@ -3640,10 +3640,6 @@
             test_makevol/Makefile
             test_window_env/Makefile
             tetgen/Makefile

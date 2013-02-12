@@ -16,6 +16,7 @@ override_dh_auto_configure:
 		--prefix=/usr/lib/freesurfer-$(FSMAJORVERSION) \
 		--disable-Werror \
 		--with-cuda=no \
+		--enable-scuba \
 		--with-vxl-include=/usr \
 		--with-tcl-include=/usr/include/tcl8.5 \
 		--enable-tcltk-apps \
@@ -38,6 +39,12 @@ override_dh_auto_configure:
 		--with-wxwidgets-dir=/usr \
 		--with-itk-dir=/usr \
 		--with-fltk-dir=/usr \
+		--with-opencv=/usr \
+		--with-gts-dir=/usr \
+		--with-boost-dir=/usr \
+		--with-petsc-dir=/usr \
+		--with-petsc-include=/usr/include/petsc \
+		--with-ann-dir=/usr \
 		CFLAGS="-I/usr/include/libxml2 -I/usr/include/GL" \
 		LDFLAGS="-Wl,--allow-shlib-undefined"
 
@@ -73,6 +80,13 @@ override_dh_auto_install:
 		sed -i -e 's|^#![ ]*/bin/csh|#!/bin/csh|' $$f ; \
 	done
 
+	# Fix up some data file paths
+	rm -f debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data/GEMS/CurrentMeshCollection30.gz
+	rm -f debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data/GEMS/imageDump.mgz
+	mkdir -p debian/tmp/usr/share/freesurfer-$(FSMAJORVERSION)/data
+	mv debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data/GEMS debian/tmp/usr/share/freesurfer-$(FSMAJORVERSION)/data/
+	rmdir debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data
+
 override_dh_auto_test:
 	: # none for now
 
@@ -91,7 +105,9 @@ override_dh_auto_clean:
 	# remove fake data files
 	-grep 'GEMS/data*' freesurfer-data.md5sums |cut -d ' ' -f 3,3| xargs rm
 	-grep 'talairach_avi/*' freesurfer-data.md5sums |cut -d ' ' -f 3,3 |xargs rm
-
+	# remove files which upstream doesn't and which otherwise upset 3.0 (quilt)
+	-rm -f GEMS/kvlAtlasMeshViewingConsoleGUI.h
+	-rm -f GEMS/kvlSegmentationEvaluationConsoleGUI.h
 	# Remove files generated using FSMAJORVERSION
 	for tmpl in debian/*template; do \
 		tmpl=$${tmpl%*.template}; \
