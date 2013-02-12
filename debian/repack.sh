@@ -49,7 +49,7 @@ mkdir -p ${nonfree_dir}/scripts
 # major hunk of data
 mv dev/distribution $data_dir
 # copy data files that are scattered around
-for i in $(find dev -type f -regextype posix-egrep -regex '.*\.(img|gz|mgh|mgz|gca)(\.rec)?'); do
+for i in $(find dev -type f -regextype posix-egrep -regex '.*\.(img|gz|mgh|mgz|gca)(\.rec|\.ifh)?'); do
 	mkdir -p ${data_dir}/$(dirname ${i#dev/*})
 	mv $i ${data_dir}/${i#dev/*}
 done
