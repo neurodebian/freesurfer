@@ -2,7 +2,7 @@ From: Michael Hanke <mih@debian.org>
 Subject: Disable code that comes in its own Debian package.
 --- a/utils/Makefile.am
 +++ b/utils/Makefile.am
-@@ -409,7 +409,7 @@
+@@ -414,7 +414,7 @@
  
  
  

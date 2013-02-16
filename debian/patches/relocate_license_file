@@ -9,7 +9,7 @@ just a better one.
 
 --- a/utils/chklc.c
 +++ b/utils/chklc.c
-@@ -93,7 +93,8 @@
+@@ -94,7 +94,8 @@
    key   = (char*)calloc(1,512);
    gkey  = (char*)calloc(1,1024);
  

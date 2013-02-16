@@ -2,7 +2,7 @@ From: Michael Hanke <mih@debian.org>
 Subject: Let clean do it properly
 --- a/GEMS/Makefile.am
 +++ b/GEMS/Makefile.am
-@@ -912,6 +912,9 @@
+@@ -906,6 +906,9 @@
  endif
  endif
  
@@ -14,7 +14,7 @@ Subject: Let clean do it properly
  # release' target.
 --- a/orient_mri/Makefile.am
 +++ b/orient_mri/Makefile.am
-@@ -142,3 +142,8 @@
+@@ -159,3 +159,8 @@
  # release' target.
  EXCLUDE_FILES=
  include $(top_srcdir)/Makefile.extra
