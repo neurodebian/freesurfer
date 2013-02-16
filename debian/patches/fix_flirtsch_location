@@ -1,6 +1,6 @@
 --- a/scripts/fsl_rigid_register
 +++ b/scripts/fsl_rigid_register
-@@ -189,7 +189,7 @@ endif
+@@ -189,7 +189,7 @@
  # this bug fix is necessary only for v5.4.2b
  set flirtversion=`flirt.fsl -version`
  if ("$flirtversion" == "FLIRT version 5.4.2b") then
@@ -11,7 +11,7 @@
    endif
 --- a/scripts/fslregister
 +++ b/scripts/fslregister
-@@ -606,7 +606,7 @@ check_params:
+@@ -617,7 +617,7 @@
    endif
  
    if($UseNewSchedule) then

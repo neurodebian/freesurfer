@@ -1,6 +1,6 @@
 --- a/configure.in
 +++ b/configure.in
-@@ -2884,7 +2884,7 @@
+@@ -2989,7 +2989,7 @@
  # ANN check
  if test ! "x$ac_ann_dir" = "xNO"; then
    # if --with-ann-dir was used, make sure necessary libs exist

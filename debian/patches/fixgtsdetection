@@ -1,6 +1,6 @@
 --- a/configure.in
 +++ b/configure.in
-@@ -2498,7 +2498,7 @@
+@@ -2603,7 +2603,7 @@
  # use the handy wx-config utility to get the compiler and linker flags
  if test ! "x$GTS_DIR" = "x"; then
    AC_MSG_RESULT([Enabled building of GTS apps.])
