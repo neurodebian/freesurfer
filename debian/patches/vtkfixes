@@ -1,0 +1,68 @@
+--- a/vtkutils/vtkRGBATransferFunction.cxx
++++ b/vtkutils/vtkRGBATransferFunction.cxx
+@@ -306,7 +306,17 @@
+   return this->UnsignedCharRGBAValue;
+ }
+ 
+-vtkIdType vtkRGBATransferFunction::GetNumberOfAvailableColors() {
++vtkIdType vtkRGBATransferFunction::GetNumberOfAvailableColors()
++{
++  if(this->Table)
++    {
++    // Not sure if this is correct since it is only set if
++    // "const unsigned char *::GetTable( double xStart, double xEnd,int size)"
++    // has been called.
++    return static_cast<vtkIdType>(this->TableSize);
++    }
++  return 16777216;  //2^24
++}
+ 
+ //----------------------------------------------------------------------------
+ // Returns the RGBA color evaluated at the specified location
+--- a/vtkutils/vtkRGBAColorTransferFunction.cxx
++++ b/vtkutils/vtkRGBAColorTransferFunction.cxx
+@@ -192,6 +192,19 @@
+     }
+ }
+ 
++vtkIdType vtkRGBAColorTransferFunction::GetNumberOfAvailableColors()
++{
++  if(this->Table)
++    {
++    // Not sure if this is correct since it is only set if
++    // "const unsigned char *::GetTable( double xStart, double xEnd,int size)"
++    // has been called.
++    return static_cast<vtkIdType>(this->TableSize);
++    }
++  return 16777216;  //2^24
++}
++
++
+ // Interpolate a diverging color map.
+ inline void vtkRGBAColorTransferFunctionInterpolateDiverging(double s,
+                                                          const double rgb1[4],
+--- a/vtkutils/vtkRGBAColorTransferFunction.h
++++ b/vtkutils/vtkRGBAColorTransferFunction.h
+@@ -209,6 +209,10 @@
+   vtkGetMacro(AllowDuplicateScalars, int);
+   vtkBooleanMacro(AllowDuplicateScalars, int);
+ 
++  // Description:
++  // Get the number of available colors for mapping to.
++  vtkIdType GetNumberOfAvailableColors();
++
+ protected:
+   vtkRGBAColorTransferFunction();
+   ~vtkRGBAColorTransferFunction();
+--- a/vtkutils/vtkRGBATransferFunction.h
++++ b/vtkutils/vtkRGBATransferFunction.h
+@@ -141,6 +141,9 @@
+   vtkGetMacro( Clamping, int );
+   vtkBooleanMacro( Clamping, int );
+ 
++  virtual vtkIdType GetNumberOfAvailableColors();
++
++
+   // Description:
+   // Set/Get the color space used for interpolation: RGB, or HSV.
+   // In HSV mode, if HSVWrap is on, it  will take the shortest path in Hue

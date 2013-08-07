@@ -1,0 +1,13 @@
+--- a/configure.in
++++ b/configure.in
+@@ -2429,10 +2429,6 @@
+   if test -d /usr/include/gtk-2.0 ; then
+   WXWIDGETS_GTK_CFLAGS="-D__WXGTK20__"
+   WXWIDGETS_GTK_CFLAGS="$WXWIDGETS_GTK_CFLAGS	`pkg-config gtk+-2.0 --cflags`"
+-  WXWIDGETS_GTK_CFLAGS="$WXWIDGETS_GTK_CFLAGS	-I/usr/lib64/glib-2.0/include"
+-  WXWIDGETS_GTK_CFLAGS="$WXWIDGETS_GTK_CFLAGS	-I/usr/include/pango-1.0"
+-  WXWIDGETS_GTK_CFLAGS="$WXWIDGETS_GTK_CFLAGS	-I/usr/include/cairo"
+-  WXWIDGETS_GTK_CFLAGS="$WXWIDGETS_GTK_CFLAGS	-I/usr/include/atk-1.0"
+   WXWIDGETS_CFLAGS="$WXWIDGETS_CFLAGS	$WXWIDGETS_GTK_CFLAGS"
+   WXWIDGETS_CXXFLAGS="$WXWIDGETS_CXXFLAGS	$WXWIDGETS_GTK_CFLAGS"
+   fi

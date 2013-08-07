@@ -27,3 +27,5 @@ fix_minc_share_location
 remove_qdec_bashism
 qdec_disable_titles
 vtk58
+vtkfixes
+fixincludepaths
