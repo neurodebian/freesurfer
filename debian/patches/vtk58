@@ -1,0 +1,26 @@
+--- a/configure.in
++++ b/configure.in
+@@ -2157,7 +2157,9 @@
+ 
+ if test ! "$ac_vtk_includes" = "NO"; then
+   AC_MSG_RESULT(VTK directory is $withval)
+-  if test -e $ac_vtk_includes/vtk-5.6 ; then
++  if test -e $ac_vtk_includes/vtk-5.8 ; then
++    ac_vtk_includes="$ac_vtk_includes/vtk-5.8"
++  elif test -e $ac_vtk_includes/vtk-5.6 ; then
+     ac_vtk_includes="$ac_vtk_includes/vtk-5.6"
+   elif test -e $ac_vtk_includes/vtk-5.5 ; then
+     ac_vtk_includes="$ac_vtk_includes/vtk-5.5"
+@@ -2181,7 +2183,11 @@
+ if test ! "$ac_vtk_libraries" = "NO"; then
+   VTK_LIBS=-L$ac_vtk_libraries
+   VTK_LIB=$ac_vtk_libraries
+-  if test -e $ac_vtk_libraries/vtk-5.6 ; then
++  if test -e $ac_vtk_libraries/vtk-5.8 ; then
++    VTK_LIB_VTK="$ac_vtk_libraries/vtk-5.8"
++    VTK_LIBS=-L$ac_vtk_libraries/vtk-5.8
++    VTK_LIB=$ac_vtk_libraries/vtk-5.8
++  elif test -e $ac_vtk_libraries/vtk-5.6 ; then
+     VTK_LIB_VTK="$ac_vtk_libraries/vtk-5.6"
+     VTK_LIBS=-L$ac_vtk_libraries/vtk-5.6
+     VTK_LIB=$ac_vtk_libraries/vtk-5.6
