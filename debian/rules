@@ -34,7 +34,7 @@ override_dh_auto_configure:
 		--with-cppunit-dir=/usr \
 		--with-qt=/usr/bin \
 		--with-vtk-dir=/usr \
-		--with-vtk-include=/usr/include/vtk-5.6 \
+		--with-vtk-include=/usr/include/vtk-5.8 \
 		--with-kwwidgets-dir=/usr \
 		--with-wxwidgets-dir=/usr \
 		--with-itk-dir=/usr \

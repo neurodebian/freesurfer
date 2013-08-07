@@ -21,7 +21,7 @@ Build-Depends: debhelper (>= 7.0.50~), dh-autoreconf,
                libnifti-dev,
                texlive-fonts-recommended,
                libcv-dev (>=2.2), libhighgui-dev,
-               libgts-dev, libboost-all-dev, libpetsc3.1-dev,
+               libgts-dev, libboost-all-dev, libpetsc3.2-dev,
                libann-dev,
                libfltk1.1-dev
 Build-Conflicts: libvtk5-dev (<< 5.6), tcl-dev (<< 8.5)
