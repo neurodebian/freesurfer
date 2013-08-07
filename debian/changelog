@@ -1,3 +1,9 @@
+freesurfer (5.1.0+dev+cvs20120104+1-1~ynicsqueeze8) squeeze-devel; urgency=low
+
+  * Rebuild with new orig to stop dpkg-v3 whining.
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Wed, 07 Aug 2013 12:21:22 +0100
+
 freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze7) squeeze-devel; urgency=low
 
   * Fix ups for qdec crashes.
