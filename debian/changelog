@@ -1,3 +1,11 @@
+freesurfer (5.1.0+dev+cvs20120104+1-1~ynicwheezy1) UNRELEASED; urgency=low
+
+  * Rebuild for YNiC wheezy install.
+  * NB: We're using a hack of creating symlinks in /usr/lib to all of the
+    libminc2 files for now as the build system is broken.
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Wed, 07 Aug 2013 12:29:04 +0100
+
 freesurfer (5.1.0+dev+cvs20120104+1-1~ynicsqueeze8) squeeze-devel; urgency=low
 
   * Rebuild with new orig to stop dpkg-v3 whining.
