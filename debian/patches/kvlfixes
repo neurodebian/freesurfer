@@ -369,3 +369,16 @@
 +    code {} {}
 +  }
  } 
+--- a/GEMS/kvlAtlasMeshBuilder.cxx
++++ b/GEMS/kvlAtlasMeshBuilder.cxx
+@@ -39,8 +39,8 @@
+ #include "kvlAtlasMeshCollectionValidator.h"
+ #endif
+ 
+-
+-
++/* For sleep */
++#include <unistd.h>
+ 
+ 
+ namespace kvl
