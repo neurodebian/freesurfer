@@ -1,0 +1,371 @@
+--- a/GEMS/kvlAtlasMeshSegmenterConsoleGUI.fl
++++ b/GEMS/kvlAtlasMeshSegmenterConsoleGUI.fl
+@@ -1,5 +1,5 @@
+ # data file for the Fltk User Interface Designer (fluid)
+-version 1.0107 
++version 1.0300 
+ header_name {.h} 
+ code_name {.cxx}
+ class kvlAtlasMeshSegmenterConsoleGUI {open
+@@ -225,31 +225,59 @@
+     }
+   }
+   Function {~kvlAtlasMeshSegmenterConsoleGUI()} {open return_type virtual
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {DisplayLabel( unsigned int labelImageNumber )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {Segment( bool useAffine=false )} {open return_type {virtual void}
+-  } {}
+-  Function {SelectTriangleContainingPoint( float, float )} {return_type {virtual void}
+-  } {}
+-  Function {SelectCurrentTriangleContainingPoint( float, float )} {return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
++  Function {SelectTriangleContainingPoint( float, float )} {open return_type {virtual void}
++  } {
++    code {} {}
++  }
++  Function {SelectCurrentTriangleContainingPoint( float, float )} {open return_type {virtual void}
++  } {
++    code {} {}
++  }
+   Function {Interrupt()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {Step()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {Continue()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {ApplyAffineParameters()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {ResetAffineParameters()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {SetGradientDescentStepSize( float stepSize )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {SetPositionUpdatingStopCriterion( float stopCriterion )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {ShowSelectedView()} {open return_type {virtual void}
+-  } {}
+-  Function {SetSliceLocation( unsigned int, unsigned int, unsigned int )} {open selected return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
++  Function {SetSliceLocation( unsigned int, unsigned int, unsigned int )} {open return_type {virtual void}
++  } {
++    code {} {}
++  }
+ } 
+--- a/GEMS/kvlAtlasMeshViewingConsoleGUI.fl
++++ b/GEMS/kvlAtlasMeshViewingConsoleGUI.fl
+@@ -1,5 +1,5 @@
+ # data file for the Fltk User Interface Designer (fluid)
+-version 1.0107 
++version 1.0300 
+ header_name {.h} 
+ code_name {.cxx}
+ class kvlAtlasMeshViewingConsoleGUI {open
+@@ -116,22 +116,40 @@
+       }
+     }
+   }
+-  Function {~kvlAtlasMeshViewingConsoleGUI()} {return_type virtual
+-  } {}
+-  Function {Draw()} {return_type {virtual void}
+-  } {}
+-  Function {SelectTriangleContainingPoint( float, float )} {return_type {virtual void}
+-  } {}
++  Function {~kvlAtlasMeshViewingConsoleGUI()} {open return_type virtual
++  } {
++    code {} {}
++  }
++  Function {Draw()} {open return_type {virtual void}
++  } {
++    code {} {}
++  }
++  Function {SelectTriangleContainingPoint( float, float )} {open return_type {virtual void}
++  } {
++    code {} {}
++  }
+   Function {SetSliceLocation( unsigned int, unsigned int, unsigned int )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {ShowSelectedView()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {GetScreenShot()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {GetScreenShotSeries()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {DumpImage()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {GetScreenShotSeries( int directionNumber )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+ } 
+--- a/GEMS/kvlAtlasParameterEstimationConsoleGUI.fl
++++ b/GEMS/kvlAtlasParameterEstimationConsoleGUI.fl
+@@ -1,5 +1,5 @@
+ # data file for the Fltk User Interface Designer (fluid)
+-version 1.0107 
++version 1.0300
+ header_name {.h} 
+ code_name {.cxx}
+ class kvlAtlasParameterEstimationConsoleGUI {open
+@@ -154,21 +154,39 @@
+     }
+   }
+   Function {~kvlAtlasParameterEstimationConsoleGUI()} {open return_type virtual
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {DisplayLabelImage( unsigned int labelImageNumber )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {InitializeMesh()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {Estimate()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {SelectTriangleContainingPoint( float, float )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {Interrupt()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {Step()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {Continue()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {SetPositionEstimationResolution( unsigned int )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+ } 
+--- a/GEMS/kvlImageThresholdingConsoleGUI.fl
++++ b/GEMS/kvlImageThresholdingConsoleGUI.fl
+@@ -1,5 +1,5 @@
+ # data file for the Fltk User Interface Designer (fluid)
+-version 1.0107 
++version 1.0300 
+ header_name {.h} 
+ code_name {.cxx}
+ class kvlImageThresholdingConsoleGUI {open
+@@ -9,7 +9,7 @@
+     Fl_Window m_Window {
+       label kvlImageThresholdingConsole
+       callback {exit( 0 );} open
+-      xywh {637 24 1280 1030} type Double visible
++      xywh {396 49 1280 1030} type Double visible
+     } {
+       Fl_Group m_ImageViewer {
+         callback {//this->SelectTriangleContainingPoint( Fl::event_x(), m_ImageViewer->h() - Fl::event_y() );} open
+@@ -20,7 +20,7 @@
+       Fl_Value_Slider m_OverlayOpacity {
+         label {Overlay opacity:}
+         callback {this->SetOverlayOpacity( m_OverlayOpacity->value() );}
+-        xywh {1070 40 175 25} type Horizontal align 1 step 0.01 textsize 14
++        xywh {1070 40 175 25} type Horizontal align 1 textsize 14
+       }
+       Fl_Value_Slider m_CoronalSliceNumber {
+         label {Coronal slice number:}
+@@ -127,24 +127,44 @@
+       }
+     }
+   }
+-  Function {~kvlImageThresholdingConsoleGUI()} {return_type virtual
+-  } {}
++  Function {~kvlImageThresholdingConsoleGUI()} {open return_type virtual
++  } {
++    code {} {}
++  }
+   Function {SetOverlayOpacity( float overlayOpacity )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {SetSliceLocation( unsigned int, unsigned int, unsigned int )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {ShowSelectedView()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {SetImageToThreshold( int )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {SetImageToMask( int )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {SetThresholds( float, float )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {MaskImage()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {ShowInverseMask( bool )} {open return_type {virtual void}
+-  } {}
+-  Function {WriteMask()} {open selected return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
++  Function {WriteMask()} {open return_type {virtual void}
++  } {
++    code {} {}
++  }
+ } 
+--- a/GEMS/kvlImageViewingConsoleGUI.fl
++++ b/GEMS/kvlImageViewingConsoleGUI.fl
+@@ -1,5 +1,5 @@
+ # data file for the Fltk User Interface Designer (fluid)
+-version 1.0107 
++version 1.0300 
+ header_name {.h} 
+ code_name {.cxx}
+ class kvlImageViewingConsoleGUI {open
+@@ -83,15 +83,27 @@
+     }
+   }
+   Function {~kvlImageViewingConsoleGUI()} {return_type virtual
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {SetOverlayOpacity( float overlayOpacity )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {SetSliceLocation( unsigned int, unsigned int, unsigned int )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {ShowSelectedView()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {GetScreenShot()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {GetScreenShotSeries( int directionNumber )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+ } 
+--- a/GEMS/kvlSegmentationEvaluationConsoleGUI.fl
++++ b/GEMS/kvlSegmentationEvaluationConsoleGUI.fl
+@@ -1,5 +1,5 @@
+ # data file for the Fltk User Interface Designer (fluid)
+-version 1.0107 
++version 1.0300 
+ header_name {.h} 
+ code_name {.cxx}
+ class kvlSegmentationEvaluationConsoleGUI {open
+@@ -80,13 +80,23 @@
+     }
+   }
+   Function {~kvlSegmentationEvaluationConsoleGUI()} {return_type virtual
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {SetOverlayOpacity( float overlayOpacity )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {SetSliceLocation( unsigned int, unsigned int, unsigned int )} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {ShowSelectedView()} {open return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+   Function {Swap()} {open selected return_type {virtual void}
+-  } {}
++  } {
++    code {} {}
++  }
+ } 
