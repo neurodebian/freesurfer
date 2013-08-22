@@ -382,3 +382,21 @@
  
  
  namespace kvl
+--- a/GEMS/kvlQuantifyPosteriorProbabilityImages.cxx
++++ b/GEMS/kvlQuantifyPosteriorProbabilityImages.cxx
+@@ -99,12 +99,12 @@
+     ProbabilityImageType::ConstPointer  probabilityImage = reader->GetOutput();
+ 
+     // Loop over all voxels
+-    itk::ImageRegionConstIterator< ProbabilityImageType >   it( probabilityImage,
++    itk::ImageRegionConstIterator< ProbabilityImageType >   it2( probabilityImage,
+         probabilityImage->GetBufferedRegion() );
+     float  volumeInVoxels = 0.0f;
+-    for ( ; !it.IsAtEnd(); ++it )
++    for ( ; !it2.IsAtEnd(); ++it2 )
+     {
+-      volumeInVoxels += it.Value() / 255.0f;
++      volumeInVoxels += it2.Value() / 255.0f;
+     } // End loop over all voxels
+ 
+ 

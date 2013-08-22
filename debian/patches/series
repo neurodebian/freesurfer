@@ -30,3 +30,4 @@ vtk58
 vtkfixes
 fixincludepaths
 kvlfixes
+fix_c++
