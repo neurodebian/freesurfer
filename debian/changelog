@@ -1,9 +1,10 @@
-freesurfer (5.1.0+dev+cvs20120104+1-1~ynicwheezy1) UNRELEASED; urgency=low
+freesurfer (5.1.0+dev+cvs20120104+1-1~ynicwheezy1) wheezy-devel; urgency=low
 
   * Rebuild for YNiC wheezy install.
   * NB: We're using a hack of creating symlinks in /usr/lib to all of the
     libminc2 files for now as the build system is broken.
   * Bump B-Ds and rules to versions usable in wheezy.
+  * Add many patches to get to build with wheezy library version.
 
  -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Wed, 07 Aug 2013 12:29:04 +0100
 
