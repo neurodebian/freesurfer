@@ -1,0 +1,35 @@
+--- a/trc/Makefile.am
++++ b/trc/Makefile.am
+@@ -27,7 +27,7 @@
+ dmri_trk2trk_SOURCES=dmri_trk2trk.cxx vial.cxx vial.h TrackIO.cxx TrackIO.h
+ dmri_trk2trk_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
+                   $(top_builddir)/fem_elastic/libfem_elastic.la \
+-                  $(top_builddir)/tetgen/libtetgen.la -lmpi_cxx
++                  $(top_builddir)/tetgen/libtetgen.la -lmpi_cxx -lmpi
+ dmri_trk2trk_LDFLAGS=$(OS_LDFLAGS)
+ 
+ dmri_train_SOURCES=dmri_train.cxx blood.cxx blood.h spline.cxx spline.h \
+@@ -39,7 +39,7 @@
+                    bite.cxx bite.h spline.cxx spline.h vial.cxx vial.h
+ dmri_paths_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
+                   $(top_builddir)/fem_elastic/libfem_elastic.la \
+-                  $(top_builddir)/tetgen/libtetgen.la -lmpi_cxx
++                  $(top_builddir)/tetgen/libtetgen.la -lmpi_cxx -lmpi
+ dmri_paths_LDFLAGS=$(OS_LDFLAGS)
+ 
+ dmri_pathstats_SOURCES=dmri_pathstats.cxx spline.cxx spline.h \
+--- a/trc/vial.h
++++ b/trc/vial.h
+@@ -30,9 +30,9 @@
+ #include <cmath>
+ #include <boost/program_options.hpp>
+ #include <boost/progress.hpp>
+-#undef SEEK_SET
+-#undef SEEK_END
+-#undef SEEK_CUR
++//#undef SEEK_SET
++//#undef SEEK_END
++//#undef SEEK_CUR
+ #include <mpi.h>
+ #include "../fem_elastic/morph.h"
+ #include "../fem_elastic/surf_utils.h"

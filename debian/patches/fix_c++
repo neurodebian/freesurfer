@@ -17,3 +17,16 @@
      }
      nbl = n;
    }
+--- a/include/minc_volume_io.h
++++ b/include/minc_volume_io.h
+@@ -53,6 +53,10 @@
+ #undef ERROR
+ #endif // Windows_NT
+ #include <volume_io.h> //from MNI
++/* Who on earth redefines X, Y and Z in public headers !?!?*/
++#undef X
++#undef Y
++#undef Z
+ /* remove unwanted warnings between hips_basic.h vs. volume_io/basic.h */
+ #undef ABS
+ #undef SIGN

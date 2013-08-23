@@ -1,6 +1,90 @@
 --- a/fem_elastic/solver.h
 +++ b/fem_elastic/solver.h
-@@ -658,9 +658,9 @@
+@@ -14,6 +14,10 @@
+ #include "mesh.h"
+ #include "cstats.h"
+ 
++#ifndef PetscTruth
++#define PetscTruth PetscBool
++#endif
++
+ //----------------------------------------------------
+ //
+ // class declaration
+@@ -319,7 +323,7 @@
+       PetscViewerBinaryOpen( PETSC_COMM_SELF, buffer,
+                              FILE_MODE_WRITE, &viewer);
+       MatView(m_stiffness, viewer);
+-      PetscViewerDestroy(viewer);
++      PetscViewerDestroy(&viewer);
+     }
+   }
+ 
+@@ -332,7 +336,7 @@
+     PetscViewerBinaryOpen( PETSC_COMM_SELF, "final_stif.bin",
+                            FILE_MODE_WRITE, &viewer);
+     MatView(m_stiffness, viewer);
+-    PetscViewerDestroy(viewer);
++    PetscViewerDestroy(&viewer);
+   }
+ 
+   // final assembly point
+@@ -409,7 +413,7 @@
+   CHKERRQ(ierr);
+   ierr = VecNorm(vcheck, NORM_2, &norm);
+   CHKERRQ(ierr);
+-  ierr = VecDestroy(vcheck);
++  ierr = VecDestroy(&vcheck);
+   CHKERRQ(ierr);
+ 
+   ierr = PetscPrintf(PETSC_COMM_WORLD, "Absolute-Norm of error = %A\n", norm);
+@@ -432,7 +436,7 @@
+                            FILE_MODE_WRITE,
+                            &viewer );
+     MatView(m_stiffness, viewer);
+-    PetscViewerDestroy(viewer);
++    PetscViewerDestroy(&viewer);
+ 
+     sprintf(pchBuf, "load_%d.bin", outCount);
+     PetscViewerBinaryOpen( PETSC_COMM_SELF,
+@@ -440,7 +444,7 @@
+                            FILE_MODE_WRITE,
+                            &viewer);
+     VecView(m_load, viewer);
+-    PetscViewerDestroy(viewer);
++    PetscViewerDestroy(&viewer);
+ 
+     sprintf(pchBuf, "sol_%d.bin", outCount);
+     PetscViewerBinaryOpen( PETSC_COMM_SELF,
+@@ -448,22 +452,22 @@
+                            FILE_MODE_WRITE,
+                            &viewer);
+     VecView(m_delta, viewer);
+-    PetscViewerDestroy(viewer);
++    PetscViewerDestroy(&viewer);
+ 
+     delete[] pchBuf;
+   }
+ 
+   // release Petsc resources
+-  ierr = VecDestroy(m_delta);
++  ierr = VecDestroy(&m_delta);
+   CHKERRQ(ierr);
+   m_delta=0;
+-  ierr = VecDestroy(m_load);
++  ierr = VecDestroy(&m_load);
+   CHKERRQ(ierr);
+   m_load=0;
+-  ierr = MatDestroy(m_stiffness);
++  ierr = MatDestroy(&m_stiffness);
+   CHKERRQ(ierr);
+   m_stiffness=0;
+-  ierr = KSPDestroy(ksp);
++  ierr = KSPDestroy(&ksp);
+   CHKERRQ(ierr);
+   ksp = 0;
+ 
+@@ -658,9 +662,9 @@
    CHKERRQ(ierr);
    ierr = MatSetFromOptions(m_stiffness);
    CHKERRQ(ierr);
@@ -12,7 +96,7 @@
    CHKERRQ(ierr);
  
    int iold_val = -1;
-@@ -950,7 +950,7 @@
+@@ -950,7 +954,7 @@
    tNode* pnode;
    int no_eqs = n * m_pmesh->get_no_nodes();
  
@@ -21,7 +105,22 @@
    CHKERRQ(ierr);
  
    std::map<int, double> mrhs;
-@@ -1030,7 +1030,7 @@
+@@ -996,11 +1000,11 @@
+ 
+   IS is;
+   ierr = ISCreateGeneral(PETSC_COMM_WORLD, (int)mrhs.size(),
+-                         indices, &is);
++                         indices, PETSC_COPY_VALUES, &is);
+   CHKERRQ(ierr);
+-  ierr = MatZeroRowsIS(m_stiffness, is, 1.0);
++  ierr = MatZeroRowsIS(m_stiffness, is, 1.0, NULL, NULL);
+   CHKERRQ(ierr);
+-  ierr = ISDestroy(is);
++  ierr = ISDestroy(&is);
+   CHKERRQ(ierr);
+ 
+   ierr = VecSetValues(m_load, (int)mrhs.size(),
+@@ -1030,7 +1034,7 @@
  
    int no_eqs = n * m_pmesh->get_no_nodes();
  
@@ -30,12 +129,55 @@
    CHKERRQ(ierr);
    std::map<int,double> mrhs;
  
-@@ -1126,7 +1126,7 @@
+@@ -1113,7 +1117,7 @@
+ 
+   ierr = MatMult( m_stiffness, vecBcs, m_load);
    CHKERRQ(ierr);
-   ierr = MatZeroRowsIS(m_stiffness, is, 1.0);
+-  ierr = VecDestroy(vecBcs);
++  ierr = VecDestroy(&vecBcs);
+   CHKERRQ(ierr);
+   ierr = VecSetValues( m_load, (int)mrhs.size(),
+                        indices, values, INSERT_VALUES);
+@@ -1122,16 +1126,16 @@
+   // condition the matrix
+   IS is;
+   ierr = ISCreateGeneral(PETSC_COMM_WORLD, (int)mrhs.size(),
+-                         indices, &is);
++                         indices, PETSC_COPY_VALUES, &is);
+   CHKERRQ(ierr);
+-  ierr = MatZeroRowsIS(m_stiffness, is, 1.0);
++  ierr = MatZeroRowsIS(m_stiffness, is, 1.0, NULL, NULL);
    CHKERRQ(ierr);
 -  ierr = MatTranspose( m_stiffness, PETSC_NULL);
 +  ierr = MatTranspose( m_stiffness, MAT_REUSE_MATRIX, &m_stiffness);
    CHKERRQ(ierr);
-   ierr = MatZeroRowsIS(m_stiffness, is, 1.0);
+-  ierr = MatZeroRowsIS(m_stiffness, is, 1.0);
++  ierr = MatZeroRowsIS(m_stiffness, is, 1.0, NULL, NULL);
    CHKERRQ(ierr);
+ 
+-  ierr = ISDestroy(is);
++  ierr = ISDestroy(&is);
+   CHKERRQ(ierr);
+ 
+   return 0;
+@@ -1314,16 +1318,16 @@
+   this->comm_solution();
+ 
+   // release Petsc resources
+-  ierr = VecDestroy(this->m_delta);
++  ierr = VecDestroy(&(this->m_delta));
+   CHKERRQ(ierr);
+   this->m_delta = 0;
+-  ierr = VecDestroy(this->m_load);
++  ierr = VecDestroy(&(this->m_load));
+   CHKERRQ(ierr);
+   this->m_load=0;
+-  ierr = MatDestroy(this->m_stiffness);
++  ierr = MatDestroy(&(this->m_stiffness));
+   CHKERRQ(ierr);
+   this->m_stiffness=0;
+-  ierr = KSPDestroy(ksp);
++  ierr = KSPDestroy(&ksp);
+   CHKERRQ(ierr);
+   ksp = 0;
+ 

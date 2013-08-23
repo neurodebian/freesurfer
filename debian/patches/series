@@ -31,3 +31,4 @@ vtkfixes
 fixincludepaths
 kvlfixes
 fix_c++
+fix_trc
