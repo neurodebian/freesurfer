@@ -1,0 +1,20 @@
+--- freesurfer-5.1.0+dev+cvs20120104+1.orig/scuba/Matrix44.cpp
++++ freesurfer-5.1.0+dev+cvs20120104+1/scuba/Matrix44.cpp
+@@ -495,7 +495,7 @@ Matrix44::GetMatrix () const {
+   return m;
+ }
+ 
+-inline Matrix44 operator*( Matrix44 const& m2,
++Matrix44 operator*( Matrix44 const& m2,
+                            Matrix44 const& m1 ) {
+ 
+ 
+@@ -591,7 +591,7 @@ inline Matrix44 operator*( Matrix44 cons
+                    m03, m13, m23, m33 );
+ };
+ 
+-inline Point3<float> operator* ( Matrix44 const& m,
++Point3<float> operator* ( Matrix44 const& m,
+ 				 Point3<float> const& p ) {
+ 
+   return Point3<float> ( m(0,0)*p[0] + m(0,1)*p[1] + m(0,2)*p[2] + m(0,3),
