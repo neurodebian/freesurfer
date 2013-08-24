@@ -562,6 +562,15 @@ Subject: [PATCH 2/2] Shared libs
  	-lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
  	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
+@@ -601,7 +600,7 @@
+ 	$(VTK_SQLITE_LIB) \
+ 	-lvtkImaging -lvtkFiltering \
+ 	-lvtkCommon -lvtksys \
+-	-lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB) \
++	-lvtkexoIIc -lnetcdf $(VTK_NETCDFCXX_LIB) \
+ 	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
+ 	-lvtkWidgets -lvtkHybrid $(VTK_HDF5_LIB) \
+ 	-lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
 @@ -620,10 +619,10 @@
  	kvlImageThresholdingConsole.h
  
@@ -1496,7 +1505,7 @@ Subject: [PATCH 2/2] Shared libs
  	$(VTK_COCOA_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
  	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) \
-@@ -486,10 +486,10 @@
+@@ -486,12 +486,12 @@
  	$(VTK_SQLITE_LIB) \
  	-lvtkImaging -lvtkFiltering \
  	-lvtkCommon -lvtksys -lvtkGenericFiltering \
@@ -1507,8 +1516,11 @@ Subject: [PATCH 2/2] Shared libs
 -	-lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
 +	-lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) $(X_LIBS) \
  	$(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat \
- 	-lpetscvec -lpetsc -lmpich -lpmpich
+-	-lpetscvec -lpetsc -lmpich -lpmpich
++	-lpetscvec -lpetsc -lmpi
  
+ # need to create a bundle for Macs
+ install-exec-hook:freeview
 @@ -550,7 +550,7 @@
  freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS)
  freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS)
@@ -1518,7 +1530,7 @@ Subject: [PATCH 2/2] Shared libs
  	$(top_builddir)/vtkfsio/libvtkfsio.a \
    $(top_builddir)/vtkutils/libvtkutils.a \
    $(top_builddir)/lineprof/liblineprof.a \
-@@ -561,7 +561,7 @@
+@@ -561,13 +561,13 @@
  	$(VTK_SQLITE_LIB) \
  	-lvtkImaging -lvtkFiltering \
  	-lvtkCommon -lvtksys -lvtkGenericFiltering \
@@ -1527,6 +1539,13 @@ Subject: [PATCH 2/2] Shared libs
  	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  	-lvtkWidgets -lvtkHybrid $(VTK_HDF5_LIB) \
    -lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
+   $(ITK_LIBS) \
+   $(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp \
+-  -lpetscdm -lpetscmat -lpetscvec -lpetsc -lmpich -lfmpich \
++  -lpetscdm -lpetscmat -lpetscvec -lpetsc -lmpi
+   $(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
+ 
+ # put a wrapper around the bin, used to setup tcltktixblt,vtk enviro vars
 --- a/freeview/freeview.pro
 +++ b/freeview/freeview.pro
 @@ -325,7 +325,7 @@
@@ -5361,7 +5380,7 @@ Subject: [PATCH 2/2] Shared libs
 -                  $(top_builddir)/tetgen/libtetgen.a 
 +dmri_trk2trk_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +                  $(top_builddir)/fem_elastic/libfem_elastic.la \
-+                  $(top_builddir)/tetgen/libtetgen.la 
++                  $(top_builddir)/tetgen/libtetgen.la -lmpi -lmpi_cxx
  dmri_trk2trk_LDFLAGS=$(OS_LDFLAGS)
  
  dmri_vox2vox_SOURCES=dmri_vox2vox.cxx vial.cxx vial.h
@@ -5370,7 +5389,7 @@ Subject: [PATCH 2/2] Shared libs
 -                  $(top_builddir)/tetgen/libtetgen.a 
 +dmri_vox2vox_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +                  $(top_builddir)/fem_elastic/libfem_elastic.la \
-+                  $(top_builddir)/tetgen/libtetgen.la 
++                  $(top_builddir)/tetgen/libtetgen.la -lmpi -lmpi_cxx
  dmri_vox2vox_LDFLAGS=$(OS_LDFLAGS)
  
  dmri_train_SOURCES=dmri_train.cxx blood.cxx blood.h spline.cxx spline.h \
@@ -5381,7 +5400,7 @@ Subject: [PATCH 2/2] Shared libs
 -                  $(top_builddir)/tetgen/libtetgen.a 
 +dmri_train_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +                  $(top_builddir)/fem_elastic/libfem_elastic.la \
-+                  $(top_builddir)/tetgen/libtetgen.la 
++                  $(top_builddir)/tetgen/libtetgen.la -lmpi -lmpi_cxx
  dmri_train_LDFLAGS=$(OS_LDFLAGS)
  
  dmri_paths_SOURCES=dmri_paths.cxx coffin.cxx coffin.h \
@@ -5392,7 +5411,7 @@ Subject: [PATCH 2/2] Shared libs
 -                  $(top_builddir)/tetgen/libtetgen.a 
 +dmri_paths_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +                  $(top_builddir)/fem_elastic/libfem_elastic.la \
-+                  $(top_builddir)/tetgen/libtetgen.la 
++                  $(top_builddir)/tetgen/libtetgen.la -lmpi -lmpi_cxx
  dmri_paths_LDFLAGS=$(OS_LDFLAGS)
  
  dmri_pathstats_SOURCES=dmri_pathstats.cxx spline.cxx spline.h \
@@ -5404,7 +5423,7 @@ Subject: [PATCH 2/2] Shared libs
 -                      $(top_builddir)/tetgen/libtetgen.a 
 +dmri_pathstats_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +                      $(top_builddir)/fem_elastic/libfem_elastic.la \
-+                      $(top_builddir)/tetgen/libtetgen.la 
++                      $(top_builddir)/tetgen/libtetgen.la -lmpi -lmpi_cxx
  dmri_pathstats_LDFLAGS=$(OS_LDFLAGS)
  
  dmri_mergepaths_SOURCES=dmri_mergepaths.cxx
@@ -5810,3 +5829,46 @@ Subject: [PATCH 2/2] Shared libs
  tridec_LDFLAGS=$(OS_LDFLAGS)
  
  # Our release target. Include files to be excluded here. They will be
+--- a/lineprof/Makefile.am
++++ b/lineprof/Makefile.am
+@@ -31,9 +31,9 @@
+ 
+ AM_CXXFLAGS=$(AM_CPPFLAGS) $(VTK_COCOA_CXXFLAGS)
+ 
+-noinst_LIBRARIES= liblineprof.a
++lib_LTLIBRARIES= liblineprof.la
+ 
+-liblineprof_a_SOURCES= \
++liblineprof_la_SOURCES= \
+ 	Tracer.cpp \
+ 	Preprocessor.cpp \
+ 	PetscSolver.cpp \
+@@ -68,7 +68,7 @@
+ 	-lvtkIO -lvtkWidgets -lvtkGraphics \
+ 	-lvtkImaging -lvtkFiltering \
+ 	-lvtkCommon -lvtksys \
+-	-lvtkHybrid -lvtkexoIIc -lvtkNetCDF -lvtkDICOMParser \
++	-lvtkHybrid -lvtkexoIIc -lnetcdf -lvtkDICOMParser \
+ 	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
+ 	-lexpat $(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
+   $(LIBTIFF) \
+@@ -83,7 +83,7 @@
+ 	-lvtkIO -lvtkWidgets -lvtkGraphics \
+ 	-lvtkImaging -lvtkFiltering \
+ 	-lvtkCommon -lvtksys \
+-	-lvtkHybrid -lvtkexoIIc -lvtkNetCDF -lvtkDICOMParser \
++	-lvtkHybrid -lvtkexoIIc -lnetcdf -lvtkDICOMParser \
+ 	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
+ 	-lexpat $(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
+     $(LIBTIFF) \
+--- a/mris_apply_reg/Makefile.am
++++ b/mris_apply_reg/Makefile.am
+@@ -7,7 +7,7 @@
+ 
+ bin_PROGRAMS = mris_apply_reg
+ mris_apply_reg_SOURCES=mris_apply_reg.c mris_apply_reg.help.xml.h
+-mris_apply_reg_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
++mris_apply_reg_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
+ mris_apply_reg_LDFLAGS=$(OS_LDFLAGS)
+ 
+ foodir=$(prefix)/docs/xml
