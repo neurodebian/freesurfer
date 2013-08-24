@@ -1542,7 +1542,7 @@ Subject: [PATCH 2/2] Shared libs
    $(ITK_LIBS) \
    $(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp \
 -  -lpetscdm -lpetscmat -lpetscvec -lpetsc -lmpich -lfmpich \
-+  -lpetscdm -lpetscmat -lpetscvec -lpetsc -lmpi
++  -lpetscdm -lpetscmat -lpetscvec -lpetsc -lmpi \
    $(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
  
  # put a wrapper around the bin, used to setup tcltktixblt,vtk enviro vars
