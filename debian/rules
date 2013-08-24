@@ -108,8 +108,6 @@ override_dh_auto_clean:
 	# remove files which upstream doesn't and which otherwise upset 3.0 (quilt)
 	-rm -f GEMS/kvlAtlasMeshViewingConsoleGUI.h
 	-rm -f GEMS/kvlSegmentationEvaluationConsoleGUI.h
-	-rm -f GEMS/kvlAtlasParameterEstimationConsoleGUI.cxx
-	-rm -f GEMS/kvlAtlasParameterEstimationConsoleGUI.h
 
 	# Remove files generated using FSMAJORVERSION
 	for tmpl in debian/*template; do \
