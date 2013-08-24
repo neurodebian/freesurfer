@@ -38,3 +38,4 @@ addbacklut
 fixtclinclude
 ignoregeodesic
 fixscuba2tcllink
+allowtcl8.5

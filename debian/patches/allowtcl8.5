@@ -1,0 +1,41 @@
+--- a/configure.in
++++ b/configure.in
+@@ -3174,14 +3174,13 @@
+ AC_SUBST(VTK_LSDYNA_LIB)
+ 
+ #
+-# check tcl/tk/tix/blt only if tcl/tk apps are enabled
++# Check for TCL etc even if we're not building the apps
++# as a couple of libraries depend on tcl...
+ #
+-if test "x$tcltk_apps" = "xyes"; then
+   ################## Tcl
+   # check tcl8.5
+-  # NJS NOTE! here temp changed to 8.4 until tcl8.5 works
+-  AC_CHECK_LIB([tcl8.4],[Tcl_Init],
+-    [LIB_TCL=-ltcl8.4],
++  AC_CHECK_LIB([tcl8.5],[Tcl_Init],
++    [LIB_TCL=-ltcl8.5],
+   # check tcl8.4
+     [
+     AC_CHECK_LIB([tcl8.4],[Tcl_Init],
+@@ -3215,9 +3214,8 @@
+   CPPFLAGS="$GL_CFLAGS $CPPFLAGS"
+   LDFLAGS="$X_LIBS $LDFLAGS"
+   # check tk8.5
+-  # NJS NOTE! here temp changed to 8.4 until tcl8.5 works
+-  AC_CHECK_LIB([tk8.4],[Tk_Init],
+-    [LIB_TK=-ltk8.4],
++  AC_CHECK_LIB([tk8.5],[Tk_Init],
++    [LIB_TK=-ltk8.5],
+   # check tk8.4
+     [
+     AC_CHECK_LIB([tk8.4],[Tk_Init],
+@@ -3303,7 +3301,6 @@
+       ])
+     ])
+   AC_SUBST(LIB_BLT)
+-fi 
+ 
+ # check for KWWidget libs only if kww app building is enabled
+ if test ! "x$kww_apps" = "xNO"; then

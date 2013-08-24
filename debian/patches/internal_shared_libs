@@ -897,7 +897,7 @@ Subject: [PATCH 2/2] Shared libs
 +  dicom/libdicom.la \
 +  hipsstubs/libhipsstubs.la \
 +  log/liblog.la"
-+DLIBS_MGH="-L\$(top_builddir)/utils -lutils -lxml2"
++DLIBS_MGH="\$(top_builddir)/utils/libutils.la -lxml2"
  
  # use local libjpeg if --with-jpeg-dir not used:
  if test "$ac_jpeg_libraries" = "NO"; then
