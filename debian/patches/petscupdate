@@ -181,3 +181,31 @@
    CHKERRQ(ierr);
    ksp = 0;
  
+--- a/lineprof/PetscSolver.cpp
++++ b/lineprof/PetscSolver.cpp
+@@ -17,9 +17,9 @@
+ 
+ PetscSolver::~PetscSolver()
+ {
+-  if ( A )   MatDestroy(A);
+-  if ( rhs ) VecDestroy( rhs );
+-  if ( sol ) VecDestroy( sol );
++  if ( A )   MatDestroy( &A );
++  if ( rhs ) VecDestroy( &rhs );
++  if ( sol ) VecDestroy( &sol );
+ }
+ 
+ void
+@@ -83,10 +83,10 @@
+   PetscReal norm;
+   ierr = VecAXPY( vcheck, neg_one, rhs ); CHKERRQ(ierr);
+   ierr = VecNorm(vcheck, NORM_2, &norm); CHKERRQ(ierr);
+-  ierr = VecDestroy(vcheck); CHKERRQ(ierr);
++  ierr = VecDestroy(&vcheck); CHKERRQ(ierr);
+ 
+ 
+-  ierr = KSPDestroy(ksp); CHKERRQ(ierr);
++  ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
+ 
+   return 0;
+ }
