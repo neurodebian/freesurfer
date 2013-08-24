@@ -1,14 +1,14 @@
 /**
  * @file  DialogAbout.cpp
- * @brief REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+ * @brief About FreeView
  *
  */
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/03/16 22:07:51 $
- *    $Revision: 1.5 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:28 $
+ *    $Revision: 1.5.2.7 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *

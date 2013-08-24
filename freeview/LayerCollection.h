@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/05/13 15:04:32 $
- *    $Revision: 1.21.2.5 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:31 $
+ *    $Revision: 1.21.2.11 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -64,6 +64,9 @@ public:
   Layer* GetFirstVisibleLayer();
 
   Layer* GetLayer(const QString& type);
+  QList<Layer*> GetLayers(const QString& type);
+
+  Layer* GetLayerByName( const QString& name );
 
   double* GetSlicePosition();
   void GetSlicePosition( double* slicePos );
@@ -83,12 +86,15 @@ public:
   void GetCurrentRASIndex( int* nIdx );
 
   double* GetWorldOrigin();
+  void GetWorldOrigin( double* dWorldOrigin_out );
   void SetWorldOrigin( double* dWorldOrigin );
 
   double* GetWorldSize();
+  void GetWorldSize( double* dWorldSize_out );
   void SetWorldSize( double* dWorldSize );
 
   double* GetWorldVoxelSize();
+  void GetWorldVoxelSize( double* dVoxelSize_out );
   void SetWorldVoxelSize( double* dVoxelSize );
 
   void GetWorldCenter( double* pos );
@@ -110,6 +116,7 @@ signals:
   void LayerPropertyChanged();
   void LayerVisibilityChanged();
   void LayerShowInfoChanged();
+  void LayerModified();
   void LayerNameChanged();
   void MouseRASPositionChanged();
   void CursorRASPositionChanged();

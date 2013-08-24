@@ -2019,7 +2019,7 @@ main(int argc, char *argv[])
 
   make_cmd_version_string
   (argc, argv,
-   "$Id: mri_fill.c,v 1.118 2011/03/16 21:23:49 nicks Exp $", "$Name: stable5 $",
+   "$Id: mri_fill.c,v 1.118 2011/03/16 21:23:49 nicks Exp $", "$Name: release_5_3_0 $",
    cmdline);
 
   // Gdiag = 0xFFFFFFFF;
@@ -2028,7 +2028,7 @@ main(int argc, char *argv[])
   nargs = handle_version_option
           (argc, argv,
            "$Id: mri_fill.c,v 1.118 2011/03/16 21:23:49 nicks Exp $",
-           "$Name: stable5 $");
+           "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
   {
     exit (0);

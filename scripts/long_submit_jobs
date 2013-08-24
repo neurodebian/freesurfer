@@ -9,8 +9,8 @@
 # Original Author: Martin Reuter
 # CVS Revision Info:
 #    $Author: mreuter $
-#    $Date: 2011/06/20 19:17:38 $
-#    $Revision: 1.4.2.5 $
+#    $Date: 2013/02/11 19:32:18 $
+#    $Revision: 1.4.2.9 $
 #
 # Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
 #
@@ -35,7 +35,12 @@ import subprocess
 import tempfile
 import shutil
 import time
+import math
 import stat
+
+#sys.path.append(os.environ['FREESURFER_HOME']+'/bin/') 
+#sys.path.append('/usr/local/freesurfer/dev/bin/') 
+
 from subject_info import *
 from LongQdecTable import *
 
@@ -60,10 +65,11 @@ mycluster = ''
 queueflag ='-q'
 
 # examples for our servers:
-launchpad ='pbsubmit -c "%(command)s" -m %(username)s -e -n %(nodes)s'
+#launchpad ='pbsubmit -c "%(command)s" -m %(username)s -e -n %(nodes)s'
+launchpad ='pbsubmit -c "%(command)s" -m %(username)s -e -l nodes=1:ppn=%(nodes)s,vmem=%(mem)sgb'
 seychelles='pbsubmit -c "%(command)s" -m %(username)s -e -l nodes=1:opteron'
 
-def submit(fname,nodes,queue):
+def submit(fname,nodes,mem,queue):
     """
     submits jobs to the cluster using pbsubmit
     """
@@ -73,7 +79,7 @@ def submit(fname,nodes,queue):
         
     # assemble the command (maybe modify to your needs):
     if hostname == "launchpad":
-        pbcmd = launchpad % {'command':fname,'username':user,'nodes':nodes}
+        pbcmd = launchpad % {'command':fname,'username':user,'nodes':nodes,'mem':mem}
     elif hostname == "seychelles":
         pbcmd = seychelles % {'command':fname,'username':user}
     else:
@@ -135,7 +141,7 @@ def wait_jobs(maxjobs):
         num = p3.communicate()[0]
          
         # stop if slots available
-        if int(num) <= maxjobs:
+        if int(num) < maxjobs:
             break
 
         #else wait
@@ -195,6 +201,8 @@ OPTIONAL ARGUMENTS
 
 --simulate        Do not submit anything, just print commands
 
+--simfiles        Do not submit anything, just create command files
+
 --check           Checks if all longitudinals are done
 
 --pause <int>     Pause in sec between submissions (default: 13)
@@ -246,15 +254,22 @@ the same cross sectional runs.
 
 REFERENCES
 ==========
+
 Highly Accurate Inverse Consistent Registration: A Robust Approach,
-M. Reuter, H.D. Rosas, B. Fischl. NeuroImage 53 (4), pp. 1181-1196, 2010.
+  M. Reuter, H.D. Rosas, B. Fischl. NeuroImage 53(4), 1181-1196, 2010.
   http://dx.doi.org/10.1016/j.neuroimage.2010.07.020
   http://reuter.mit.edu/papers/reuter-robreg10.pdf 
 
 Avoiding Asymmetry-Induced Bias in Longitudinal Image Processing,
-M. Reuter, B. Fischl. NeuroImage 57 (1), pp. 19-21, 2011.
+  M. Reuter, B. Fischl. NeuroImage 57(1), 19-21, 2011.
   http://dx.doi.org/10.1016/j.neuroimage.2011.02.076
   http://reuter.mit.edu/papers/reuter-bias11.pdf 
+
+Within-Subject Template Estimation for Unbiased Longitudinal Image Analysis.
+  M. Reuter, N.J. Schmansky, H.D. Rosas, B. Fischl.
+  NeuroImage 61(4), 1402-1418, 2012.
+  http://dx.doi.org/10.1016/j.neuroimage.2012.02.084
+  http://reuter.mit.edu/papers/reuter-long12.pdf
 
 """
 
@@ -265,7 +280,7 @@ def options_parse():
     Command Line Options Parser for long_mris_slopes
     initiate the option parser and return the parsed object
     """
-    parser = optparse.OptionParser(version='$Id: long_submit_jobs,v 1.4.2.5 2011/06/20 19:17:38 mreuter Exp $', usage=HELPTEXT)
+    parser = optparse.OptionParser(version='$Id: long_submit_jobs,v 1.4.2.9 2013/02/11 19:32:18 mreuter Exp $', usage=HELPTEXT)
     
     # help text
     h_qdec      = '(REQUIRED) qdec table file specifying the subjects and time points'
@@ -283,13 +298,16 @@ def options_parse():
     h_lflags    = 'Manually specify flags for long (default: \'-all\')'
     
     h_affine    = 'use affine registration for base'
-    h_force     = 'force reprocessing even if finished (recon-all.done)'
+    h_force     = 'force reprocessing even if finished successfully before (recon-all.done)'
     h_simulate  = 'do not submit anything, just print commands'
+    h_simfiles  = 'do not submit anything, just create command files'
     h_skip      = '0 (exit on missing), 1 (default, skip instead of exit), 2 (skip instead of wait)'
+    h_skiperror = 'skip re-submission if run had errors earlier (default: resubmit if not running)'
     h_check     = 'check if all longitudinals are done'
     h_pause     = 'pause in sec between submissions (default: 13)'
     h_max       = 'max num of jobs of this user (default: 100)'
     h_queue     = 'special queue to submit'
+    h_mem       = 'mem to request (default: 7 Gig), only used in -base submission'
     
     # Add options 
 
@@ -314,12 +332,15 @@ def options_parse():
     parser.add_option('--affine' , action='store_true', dest='affine', help=h_affine , default=False)
     parser.add_option('--force'  , action='store_true', dest='force',  help=h_force , default=False)
     parser.add_option('--simulate', action='store_true', dest='simulate',  help=h_simulate , default=False)
+    parser.add_option('--simfiles', action='store_true', dest='simfiles',  help=h_simfiles , default=False)
     parser.add_option('--skip', dest='skip',  help=h_skip , default=1, type="int")
+    parser.add_option('--skiperror'  , action='store_true', dest='skiperror',  help=h_skiperror , default=False)
     parser.add_option('--check', action='store_true', dest='check',  help=h_check , default=False)
 
     parser.add_option('--pause' , dest='pause' , help=h_pause, default=13, type="float")
     parser.add_option('--max'   , dest='max'   , help=h_max, default=100, type="int")
     parser.add_option('--queue' , dest='queue' , help=h_queue)
+    parser.add_option('--mem'   , dest='mem'   , help=h_mem, default=7, type="int")
         
     
                       
@@ -338,8 +359,8 @@ def options_parse():
     
     # extensive error checks
     if options.qdec is None or options.cdir is None:
-        print 'ERROR: Specify --qedc and --cdir'
-        print '       or run with --help for help.'
+        parser.print_help()
+        print '\nERROR: Specify --qedc and --cdir'
         sys.exit(1)
 
     # setting all to true if not manually selected through parameters (unless check is true):
@@ -370,6 +391,9 @@ def options_parse():
         
     if options.lflags is None:
         options.lflags = "-all"
+                   
+    if options.simfiles:
+        options.simulate = True 
                    
     return options
 
@@ -447,6 +471,7 @@ def run_cross(qdectable,options):
     running  = []
     notexist = []
     norights = []
+    error    = []
     submitted= 0
     total = 0
     for subjectid, tplist in qdectable.subjects_tp_map.items():
@@ -476,6 +501,7 @@ def run_cross(qdectable,options):
                 
             
             # skip if still running or done and no force
+            iserror   = os.path.join(options.cdir,tpid,"scripts","recon-all.error")
             isrunning = os.path.join(options.cdir,tpid,"scripts","IsRunning.lh+rh")
             isdone    = os.path.join(options.cdir,tpid,"scripts","recon-all.done")
             if os.path.exists(isrunning):
@@ -486,6 +512,11 @@ def run_cross(qdectable,options):
                 print "Skipping cross "+tpid+"  (is done and no --force specified)\n"
                 done.append( (subjectid,tpid) )
                 continue
+            if os.path.exists(iserror) and options.skiperror:
+                print "Skipping cross "+tpid+"  (quit with error earlier)\n"
+                error.append( (subjectid,tpid) )
+                continue
+            
 
             # check if read/write access:
             tpcdir = os.path.join(options.cdir,tpid)
@@ -500,14 +531,15 @@ def run_cross(qdectable,options):
             
             # create tp cross sectionally:
             cmd = recall+" -s "+tpid+" -sd "+options.cdir+" "+options.cflags
-            if not options.simulate:
+            if not options.simulate or options.simfiles:
                 cmdf=os.path.join(options.cdir,tpid+"-cross.cmdf")
                 f = open(cmdf, 'w')
                 f.write(cmd+"\n")
                 f.close()
-                os.chmod(cmdf,stat.S_IRWXU)
+                os.chmod(cmdf,stat.S_IRWXU | stat.S_IRWXG)
+            if not options.simulate:
                 wait_jobs(options.max)
-                submit(cmdf,1,options.queue)
+                submit(cmdf,1,7,options.queue)
                 submitted = submitted + 1
                 print "Submitted: "+str(submitted)+"\n"
                 time.sleep(options.pause)
@@ -521,6 +553,7 @@ def run_cross(qdectable,options):
     print            
     print "already done    : "+str(len(done))
     print "already running : "+str(len(running))
+    print "skipped (errors): "+str(len(error))
     print "submitted       : "+str(submitted)
     print "dirs not exist  : "+str(len(notexist))
     print "dirs no rights  : "+str(len(norights))
@@ -539,13 +572,14 @@ def run_base(qdectable,options):
     if not os.path.exists(options.bdir):
         os.mkdir(options.bdir)
         
-    # copy recon-all to cross dir:
+    # copy recon-all to base dir:
     recall = cp_recall(options.bdir)
    
     done     = []
     running  = []
     notexist = []
     norightsB= []
+    error    = []
     submitted= 0
     total = 0
     less2 = 0
@@ -555,10 +589,14 @@ def run_base(qdectable,options):
         total = total+1
 
         # check if 2 or more time points
-        if len(tplist) < 2 :
+        if len(tplist) == 1 :
             less2 = less2 + 1
-            print 'WARNING: '+str(subjectid)+' has less than 2 time points, skipping ...'
-            continue
+            print 'WARNING: '+str(subjectid)+' has only single time point, processing upright as base'
+#            print 'WARNING: '+str(subjectid)+' has less than 2 time points, skipping ...'
+#            continue
+        if len(tplist) == 0 :
+            print 'ERROR: '+str(subjectid)+' has 0 time points? '
+            sys.exit(1)
 
         basedir   = os.path.join(options.bdir,subjectid)
         if os.path.exists(basedir) and not ( os.access(basedir,os.R_OK) and os.access(basedir,os.X_OK)and os.access(basedir,os.W_OK)):
@@ -574,6 +612,7 @@ def run_base(qdectable,options):
         # skip if base still running or done and no force
         isrunning = os.path.join(options.bdir,subjectid,"scripts","IsRunning.lh+rh")
         isdone    = os.path.join(options.bdir,subjectid,"scripts","recon-all.done")
+        iserror   = os.path.join(options.bdir,subjectid,"scripts","recon-all.error")
         if os.path.exists(isrunning):
             print "WARNING: "+subjectid+" seems to be still running ? Skipping ... \n"
             running.append( subjectid )
@@ -581,6 +620,10 @@ def run_base(qdectable,options):
         if os.path.exists(isdone) and not options.force:
             print "Skipping base "+subjectid+"  (is done and no --force specified)\n"
             done.append( subjectid )
+            continue
+        if os.path.exists(iserror) and options.skiperror:
+            print "Skipping base "+subjectid+"  (quit with error earlier)\n"
+            error.append( (subjectid,tpid) )
             continue
 
         tpids = [entry[0] for entry in tplist]
@@ -645,31 +688,32 @@ def run_base(qdectable,options):
             #echo "WARNING $base has missing cross sectionals. Skipping ..."
             continue
 
-        #determine nodes (mem usage)
+        #determine mem usage
         nodes = 1
-        if len(tpids) > 3:
-            nodes = 2
-        if len(tpids) > 5:
-            nodes = 3
-        if len(tpids) > 7:
-            nodes = 4
-
-
+#        mem = int(math.ceil(len(tpids) * 2.5))
+        mem = options.mem
+#        if len(tpids) > 3:
+#            mem = 12
+#        if len(tpids) > 5:
+#            mem = 20
+#        if len(tpids) > 8:
+#            mem = 28
         baseflag = " -base "
         if options.affine:
             baseflag = " -base-affine "
             # also maybe adjust nodes number
-            if nodes < 4: nodes = nodes+1
+            #if mem < 28: mem = mem+7
             
         cmd = recall+" -sd "+options.bdir+baseflag+subjectid+tps+" "+options.bflags
-        if not options.simulate:
+        if not options.simulate or options.simfiles:
             cmdf=os.path.join(options.bdir,subjectid+"-base.cmdf")
             f = open(cmdf, 'w')
             f.write(cmd+"\n")
             f.close()
             os.chmod(cmdf,stat.S_IRWXU)
+        if not options.simulate:
             wait_jobs(options.max)
-            submit(cmdf,nodes,options.queue)
+            submit(cmdf,nodes,mem,options.queue)
             submitted = submitted + 1
             print "Submitted: "+str(submitted)+"\n"
             time.sleep(options.pause)
@@ -682,6 +726,7 @@ def run_base(qdectable,options):
     print "already done    : "+str(len(done))
     print "already running : "+str(len(running))
     print "dirs not exist  : "+str(len(notexist))
+    print "skipped (errors): "+str(len(error))
 
     return submitted
 
@@ -701,24 +746,28 @@ def run_long(qdectable,options):
     if not os.path.exists(options.ldir):
         os.mkdir(options.ldir)
         
-    # copy recon-all to cross dir:
-    recall = cp_recall(options.cdir)
+    # copy recon-all to long dir:
+    recall = cp_recall(options.ldir)
     
     done     = []
     running  = []
     notexist = []
     nobase   = []
     norights = []
+    error    = []
     submitted= 0
     for subjectid, tplist in qdectable.subjects_tp_map.items():
         print '\n========================================\n'
         print '[LONG] Subject: '+subjectid+'\n'
 
         # check if 2 or more time points
-        if len(tplist) < 2 :
-            print 'WARNING: '+str(subjectid)+' has less than 2 time points, skipping ...'
-            continue
-
+        if len(tplist) == 1 :
+            print 'WARNING: '+str(subjectid)+' has only single time point, running long with upright base'
+#            print 'WARNING: '+str(subjectid)+' has less than 2 time points, skipping ...'
+#            continue
+        if len(tplist) == 0 :
+            print 'ERROR: '+str(subjectid)+' has 0 time points? '
+            sys.exit(1)
 
         requirement = os.path.join("scripts","recon-all.done")
         status = check_file(options.bdir,subjectid,requirement)
@@ -752,7 +801,7 @@ def run_long(qdectable,options):
                     if not options.simulate:
                         sys.exit(1)
             else:
-                print "Simulate: would wait for base "+subjectsid+" here ...\n"
+                print "Simulate: would wait for base "+subjectid+" here ...\n"
 
         #link base dir if not simulate:
         baseinbdir = os.path.join(options.bdir,subjectid)
@@ -783,7 +832,7 @@ def run_long(qdectable,options):
        
             if status == 1: # not there and still running:
                 # if skipping >= 2: don't wait for complete base below
-                if options.skipping >= 2:
+                if options.skip >= 2:
                     print "WARNING [long]: "+tpid+" missing norm.mgz. Skipping longs ..."
                     if options.simulate:
                         continue # check other time points
@@ -830,6 +879,7 @@ def run_long(qdectable,options):
             # skip if still running or done and no force
             isrunning = os.path.join(options.ldir,tpid+".long."+subjectid,"scripts","IsRunning.lh+rh")
             isdone    = os.path.join(options.ldir,tpid+".long."+subjectid,"scripts","recon-all.done")
+            iserror   = os.path.join(options.ldir,tpid+".long."+subjectid,"scripts","recon-all.error")
             if os.path.exists(isrunning):
                 print "WARNING: "+tpid+".long."+subjectid+" seems to be still running ? Skipping ... \n"
                 running.append( (subjectid,tpid) )
@@ -837,6 +887,10 @@ def run_long(qdectable,options):
             if os.path.exists(isdone) and not options.force:
                 print "Skipping long "+tpid+".long."+subjectid+"  (is done and no --force specified)\n"
                 done.append( (subjectid,tpid) )
+                continue
+            if os.path.exists(iserror) and not options.skiperror:
+                print "Skipping long "+tpid+".long."+subjectid+"  (had error earlier)\n"
+                error.append( (subjectid,tpid) )
                 continue
                 
             tpiddir = os.path.join(options.ldir,tpid+".long."+subjectid)
@@ -851,14 +905,15 @@ def run_long(qdectable,options):
             
             
             cmd = recall+" -sd "+options.ldir+" -long "+tpid+" "+subjectid+" "+options.lflags
-            if not options.simulate:
+            if not options.simulate or options.simfiles:
                 cmdf=os.path.join(options.ldir,tpid+"-long.cmdf")
                 f = open(cmdf, 'w')
                 f.write(cmd+"\n")
                 f.close()
                 os.chmod(cmdf,stat.S_IRWXU)
+            if not options.simulate:
                 wait_jobs(options.max)
-                submit(cmdf,1,options.queue)
+                submit(cmdf,1,7,options.queue)
                 submitted = submitted + 1
                 print "Submitted: "+str(submitted)+"\n"
                 time.sleep(options.pause)
@@ -874,6 +929,7 @@ def run_long(qdectable,options):
     print "already running : "+str(len(running))
     print "dirs not exist  : "+str(len(notexist))
     print "base not exist  : "+str(len(nobase))
+    print "skipped (errors): "+str(len(error))
 
     return submitted
 

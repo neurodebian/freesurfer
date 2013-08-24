@@ -1,14 +1,14 @@
 /**
  * @file  RenderView2D.cpp
- * @brief REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+ * @brief 2D slice view
  *
  */
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/05/13 15:04:33 $
- *    $Revision: 1.44.2.4 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:37 $
+ *    $Revision: 1.44.2.10 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -43,7 +43,11 @@
 #include "Region2DRectangle.h"
 #include "Cursor2D.h"
 #include "MyUtils.h"
+#include <QActionGroup>
+#include <QMessageBox>
+#include <QMenu>
 #include <QDebug>
+#include "LayerLineProfile.h"
 
 RenderView2D::RenderView2D( QWidget* parent ) : RenderView( parent )
 {
@@ -54,6 +58,7 @@ RenderView2D::RenderView2D( QWidget* parent ) : RenderView( parent )
   m_selection2D = new Region2DRectangle( this );
   m_selection2D->SetEnableStats( false );
   connect(m_cursor2D, SIGNAL(Updated()), this, SLOT(RequestRedraw()));
+  connect(this, SIGNAL(ViewChanged()), this, SLOT(Update2DOverlay()));
 
   m_interactorNavigate = new Interactor2DNavigate( this );
   m_interactorMeasure = new Interactor2DMeasure( this );
@@ -61,7 +66,12 @@ RenderView2D::RenderView2D( QWidget* parent ) : RenderView( parent )
   m_interactorROIEdit = new Interactor2DROIEdit( this );
   m_interactorPointSetEdit = new Interactor2DPointSetEdit( this );
   m_interactorVolumeCrop = new Interactor2DVolumeCrop( this );
+  connect(m_interactorMeasure, SIGNAL(Error(QString)), this, SLOT(OnInteractorError(QString)));
+  connect(m_interactorVoxelEdit, SIGNAL(Error(QString)), this, SLOT(OnInteractorError(QString)));
+  connect(m_interactorROIEdit, SIGNAL(Error(QString)), this, SLOT(OnInteractorError(QString)));
+  connect(m_interactorPointSetEdit, SIGNAL(Error(QString)), this, SLOT(OnInteractorError(QString)));
   SetInteractionMode( IM_Navigate );
+  m_dPreSlicePosition = -1e10;
 }
 
 void RenderView2D::SetViewPlane( int nPlane )
@@ -133,7 +143,6 @@ void RenderView2D::RefreshAllActors(bool bForScreenShot)
   mainwnd->GetLayerCollection( "ROI" )->Append2DProps( m_renderer, m_nViewPlane );
   mainwnd->GetLayerCollection( "Surface" )->Append2DProps( m_renderer, m_nViewPlane );
   mainwnd->GetLayerCollection( "PointSet" )->Append2DProps( m_renderer, m_nViewPlane );
-
   mainwnd->GetLayerCollection( "Supplement" )->Append2DProps( m_renderer, m_nViewPlane );
 
   mainwnd->GetVolumeCropper()->Append2DProps( m_renderer, m_nViewPlane );
@@ -154,10 +163,12 @@ void RenderView2D::RefreshAllActors(bool bForScreenShot)
   {
     double* orig = lc->GetWorldOrigin();
     double* size = lc->GetWorldSize();
+
     m_renderer->ResetCameraClippingRange(orig[0], orig[0]+size[0],
                                          orig[1], orig[1]+size[1],
                                          orig[2], orig[2]+size[2]);
   }
+//  m_renderer->ResetCameraClippingRange();
   RenderView::RefreshAllActors(bForScreenShot);
 }
 
@@ -170,22 +181,23 @@ void RenderView2D::UpdateViewByWorldCoordinate()
     wcenter[i] = m_dWorldOrigin[i] + m_dWorldSize[i] / 2;
   }
   cam->SetFocalPoint( wcenter );
+  double len = qMax(m_dWorldSize[0], qMax(m_dWorldSize[1], m_dWorldSize[2]));
   switch ( m_nViewPlane )
   {
   case 0:
-    cam->SetPosition( wcenter[0] + m_dWorldSize[0], wcenter[1], wcenter[2] );
+    cam->SetPosition( wcenter[0] + len, wcenter[1], wcenter[2] );
     cam->SetViewUp( 0, 0, 1 );
     break;
   case 1:
-    cam->SetPosition( wcenter[0], wcenter[1] + m_dWorldSize[1], wcenter[2] );
+    cam->SetPosition( wcenter[0], wcenter[1] + len, wcenter[2] );
     cam->SetViewUp( 0, 0, 1 );
     break;
   case 2:
-    cam->SetPosition( wcenter[0], wcenter[1], wcenter[2] - m_dWorldSize[2] );
+    cam->SetPosition( wcenter[0], wcenter[1], wcenter[2] - len );
     break;
   }
 //  m_renderer->ResetCameraClippingRange();
-  cam->SetParallelScale( qMax( qMax(m_dWorldSize[0], m_dWorldSize[1]), m_dWorldSize[2]) );
+  cam->SetParallelScale( qMax( qMax(m_dWorldSize[0], m_dWorldSize[1]), m_dWorldSize[2])/2 );
 }
 
 void RenderView2D::UpdateAnnotation()
@@ -240,9 +252,16 @@ void RenderView2D::OnSlicePositionChanged()
 {
   double slicePos[3];
   MainWindow::GetMainWindow()->GetLayerCollection( "MRI" )->GetSlicePosition( slicePos );
-  for ( int i = 0; i < m_regions.size(); i++ )
+
+  if (m_dPreSlicePosition != slicePos[m_nViewPlane])
   {
-    m_regions[i]->UpdateSlicePosition( m_nViewPlane, slicePos[m_nViewPlane] );
+    for ( int i = 0; i < m_regions.size(); i++ )
+    {
+      m_regions[i]->UpdateSlicePosition( m_nViewPlane, slicePos[m_nViewPlane] );
+    }
+
+    ResetCameraClippingRange();
+    m_dPreSlicePosition = slicePos[m_nViewPlane];
   }
   m_cursor2D->SetPosition( slicePos );
   Update2DOverlay();
@@ -320,7 +339,7 @@ void RenderView2D::StopSelection()
 
 Region2D* RenderView2D::GetRegion( int nX, int nY, int* index_out )
 {
-  for ( int i = 0; i < m_regions.size(); i++ )
+  for ( int i = m_regions.size()-1; i >= 0; i-- )
   {
     if ( m_regions[i]->Contains( nX, nY, index_out ) )
     {
@@ -486,4 +505,90 @@ bool RenderView2D::SetSliceNumber( int nNum )
   MainWindow::GetMainWindow()->SetSlicePosition( pos );
   lc_mri->SetCursorRASPosition( pos );
   return true;
+}
+
+void RenderView2D::TriggerContextMenu( QMouseEvent* event )
+{
+  QMenu menu;
+  bool bShowBar = this->GetShowScalarBar();
+  QList<Layer*> layers = MainWindow::GetMainWindow()->GetLayers("MRI");
+  Region2D* reg = GetRegion(event->x(), event->y());
+  if (reg)
+  {
+    QAction* act = new QAction("Duplicate", this);
+    act->setData(QVariant::fromValue((QObject*)reg));
+    connect(act, SIGNAL(triggered()), this, SLOT(OnDuplicateRegion()));
+    menu.addAction(act);
+  }
+  else if (layers.size() > 1)
+  {
+    QMenu* menu2 = menu.addMenu("Show Color Bar");
+    QActionGroup* ag = new QActionGroup(this);
+    ag->setExclusive(true);
+    foreach (Layer* layer, layers)
+    {
+      QAction* act = new QAction(layer->GetName(), this);
+      act->setCheckable(true);
+      act->setChecked(bShowBar && layer == m_layerScalarBar);
+      act->setData(QVariant::fromValue((QObject*)layer));
+      menu2->addAction(act);
+      ag->addAction(act);
+    }
+    connect(ag, SIGNAL(triggered(QAction*)), this, SLOT(SetScalarBarLayer(QAction*)));
+  }
+  if (!menu.actions().isEmpty())
+    menu.exec(event->globalPos());
+}
+
+void RenderView2D::OnDuplicateRegion()
+{
+  QAction* act = qobject_cast<QAction*>(sender());
+  if (!act)
+    return;
+
+  Region2D* reg = qobject_cast<Region2D*>(qVariantValue<QObject*>(act->data()));
+  if (reg)
+  {
+    reg = reg->Duplicate(this);
+    if (reg)
+    {
+      reg->Offset(5, 5);
+      AddRegion(reg);
+    }
+  }
+}
+
+void RenderView2D::OnInteractorError(const QString &msg)
+{
+  QMessageBox::warning(this, "Error", msg);
+}
+
+bool RenderView2D::PickLineProfile(int x, int y)
+{
+  QList<LayerLineProfile*> lineprofs;
+  QList<Layer*> layers = MainWindow::GetMainWindow()->GetLayers("Supplement");
+  foreach (Layer* layer, layers)
+  {
+    if (layer->IsTypeOf("LineProfile"))
+    {
+      LayerLineProfile* l = qobject_cast<LayerLineProfile*>(layer);
+      if (l->GetPlane() == this->m_nViewPlane)
+        lineprofs << l;
+    }
+  }
+  if (lineprofs.isEmpty())
+    return false;
+
+  foreach (LayerLineProfile* lp, lineprofs)
+  {
+    int nId = this->PickCell(lp->GetLineProfileActor(), x, y);
+    if (nId >= 0)
+    {
+      nId /= 6;
+      emit LineProfileIdPicked(lp, nId);
+      lp->SetActiveLineId(nId);
+      return true;
+    }
+  }
+  return false;
 }

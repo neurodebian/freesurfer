@@ -13,8 +13,8 @@
  * Original Author: Rudolph Pienaar
  * CVS Revision Info:
  *    $Author: nicks $
- *    $Date: 2011/02/27 21:18:07 $
- *    $Revision: 1.10 $
+ *    $Date: 2012/11/14 22:09:04 $
+ *    $Revision: 1.10.2.1 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -34,10 +34,6 @@
 
 #ifdef __cplusplus
 extern  "C" {
-#endif
-
-#ifdef HAVE_CONFIG_H
-#include <config.h>
 #endif
 
 #include "mri.h"

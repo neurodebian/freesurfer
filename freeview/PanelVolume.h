@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/05/13 15:04:33 $
- *    $Revision: 1.37.2.3 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:36 $
+ *    $Revision: 1.37.2.9 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -49,6 +49,7 @@ public:
 
 protected slots:
   void OnCheckShowContour( bool bShow );
+  void OnCheckShowLabelContour( bool bShow );
   void OnSliderOpacity( int nVal );
   void OnComboColorMap( int nSel );
   void OnComboLookupTable( int nSel );
@@ -83,6 +84,10 @@ protected slots:
 
   void OnActiveFrameChanged(int nFrame);
 
+  void OnShowExistingLabelsOnly(bool b);
+
+  void OnComboMask( int nSel );
+
 protected:
   void PopulateColorTable( COLOR_TABLE* ctab );
   void DoUpdateWidgets();
@@ -100,6 +105,8 @@ private:
   QList<QWidget*> m_widgetlistFrame;
   QList<QWidget*> m_widgetlistVector;
   QList<QWidget*> m_widgetlistContour;
+  QList<QWidget*> m_widgetlistContourNormal;
+  QList<QWidget*> m_widgetlistContourLabel;
   QList<QWidget*> m_widgetlistNormalDisplay;
   QList<QWidget*> m_widgetlistEditable;
   QList<QWidget*> m_widgetlistVolumeTrack;
@@ -109,6 +116,7 @@ private:
   LUTDataHolder* m_luts;
 
   COLOR_TABLE*  m_curCTAB;
+  bool          m_bShowExistingLabelsOnly;
 };
 
 #endif // PANELVOLUME_H

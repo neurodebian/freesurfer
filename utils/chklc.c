@@ -7,10 +7,10 @@
  * Original Author: Bruce Fischl
  * CVS Revision Info:
  *    $Author: nicks $
- *    $Date: 2011/03/02 00:04:42 $
- *    $Revision: 1.13 $
+ *    $Date: 2013/05/08 15:46:30 $
+ *    $Revision: 1.13.2.1 $
  *
- * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+ * Copyright © 2011-2013 The General Hospital Corporation (Boston, MA) "MGH"
  *
  * Terms and conditions for use, reproduction, distribution and contribution
  * are found in the 'FreeSurfer Software License Agreement' contained
@@ -62,7 +62,6 @@ static const char* licmsg2 =
 "--------------------------------------------------------------------------\n";
 #endif
 
-
 void chklc(void)
 {
   char  dirname[STRLEN], *cp ;
@@ -80,7 +79,6 @@ void chklc(void)
   cp = getenv("FREESURFER_HOME");
   if (cp == NULL)
   {
-    //fprintf(stdout,errmsg);
     fprintf(stderr,"%s",errmsg);
     exit(-1);
   }
@@ -98,7 +96,12 @@ void chklc(void)
   lfile = fopen(lfilename,"r");
   if (lfile == NULL)
   {
-    //fprintf(stdout,licmsg,lfilename);
+    sprintf(lfilename,"%s/lic%s",dirname, "ense.txt");
+
+    lfile = fopen(lfilename,"r");
+  }
+  if (lfile == NULL)
+  {
     fprintf(stderr,licmsg,lfilename);
     exit(-1);
   }
@@ -110,11 +113,23 @@ void chklc(void)
   sprintf(gkey,"%s.%s",email,magic);
 
 #ifndef Darwin
-  if (strcmp(key,crypt(gkey,"*C*O*R*T*E*C*H*S*0*1*2*3*"))!=0)
   {
-    //fprintf(stdout,licmsg2,lfilename);
-    fprintf(stderr,licmsg2,lfilename);
-    exit(-1);
+    char* crypt_gkey = crypt(gkey,"*C*O*R*T*E*C*H*S*0*1*2*3*");
+    // it seems some implementations of crypt (like Fedora18)
+    // don't like the input we give it and crypt returns NULL, which crashes 
+    // those systems, so check and skip
+    if (crypt_gkey == NULL)
+    {
+      //fprintf(stderr,"chklc: crypt returned NULL!\n");
+    }
+    else
+    {
+      if (strcmp(key,crypt(gkey,crypt_gkey))!=0)
+      {
+        fprintf(stderr,licmsg2,lfilename);
+        exit(-1);
+      }
+    }
   }
 #endif
 

@@ -186,7 +186,7 @@ main(int argc,char *argv[]) {
   int nargs;
 
   /* rkt: check for and handle version tag */
-  nargs = handle_version_option (argc, argv, "$Id: mri_make_bem_surfaces.c,v 1.11 2006/12/29 02:09:07 nicks Exp $", "$Name: stable5 $");
+  nargs = handle_version_option (argc, argv, "$Id: mri_make_bem_surfaces.c,v 1.11 2006/12/29 02:09:07 nicks Exp $", "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
     exit (0);
   argc -= nargs;

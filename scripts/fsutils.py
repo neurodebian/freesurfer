@@ -1,5 +1,5 @@
 # Original author - Krish Subramaniam
-# $Id: fsutils.py,v 1.4.2.1 2011/03/24 03:18:19 krish Exp $
+# $Id: fsutils.py,v 1.4.2.6 2013/01/31 19:23:49 greve Exp $
 import os
 import logging
 import sys
@@ -92,7 +92,7 @@ Derived from StatsParser
 """
 class AsegStatsParser(StatsParser):
 
-    measure_column_map = {'volume':3, 'mean':5, 'std':6}
+    measure_column_map = {'nvoxels':2,'nvertices':2,'volume':3,'Area_mm2':3, 'mean':5, 'std':6, 'max':8, 'snr':10}
     maxsegno = None
     id_name_map = StableDict()
 
@@ -157,8 +157,20 @@ class AsegStatsParser(StatsParser):
                         ('# Measure TotalGray, TotalGrayVol,','TotalGrayVol'),
                         ('# Measure SuperTentorial, SuperTentorialVol,','SuperTentorialVol'),
                         ('# Measure SupraTentorial, SupraTentorialVol,','SupraTentorialVol'),
+                        ('# Measure SupraTentorialNotVent, SupraTentorialVolNotVent,','SupraTentorialVolNotVent'),
+                        ('# Measure SupraTentorialNotVentVox, SupraTentorialVolNotVentVox,','SupraTentorialVolNotVentVox'),
                         ('# Measure IntraCranialVol, ICV,','IntraCranialVol'),
-                        ('# Measure BrainSeg, BrainSegVol,','BrainSegVol'),)
+                        ('# Measure EstimatedTotalIntraCranialVol, eTIV,','EstimatedTotalIntraCranialVol'),
+                        ('# Measure Mask, MaskVol,','MaskVol'),
+                        ('# Measure BrainVol-to-eTIV, BrainVol-to-eTIV,','BrainVol-to-eTIV'),
+                        ('# Measure BrainSegVol-to-eTIV, BrainSegVol-to-eTIV,','BrainSegVol-to-eTIV'),
+                        ('# Measure MaskVol-to-eTIV, MaskVol-to-eTIV,','MaskVol-to-eTIV'),
+                        ('# Measure lhSurfaceHoles, lhSurfaceHoles,','lhSurfaceHoles'),
+                        ('# Measure rhSurfaceHoles, rhSurfaceHoles,','rhSurfaceHoles'),
+                        ('# Measure SurfaceHoles, SurfaceHoles,','SurfaceHoles'),
+                        ('# Measure BrainSeg, BrainSegVol,','BrainSegVol'),
+                        ('# Measure BrainSegNotVent, BrainSegVolNotVent,','BrainSegVolNotVent'),
+                        ('# Measure BrainSegNotVentSurf, BrainSegVolNotVentSurf,','BrainSegVolNotVentSurf'),)
                 c = 0
                 for start, structn in beg_struct_tuple:
                     c = c + 1
@@ -180,7 +192,7 @@ Derived from StatsParser
 class AparcStatsParser(StatsParser):
 
     # this is a map of measure requested and its corresponding column# in ?h.aparc*.stats
-    measure_column_map = {'area':2, 'volume':3, 'thickness':4, 'thicknessstd':5, 'meancurv':6 }
+    measure_column_map = {'area':2, 'volume':3, 'thickness':4, 'thicknessstd':5, 'meancurv':6, 'gauscurv':7, 'foldind':8, 'curvind':9 }
     parc_measure_map = StableDict()
 
     # we take in the measure we need..
@@ -213,6 +225,14 @@ class AparcStatsParser(StatsParser):
             if measure == 'area':
                 beg_struct_tuple = (
                     ('# Measure Cortex, WhiteSurfArea,', 'WhiteSurfArea'),
+                )
+                for start, structn in beg_struct_tuple:
+                    if line.startswith(start):
+                        strlst = line.split(',')
+                        self.parc_measure_map[structn] = float( strlst[3])
+            if measure == 'thickness':
+                beg_struct_tuple = (
+                    ('# Measure Cortex, MeanThickness,', 'MeanThickness'),
                 )
                 for start, structn in beg_struct_tuple:
                     if line.startswith(start):

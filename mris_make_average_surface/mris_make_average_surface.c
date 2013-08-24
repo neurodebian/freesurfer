@@ -13,9 +13,9 @@
 /*
  * Original Author: Bruce Fischl
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/02 00:04:33 $
- *    $Revision: 1.29 $
+ *    $Author: greve $
+ *    $Date: 2013/04/11 20:42:48 $
+ *    $Revision: 1.29.2.1 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -113,7 +113,7 @@ ENDHELP
 #include "gcamorph.h"
 
 static char vcid[] = 
-"$Id: mris_make_average_surface.c,v 1.29 2011/03/02 00:04:33 nicks Exp $";
+"$Id: mris_make_average_surface.c,v 1.29.2.1 2013/04/11 20:42:48 greve Exp $";
 
 int main(int argc, char *argv[]) ;
 
@@ -146,14 +146,15 @@ main(int argc, char *argv[]) {
   float        average_surface_area = 0.0 ;
   MATRIX *XFM=NULL;
   GCA_MORPH *gcam=NULL;
+  MRI *mritemplate;
 
   memset((void *) &vg, 0, sizeof (VOL_GEOM));
 
   /* rkt: check for and handle version tag */
   nargs = handle_version_option 
     (argc, argv, 
-     "$Id: mris_make_average_surface.c,v 1.29 2011/03/02 00:04:33 nicks Exp $",
-     "$Name: stable5 $");
+     "$Id: mris_make_average_surface.c,v 1.29.2.1 2013/04/11 20:42:48 greve Exp $",
+     "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
     exit (0);
   argc -= nargs;
@@ -366,6 +367,13 @@ main(int argc, char *argv[]) {
 #endif
     MRIScomputeMetricProperties(mris_ico) ;
   }
+
+  sprintf(fname, "%s/average/mni305.cor.mgz", mdir);
+  printf("Adding volume geometry from %s\n",fname);
+  mritemplate = MRIread(fname);
+  initVolGeom(&mris_ico->vg);
+  getVolGeom(mritemplate, &mris_ico->vg);
+  MRIfree(&mritemplate);
 
   sprintf(fname, "%s/%s/surf/%s.%s", sdirout,out_sname, hemi, avg_surf_name) ;
   printf("writing average %s surface to %s\n", avg_surf_name, fname);

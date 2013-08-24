@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/05/13 15:04:31 $
- *    $Revision: 1.49.2.2 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:29 $
+ *    $Revision: 1.49.2.8 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -51,6 +51,8 @@
 #include "MyUtils.h"
 #include <QFileInfo>
 #include <QDebug>
+#include <QDir>
+
 extern "C"
 {
 #include "mri_identify.h"
@@ -76,6 +78,7 @@ FSSurface::FSSurface( FSVolume* ref, QObject* parent ) : QObject( parent ),
   for ( int i = 0; i < 3; i++ )
   {
     m_polydataVector2D[i] = vtkSmartPointer<vtkPolyData>::New();
+    m_polydataVertex2D[i] = vtkSmartPointer<vtkPolyData>::New();
   }
 
   for ( int i = 0; i < NUM_OF_VSETS; i++ )
@@ -85,6 +88,33 @@ FSSurface::FSSurface( FSVolume* ref, QObject* parent ) : QObject( parent ),
     m_bSurfaceLoaded[i] = false;
     m_HashTable[i] = NULL;
   }
+
+  m_targetToRasMatrix[0] = 1;
+  m_targetToRasMatrix[1] = 0;
+  m_targetToRasMatrix[2] = 0;
+  m_targetToRasMatrix[3] = 0;
+  m_targetToRasMatrix[4] = 0;
+  m_targetToRasMatrix[5] = 1;
+  m_targetToRasMatrix[6] = 0;
+  m_targetToRasMatrix[7] = 0;
+  m_targetToRasMatrix[8] = 0;
+  m_targetToRasMatrix[9] = 0;
+  m_targetToRasMatrix[10] = 1;
+  m_targetToRasMatrix[11] = 0;
+  m_targetToRasMatrix[12] = 0;
+  m_targetToRasMatrix[13] = 0;
+  m_targetToRasMatrix[14] = 0;
+  m_targetToRasMatrix[15] = 1;
+  if (ref)
+  {
+    MATRIX* mat = ref->GetTargetToRASMatrix();
+    for ( int i = 0; i < 16; i++ )
+    {
+      m_targetToRasMatrix[i] = (double) *MATRIX_RELT((mat),(i/4)+1,(i%4)+1);
+    }
+  }
+  m_targetToRasTransform = vtkSmartPointer<vtkTransform>::New();
+  m_targetToRasTransform->SetMatrix( m_targetToRasMatrix );
 }
 
 FSSurface::~FSSurface()
@@ -150,13 +180,12 @@ bool FSSurface::MRISRead( const QString& filename,
       cerr << "Can not load patch file " << qPrintable(patch_filename) << "\n";
     }
   }
+
   // Get some info from the MRIS. This can either come from the volume
   // geometry data embedded in the surface; this is done for newer
   // surfaces. Or it can come from the source information in the
   // transform. We use it to get the RAS center offset for the
   // surface->RAS transform.
-
-
   m_SurfaceToRASMatrix[0] = 1;
   m_SurfaceToRASMatrix[1] = 0;
   m_SurfaceToRASMatrix[2] = 0;
@@ -195,19 +224,28 @@ bool FSSurface::MRISRead( const QString& filename,
     useVolGeomToMRI(&m_MRIS->vg, tmp);
     MATRIX* vox2rasScanner = MRIxfmCRS2XYZ(tmp, 0);
     MATRIX* vo2rasTkReg = MRIxfmCRS2XYZtkreg(tmp);
-    MATRIX* vox2rasTkReg_inv = MatrixInverse( vo2rasTkReg, NULL );
-    MATRIX* M = MatrixMultiply( vox2rasScanner, vox2rasTkReg_inv, NULL );
-    for ( int i = 0; i < 16; i++ )
+    if (vo2rasTkReg)
     {
-      m_SurfaceToRASMatrix[i] =
-        (double) *MATRIX_RELT( M, (i/4)+1, (i%4)+1 );
+      MATRIX* vox2rasTkReg_inv = MatrixInverse( vo2rasTkReg, NULL );
+      if (vox2rasTkReg_inv)
+      {
+        MATRIX* M = MatrixMultiply( vox2rasScanner, vox2rasTkReg_inv, NULL );
+        for ( int i = 0; i < 16; i++ )
+        {
+          m_SurfaceToRASMatrix[i] =
+            (double) *MATRIX_RELT( M, (i/4)+1, (i%4)+1 );
+        }
+        MatrixFree( &vox2rasTkReg_inv );
+        MatrixFree( &M );
+        m_bValidVolumeGeometry = true;
+      }
+      else
+        cout << "Warning: MatrixInverse failed." << endl;
     }
+
     MRIfree( &tmp );
     MatrixFree( &vox2rasScanner );
     MatrixFree( &vo2rasTkReg );
-    MatrixFree( &vox2rasTkReg_inv );
-    MatrixFree( &M );
-    m_bValidVolumeGeometry = true;
   }
 
   // Make our transform object and set the matrix.
@@ -249,8 +287,9 @@ bool FSSurface::MRISRead( const QString& filename,
     LoadVectors ( vector_filename );
   }
 
-  LoadCurvature();
-// cout << "MRISread finished\n";
+  QFileInfo fi(filename);
+  if (QFileInfo(fi.absoluteDir(), fi.completeBaseName() + ".curv").exists())
+    LoadCurvature();
 
   return true;
 }
@@ -341,19 +380,115 @@ bool FSSurface::LoadCurvature( const QString& filename )
   }
 }
 
-bool FSSurface::LoadOverlay( const QString& filename )
+bool FSSurface::LoadOverlay( const QString& filename, const QString& fn_reg,
+                             float** data_out, int* nvertices_out, int* nframes_out,
+                             bool bUseSecondHalfData )
 {
 //    int mritype = mri_identify((char*)( filename.toAscii().data() ));
 //    qDebug() << "mritype " << mritype;
-  if ( ::MRISreadValues( m_MRIS, (char*)( filename.toAscii().data() ) ) != 0 )
+  MRI* mriheader = MRIreadHeader(filename.toAscii().data(), MRI_VOLUME_TYPE_UNKNOWN);
+  if (mriheader && mriheader->width*mriheader->height*mriheader->depth != m_MRIS->nvertices &&
+      mriheader->width*mriheader->height*mriheader->depth*mriheader->nframes != m_MRIS->nvertices )
   {
-    cerr << "could not read overlay data from " << qPrintable(filename) << "\n";
-    return false;
+    // try load as volume
+    MRI* mri = MRIread(filename.toAscii().data());
+    if (!mri)
+    {
+      cerr << "could not read overlay data from " << qPrintable(filename) << "\n";
+      return false;
+    }
+
+    // if there is registration file, read it
+    MATRIX* tkregMat = MRIxfmCRS2XYZtkreg(mri);
+    MATRIX* ras2vox_tkreg = MatrixInverse(tkregMat, NULL);
+    MatrixFree(&tkregMat);
+    if (!fn_reg.isEmpty())
+    {
+      MRI* tmp = MRIallocHeader(m_MRIS->vg.width, m_MRIS->vg.height, m_MRIS->vg.depth, MRI_UCHAR, 1);
+      useVolGeomToMRI(&m_MRIS->vg, tmp);
+      MATRIX* matReg = FSVolume::LoadRegistrationMatrix(fn_reg, tmp, mri);
+      if (matReg == NULL)
+      {
+         cerr << "could not read registration data from " << qPrintable(fn_reg) << "\n";
+      }
+      else
+      {
+        ras2vox_tkreg = MatrixMultiply(ras2vox_tkreg, matReg, NULL);
+      }
+      MatrixFree(&matReg);
+      MRIfree(&tmp);
+    }
+    double m[16];
+    for ( int i = 0; i < 16; i++ )
+    {
+      m[i] = (double) *MATRIX_RELT((ras2vox_tkreg),(i/4)+1,(i%4)+1);
+    }
+
+    float* data = new float[mri->nframes*m_MRIS->nvertices];
+    if (!data)
+      return false;
+    for ( int i = 0; i < m_MRIS->nvertices; i++ )
+    {
+      double v[4] = { m_MRIS->vertices[i].x, m_MRIS->vertices[i].y, m_MRIS->vertices[i].z, 1 };
+      vtkMatrix4x4::MultiplyPoint(m, v, v);
+      int nx = (int)(v[0]+0.5);
+      int ny = (int)(v[1]+0.5);
+      int nz = (int)(v[2]+0.5);
+      if (nx >= 0 && nx < mri->width && ny >= 0 && ny < mri->height && nz >= 0 && nz < mri->depth)
+      {
+        for (int j = 0; j < mri->nframes; j++)
+          data[j*m_MRIS->nvertices + i] = ::MRIgetVoxVal(mri, nx, ny, nz, j);
+      }
+    }
+
+    *data_out = data;
+    *nframes_out = mri->nframes;
+    *nvertices_out = m_MRIS->nvertices;
+    MRIfree(&mri);
+    MatrixFree(&ras2vox_tkreg);
   }
   else
   {
-    return true;
+    MRI* mri = MRIread(filename.toAscii().data());
+    if (!mri)
+    {
+      cerr << "could not read overlay data from " << qPrintable(filename) << "\n";
+      return false;
+    }
+    int nPerFrame = mri->width*mri->height*mri->depth;
+    int nframes = nPerFrame*mri->nframes / m_MRIS->nvertices;
+    float* data = new float[nPerFrame*mri->nframes];
+    for (int nx = 0; nx < mri->width; nx++)
+    {
+      for (int ny = 0; ny < mri->height; ny++)
+      {
+        for (int nz = 0; nz < mri->depth; nz++)
+        {
+          for (int nk = 0; nk < mri->nframes; nk++)
+          {
+            data[nk*nPerFrame + nz*mri->height*mri->width + ny*mri->width + nx]
+                = ::MRIgetVoxVal(mri, nx, ny, nz, nk);
+          }
+        }
+      }
+    }
+    if (bUseSecondHalfData)
+    {
+      float* data2 = new float[m_MRIS->nvertices];
+      memcpy(data2, data+m_MRIS->nvertices, sizeof(float)*m_MRIS->nvertices);
+      delete[] data;
+      *data_out = data2;
+      *nframes_out = 1;
+    }
+    else
+    {
+      *data_out = data;
+      *nframes_out = nframes;
+    }
+    *nvertices_out = m_MRIS->nvertices;
   }
+
+  return true;
 }
 
 /*
@@ -625,15 +760,34 @@ void FSSurface::UpdatePolyData( MRIS* mris,
     surfaceRAS[1] = mris->vertices[vno].y;
     surfaceRAS[2] = mris->vertices[vno].z;
     this->ConvertSurfaceToRAS( surfaceRAS, point );
+    /*
     if ( m_volumeRef )
     {
       m_volumeRef->RASToTarget( point, point );
     }
+    */
+    m_targetToRasTransform->GetInverse()->TransformPoint(point, point);
     newPoints->InsertNextPoint( point );
 
     normal[0] = mris->vertices[vno].nx;
     normal[1] = mris->vertices[vno].ny;
     normal[2] = mris->vertices[vno].nz;
+    float orig[3] = { 0, 0, 0 };
+    this->ConvertSurfaceToRAS( orig, orig );
+    this->ConvertSurfaceToRAS( normal, normal );
+    /*
+    if ( m_volumeRef )
+    {
+      m_volumeRef->RASToTarget( orig, orig );
+      m_volumeRef->RASToTarget( normal, normal );
+    }
+    */
+    m_targetToRasTransform->GetInverse()->TransformPoint(orig, orig);
+    m_targetToRasTransform->GetInverse()->TransformPoint(normal, normal);
+
+    for (int i = 0; i < 3; i++)
+      normal[i] = normal[i] - orig[i];
+    vtkMath::Normalize(normal);
     newNormals->InsertNextTuple( normal );
 
     if ( polydata_verts )
@@ -710,10 +864,13 @@ void FSSurface::UpdateVerticesAndNormals()
     surfaceRAS[1] = m_MRIS->vertices[vno].y;
     surfaceRAS[2] = m_MRIS->vertices[vno].z;
     this->ConvertSurfaceToRAS( surfaceRAS, point );
+    /*
     if ( m_volumeRef )
     {
       m_volumeRef->RASToTarget( point, point );
     }
+    */
+    m_targetToRasTransform->GetInverse()->TransformPoint(point, point);
     newPoints->InsertNextPoint( point );
 
     normal[0] = m_MRIS->vertices[vno].nx;
@@ -755,10 +912,13 @@ void FSSurface::UpdateVectors()
         surfaceRAS[1] = m_fVertexSets[m_nActiveSurface][vno].y + vectors[vno].y;
         surfaceRAS[2] = m_fVertexSets[m_nActiveSurface][vno].z + vectors[vno].z;
         this->ConvertSurfaceToRAS( surfaceRAS, point );
+        /*
         if ( m_volumeRef )
         {
           m_volumeRef->RASToTarget( point, point );
         }
+        */
+        m_targetToRasTransform->GetInverse()->TransformPoint(point, point);
         double* p0 = oldPoints->GetPoint( vno );
         if (normals)
         {
@@ -895,10 +1055,13 @@ void FSSurface::UpdateVector2D( int nPlane, double slice_pos, vtkPolyData* conto
         surfaceRAS[1] = m_fVertexSets[m_nActiveSurface][vno].y + vectors[vno].y;
         surfaceRAS[2] = m_fVertexSets[m_nActiveSurface][vno].z + vectors[vno].z;
         this->ConvertSurfaceToRAS( surfaceRAS, point );
+        /*
         if ( m_volumeRef )
         {
           m_volumeRef->RASToTarget( point, point );
         }
+        */
+        m_targetToRasTransform->GetInverse()->TransformPoint(point, point);
 
         if ( contour_pts )
         {
@@ -1148,6 +1311,7 @@ void FSSurface::ComputeNormals()
   float norm[3],snorm[3];
 
   for (k=0; k<mris->nfaces; k++)
+  {
     if (mris->faces[k].ripflag)
     {
       f = &mris->faces[k];
@@ -1156,10 +1320,12 @@ void FSSurface::ComputeNormals()
         mris->vertices[f->v[n]].border = TRUE;
       }
     }
+  }
   for (k=0; k<mris->nvertices; k++)
+  {
+    v = &mris->vertices[k];
     if (!mris->vertices[k].ripflag)
     {
-      v = &mris->vertices[k];
       snorm[0]=snorm[1]=snorm[2]=0;
       v->area = 0;
       for (n=0; n<v->num; n++)
@@ -1183,6 +1349,7 @@ void FSSurface::ComputeNormals()
       v->ny = snorm[1];
       v->nz = snorm[2];
     }
+  }
 }
 
 void FSSurface::ConvertSurfaceToRAS ( float iX, float iY, float iZ,
@@ -1271,6 +1438,16 @@ void FSSurface::ConvertRASToSurface ( float const iRAS[3], float oSurf[3] ) cons
 void FSSurface::ConvertRASToSurface ( double const iRAS[3], double oSurf[3] ) const
 {
   m_SurfaceToRASTransform->GetInverse()->TransformPoint( iRAS, oSurf );
+}
+
+void FSSurface::ConvertTargetToRAS(const double iTarget[], double oRAS[]) const
+{
+  m_targetToRasTransform->TransformPoint(iTarget, oRAS);
+}
+
+void FSSurface::ConvertRASToTarget(const double iRAS[], double oTarget[]) const
+{
+  m_targetToRasTransform->GetInverse()->TransformPoint(iRAS, oTarget);
 }
 
 void FSSurface::GetBounds ( float oRASBounds[6] )
@@ -1518,25 +1695,65 @@ double FSSurface::GetCurvatureValue( int nVertex )
   return m_MRIS->vertices[nVertex].curv;
 }
 
-void FSSurface::Reposition( FSVolume *volume, int target_vno, double target_val, int nsize, double sigma )
+void FSSurface::Reposition( FSVolume *volume, int target_vno, double target_val, int nsize, double sigma, int flags )
 {
   MRISsaveVertexPositions( m_MRIS, INFLATED_VERTICES );
   float fval = (float)target_val;
-  MRISrepositionSurface( m_MRIS, volume->GetMRI(), &target_vno, &fval, 1, nsize, sigma );
+  MRISrepositionSurface( m_MRIS, volume->GetMRI(), &target_vno, &fval, 1, nsize, sigma, flags );
+  PostEditProcess();
+}
+
+void FSSurface::Reposition( FSVolume *volume, int target_vno, double* coord, int nsize, double sigma, int flags )
+{
+  MRISsaveVertexPositions( m_MRIS, INFLATED_VERTICES );
+  MRISrepositionSurfaceToCoordinate( m_MRIS, volume->GetMRI(), target_vno, coord[0], coord[1], coord[2], nsize, sigma, flags );
+  PostEditProcess();
+}
+
+bool FSSurface::Smooth(int nMethod, int niters, double lambda, double K_bp)
+{
+  MRISsaveVertexPositions( m_MRIS, INFLATED_VERTICES );
+  if (nMethod == 0 ) // Taubin
+  {
+    double mu = (1.0)/((K_bp)-1.0/lambda);
+    if (MRIStaubinSmooth(m_MRIS, niters, lambda, mu, TAUBIN_UNIFORM_WEIGHTS) != 0)
+      return false;
+  }
+  else if (nMethod == 1) // standard
+  {
+    if (MRISaverageVertexPositions(m_MRIS, niters) != 0)
+      return false;
+  }
+  PostEditProcess();
+  return true;
+}
+
+void FSSurface::RemoveIntersections()
+{
+  MRISremoveIntersections(m_MRIS);
+  PostEditProcess();
+}
+
+void FSSurface::PostEditProcess()
+{
+  if ( m_HashTable[m_nActiveSurface] )
+    MHTfree( &m_HashTable[m_nActiveSurface] );
+  m_HashTable[m_nActiveSurface] = MHTfillVertexTableRes( m_MRIS, NULL, CURRENT_VERTICES, 2.0 );
+
   SaveVertices( m_MRIS, m_nActiveSurface );
   ComputeNormals();
   SaveNormals( m_MRIS, m_nActiveSurface );
   UpdateVerticesAndNormals();
 }
 
-void FSSurface::Reposition( FSVolume *volume, int target_vno, double* coord, int nsize, double sigma )
+void FSSurface::RepositionVertex(int vno, double *coord)
 {
   MRISsaveVertexPositions( m_MRIS, INFLATED_VERTICES );
-  MRISrepositionSurfaceToCoordinate( m_MRIS, volume->GetMRI(), target_vno, coord[0], coord[1], coord[2], nsize, sigma );
-  SaveVertices( m_MRIS, m_nActiveSurface );
-  ComputeNormals();
-  SaveNormals( m_MRIS, m_nActiveSurface );
-  UpdateVerticesAndNormals();
+  VERTEX *v = &m_MRIS->vertices[vno];
+  v->x = coord[0];
+  v->y = coord[1];
+  v->z = coord[2];
+  PostEditProcess();
 }
 
 void FSSurface::UndoReposition()

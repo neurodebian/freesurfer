@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/14 23:44:48 $
- *    $Revision: 1.13 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:38 $
+ *    $Revision: 1.13.2.6 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -504,23 +504,6 @@ void VolumeCropper::SetExtent( int nComp, int nValue )
   m_mri->SetCroppingBounds( m_bounds );
   UpdateProps();
 }
-
-/*
-void VolumeCropper::DoListenToMessage( std::string const iMsg, void* iData, void* sender )
-{
-  if ( iMsg == "SlicePositionChanged" )
-  {
-    UpdateSliceActorVisibility();
-  }
-  else if ( iMsg == "ResampleFactorChanged" )
-  {
-    if ( iData == m_mri )
-    {
-      UpdateProps();
-    }
-  }
-}
-*/
 
 void VolumeCropper::UpdateSliceActorVisibility()
 {

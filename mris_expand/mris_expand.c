@@ -9,8 +9,8 @@
  * Original Author: Bruce Fischl
  * CVS Revision Info:
  *    $Author: nicks $
- *    $Date: 2011/03/02 00:04:32 $
- *    $Revision: 1.13 $
+ *    $Date: 2012/04/25 17:19:10 $
+ *    $Revision: 1.13.2.1 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -48,7 +48,9 @@ char *Progname ;
 static void usage_exit(int code) ;
 static INTEGRATION_PARMS parms ;
 static int use_thickness = 0 ;
-static int nsurfaces = 0 ;
+static int nsurfaces = 1 ;
+static char *thickness_name = "thickness" ;
+static char *pial_name = "pial" ;
 
 int
 main(int argc, char *argv[])
@@ -72,8 +74,8 @@ main(int argc, char *argv[])
   /* rkt: check for and handle version tag */
   nargs = handle_version_option
     (argc, argv,
-     "$Id: mris_expand.c,v 1.13 2011/03/02 00:04:32 nicks Exp $",
-     "$Name: stable5 $");
+     "$Id: mris_expand.c,v 1.13.2.1 2012/04/25 17:19:10 nicks Exp $",
+     "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
     exit (0);
   argc -= nargs;
@@ -115,10 +117,10 @@ main(int argc, char *argv[])
   if (use_thickness)
   {
     printf("reading thickness...\n") ;
-    if (MRISreadCurvatureFile(mris, "thickness") != NO_ERROR)
+    if (MRISreadCurvatureFile(mris, thickness_name) != NO_ERROR)
       ErrorExit(ERROR_NOFILE, "%s: could not load thickness file", Progname) ;
     MRISsaveVertexPositions(mris, WHITE_VERTICES) ;
-    if (MRISreadVertexPositions(mris, "pial") != NO_ERROR)
+    if (MRISreadVertexPositions(mris, pial_name) != NO_ERROR)
       ErrorExit(ERROR_NOFILE,
                 "%s: could not read pial vertex positions\n",
                 Progname) ;
@@ -135,8 +137,11 @@ main(int argc, char *argv[])
   if (navgs > 0)
     MRISaverageVertexPositions(mris, navgs) ;
 #endif
-  printf("writing expanded surface to %s...\n", out_fname) ;
-  MRISwrite(mris, out_fname) ;
+  if (nsurfaces == 1)
+  {
+    printf("writing expanded surface to %s...\n", out_fname) ;
+    MRISwrite(mris, out_fname) ;
+  }
 
   msec = TimerStop(&start) ;
   seconds = nint((float)msec/1000.0f) ;
@@ -166,6 +171,18 @@ get_option(int argc, char *argv[])
   {
     use_thickness = 1 ;
     printf("using distance as a %% of thickness\n") ;
+  }
+  else if (!stricmp(option, "thickness_name"))
+  {
+    thickness_name = argv[2] ;
+    printf("using thickness file %s\n", thickness_name) ;
+    nargs = 1 ;
+  }
+  else if (!stricmp(option, "pial"))
+  {
+    pial_name = argv[2] ;
+    printf("reading pial surface from %s\n", pial_name) ;
+    nargs = 1 ;
   }
   else switch (toupper(*option))
     {

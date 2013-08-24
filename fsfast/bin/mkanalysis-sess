@@ -7,8 +7,8 @@
 # Original Author: Doug Greve
 # CVS Revision Info:
 #    $Author: greve $
-#    $Date: 2011/12/09 20:06:46 $
-#    $Revision: 1.64.2.2 $
+#    $Date: 2013/01/22 21:52:07 $
+#    $Revision: 1.64.2.5 $
 #
 # Copyright (C) 2002-2007,
 # The General Hospital Corporation (Boston, MA). 
@@ -23,7 +23,7 @@
 # Bug reports: analysis-bugs@nmr.mgh.harvard.edu
 #
 
-set VERSION = '$Id: mkanalysis-sess,v 1.64.2.2 2011/12/09 20:06:46 greve Exp $';
+set VERSION = '$Id: mkanalysis-sess,v 1.64.2.5 2013/01/22 21:52:07 greve Exp $';
 
 set analysis = ();
 set TR = ();
@@ -82,7 +82,8 @@ set DoMCExtReg = 0;
 set HeteroGCor = 0;
 set UseB0DC = 0;
 set ApplySubCortMask = 1;
-set PerSession = 1;
+set PerSession = 0;
+set PerRun = 0;
 
 set force = 0;
 
@@ -316,6 +317,10 @@ while( $#argv != 0 )
       set maskstem = $argv[1]; shift;
       breaksw
 
+    case "-no-mask":
+      set maskstem = nomask;
+      breaksw
+
     case "-ter":
     case "-TER":
       if($#argv < 1) goto arg1err;
@@ -460,7 +465,7 @@ while( $#argv != 0 )
       set RawSpace = $argv[1]; shift; # subjectname
       set RawHemi = $argv[1]; shift;
       set RawSpaceType = surface
-      set mcstem = fmcpr
+      #set mcstem = fmcpr
       if($RawHemi != lh && $RawHemi != rh) then
         echo "ERROR: hemisphere $RawHemi unrecognized, must be lh or rh"
         exit 1;
@@ -474,7 +479,7 @@ while( $#argv != 0 )
       endif
       set RawSpaceType = volume;
       set RawSpace = mni305;
-      set mcstem = fmcpr
+      #set mcstem = fmcpr
       breaksw
 
     case "-subcort-mask":
@@ -487,10 +492,13 @@ while( $#argv != 0 )
       breaksw
 
     case "-per-run":
+      set PerRun = 1;
       set PerSession = 0;
+      set mcstem = fmcpr
       breaksw
 
     case "-per-session":
+      set PerRun = 0;
       set PerSession = 1;
       set mcstem = fmc
       breaksw
@@ -629,6 +637,12 @@ goto parse_args_return;
 
 ############--------------##################
 check_params:
+  if($PerRun == 0 && $PerSession == 0) then
+    echo "ERROR: must specify either -per-run or -per-session"
+    echo "       you probably want to use -per-run unless you used"
+    echo "       -per-session when you ran preproc-sess"
+    exit 1;
+  endif
 
   if($#fsd == 0) then
     echo "ERROR: you must specify a functional subdirectory with -fsd"
@@ -765,6 +779,8 @@ usage_exit:
   echo "  -stc SliceOrder : slice-time correct using the name of the SliceOrder (default none)"
   echo "  -reg-dof DOF    : use given DOF when performing registration (default is $RegDOF)"
   echo "  -fsd FSD        : functional subdirectory (eg, bold)"
+  echo "  -per-run : to be used when you run preproc-sess -per-run"
+  echo "  -per-session : to be used when you run preproc-sess -per-session"
   echo ""
   echo "Basic Design Arguments"
   echo "  -event-related          : event-related or blocked design"
@@ -794,6 +810,7 @@ usage_exit:
   echo "Noise, drift, and temporal filtering options"
   echo "   -polyfit N          : fit trend with polynomial of order N (default is 2)"
   echo "   -hpf CutoffHz       : High-pass filtering with Cuttoff in Hz"
+  echo "   -lpf CutoffHz       : Low-pass filtering with Cuttoff in Hz"
   echo "   -tpexclude filename : time-point (in seconds) exclude file name"
   echo "   -nskip  N           : skip the first N time points in each run"
   echo "   -nuisreg extreg n : external nuisance regressor file and number of regressors to include"
@@ -806,10 +823,10 @@ usage_exit:
   echo "   -fsv3-whiten   : perform whitening like FreeSurfer Version 3 (and -no-)"
   echo ""
   echo "Other Optional Arguments"
-  echo "  -per-session : to be used when you run preproc-sess -per-session"
   echo "  -runlistfile filename : file with list of runs to include in analysis"
   echo "  -funcstem stem  : override default"
   echo "  -mask  maskid : use masks/maskid to compute autocor and whitening"
+  echo "  -no-mask  : do not use a mask"
   echo "  -no-inorm              : do not intensity normalize data"
   echo "  -rescale-target value  : intensity normalize to value"
   echo "  -version        : print version and exit"
@@ -896,6 +913,18 @@ Perform slice-timing correction using FSLs slicetimer. Options for
 Slice Order are siemens, up, down, odd, even. By default, no
 slice timing correction is done.
 
+-per-run : to be used when you run preproc-sess -per-session
+-per-session : to be used when you run preproc-sess -per-session
+
+These dictate how motion correction and registration will be
+performed.  For PerRun, each run is handled separately with the
+template being the middle time point of each run. The template is the
+target used for both motion correction and registration to the
+anatomical. For PerSession, the template is the first time point from
+the first run. All time points for all runs are aligned to this
+template, and only one anatomical registration is done. Generally, 
+it is better to use -per-run.
+
 BASIC DESIGN ARGUMENTS
 
 There are four types of design supported: event-related/blocked, 
@@ -916,7 +945,19 @@ cycles). You will be required to specify a paradigm file.
 
 Design is AB-Blocked (ie, periodic, two condition). Specify the period
 of stimuluation in seconds (NOTE: in previous versions you had to
-specify the number of cycles). No paradigm file is required.
+specify the number of cycles). No paradigm file is required. When
+selxavg3-sess is run, it will automatically create a Fourier analysis
+with components at the fundamental and first harmonic as well as
+components at a frequency just below and above the fundamental for a
+total of 4 frequencies each of which will have a real and imaginary
+component for a total of 8 regressors.  It will also create a contrast
+called "fund" (for "fundamental"). This contrast will be a F-contrast
+to test both the real (cosine) and imaginary (sine) components of the
+fundamental frequency with the fsig volume being the final
+result. There will also be other files there including real.nii and
+imag.nii which are the real and imaginary components. There will also
+be angle.nii and angle.masked.nii which will be the angle between the
+real and imaginary; the masked version will be masked by fsig > 2.
 
 -notask
 
@@ -1073,8 +1114,7 @@ exist in each functional run. By default, the stem is f.  If the
 -motioncor flag is included, then the stem fmc is used (this is the
 default output of mc-sess).
 
--per-session : to be used when you run preproc-sess -per-session
- 
+
 -runlistfile filename (Shortcut: -rlf) 
 
 This is a file that should exist in each FSD that lists the runs to be 

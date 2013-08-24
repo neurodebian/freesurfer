@@ -252,7 +252,7 @@ main(int argc, char *argv[])
   int indexmap[MAX_CLASSES + 1];
 
   /* rkt: check for and handle version tag */
-  nargs = handle_version_option (argc, argv, "$Id: mri_ms_EM_with_atlas.c,v 1.5.2.2 2011/10/04 18:39:09 nicks Exp $", "$Name: stable5 $");
+  nargs = handle_version_option (argc, argv, "$Id: mri_ms_EM_with_atlas.c,v 1.5.2.2 2011/10/04 18:39:09 nicks Exp $", "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
   {
     exit (0);

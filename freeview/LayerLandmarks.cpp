@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/05/13 15:04:32 $
- *    $Revision: 1.2.2.5 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:32 $
+ *    $Revision: 1.2.2.12 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -49,6 +49,7 @@ Landmark::Landmark()
     actorSlice[i]->GetProperty()->SetAmbient( 1 );
     actorSlice[i]->GetProperty()->SetDiffuse( 0 );
     actorSlice[i]->GetProperty()->SetOpacity(0.7);
+    actorSlice[i]->VisibilityOff();
   }
 }
 

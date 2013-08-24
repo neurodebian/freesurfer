@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>490</width>
-    <height>665</height>
+    <height>723</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,17 +15,14 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_4">
-     <property name="spacing">
-      <number>26</number>
-     </property>
+    <layout class="QGridLayout" name="gridLayout_2">
      <property name="leftMargin">
       <number>0</number>
      </property>
      <property name="topMargin">
       <number>0</number>
      </property>
-     <item>
+     <item row="1" column="0">
       <widget class="QGroupBox" name="groupBox">
        <property name="title">
         <string>Opacity</string>
@@ -60,7 +57,7 @@
        </layout>
       </widget>
      </item>
-     <item>
+     <item row="1" column="1">
       <widget class="QGroupBox" name="groupBox_5">
        <property name="title">
         <string>Smooth</string>
@@ -108,6 +105,58 @@
            </size>
           </property>
          </spacer>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="0" column="0" colspan="2">
+      <widget class="QGroupBox" name="groupBoxFrame">
+       <property name="title">
+        <string>Frame</string>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="0,0,0,0">
+        <item>
+         <widget class="QSlider" name="sliderFrame">
+          <property name="maximum">
+           <number>100</number>
+          </property>
+          <property name="value">
+           <number>100</number>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="spinBoxFrame">
+          <property name="wrapping">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_12">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Fixed</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>5</width>
+            <height>5</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkBoxAutoFrame">
+          <property name="text">
+           <string> Auto set frame by vertex number</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -480,9 +529,49 @@
     </widget>
    </item>
    <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_7">
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <spacer name="horizontalSpacer_11">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>5</width>
+         <height>5</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="checkBoxAutoApply">
+       <property name="text">
+        <string>Automatically apply changes</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_7">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>5</width>
+         <height>5</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
     <widget class="QLabel" name="label_4">
      <property name="text">
-      <string>You must click &quot;Apply&quot; to apply the changes to the overlay.</string>
+      <string>Or you must click &quot;Apply&quot; to apply the changes to the overlay.</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -528,8 +617,8 @@
    <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>463</x>
-     <y>630</y>
+     <x>472</x>
+     <y>713</y>
     </hint>
     <hint type="destinationlabel">
      <x>472</x>
@@ -544,8 +633,8 @@
    <slot>OnSliderOpacity(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>139</x>
-     <y>58</y>
+     <x>170</x>
+     <y>123</y>
     </hint>
     <hint type="destinationlabel">
      <x>472</x>
@@ -560,8 +649,8 @@
    <slot>OnSpinBoxOpacity(double)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>200</x>
-     <y>46</y>
+     <x>230</x>
+     <y>128</y>
     </hint>
     <hint type="destinationlabel">
      <x>472</x>
@@ -576,8 +665,8 @@
    <slot>UpdateGraph()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>64</x>
-     <y>146</y>
+     <x>93</x>
+     <y>225</y>
     </hint>
     <hint type="destinationlabel">
      <x>472</x>
@@ -592,8 +681,8 @@
    <slot>UpdateGraph()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>161</x>
-     <y>143</y>
+     <x>196</x>
+     <y>225</y>
     </hint>
     <hint type="destinationlabel">
      <x>472</x>
@@ -608,8 +697,8 @@
    <slot>UpdateGraph()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>103</x>
-     <y>110</y>
+     <x>93</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
      <x>472</x>
@@ -624,8 +713,8 @@
    <slot>UpdateGraph()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>179</x>
-     <y>114</y>
+     <x>196</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
      <x>472</x>
@@ -640,8 +729,8 @@
    <slot>UpdateGraph()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>256</x>
-     <y>113</y>
+     <x>298</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
      <x>472</x>
@@ -656,8 +745,8 @@
    <slot>OnClicked(QAbstractButton*)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>351</x>
-     <y>630</y>
+     <x>360</x>
+     <y>713</y>
     </hint>
     <hint type="destinationlabel">
      <x>472</x>
@@ -672,12 +761,12 @@
    <slot>setDisabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>207</x>
-     <y>113</y>
+     <x>196</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
-     <x>96</x>
-     <y>149</y>
+     <x>93</x>
+     <y>225</y>
     </hint>
    </hints>
   </connection>
@@ -688,12 +777,12 @@
    <slot>setDisabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>243</x>
-     <y>115</y>
+     <x>298</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
-     <x>108</x>
-     <y>146</y>
+     <x>93</x>
+     <y>225</y>
     </hint>
    </hints>
   </connection>
@@ -704,12 +793,12 @@
    <slot>click()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>117</x>
-     <y>121</y>
+     <x>196</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
-     <x>238</x>
-     <y>577</y>
+     <x>206</x>
+     <y>602</y>
     </hint>
    </hints>
   </connection>
@@ -720,8 +809,8 @@
    <slot>UpdateGraph()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>105</x>
-     <y>577</y>
+     <x>89</x>
+     <y>602</y>
     </hint>
     <hint type="destinationlabel">
      <x>1</x>
@@ -736,8 +825,8 @@
    <slot>UpdateGraph()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>238</x>
-     <y>577</y>
+     <x>206</x>
+     <y>602</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -752,8 +841,8 @@
    <slot>UpdateGraph()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>335</x>
-     <y>577</y>
+     <x>295</x>
+     <y>602</y>
     </hint>
     <hint type="destinationlabel">
      <x>472</x>
@@ -768,12 +857,12 @@
    <slot>setDisabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>116</x>
-     <y>112</y>
+     <x>196</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
-     <x>47</x>
-     <y>560</y>
+     <x>73</x>
+     <y>558</y>
     </hint>
    </hints>
   </connection>
@@ -784,12 +873,12 @@
    <slot>setDisabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>287</x>
-     <y>117</y>
+     <x>298</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
-     <x>471</x>
-     <y>588</y>
+     <x>469</x>
+     <y>613</y>
     </hint>
    </hints>
   </connection>
@@ -800,12 +889,12 @@
    <slot>click()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>332</x>
-     <y>128</y>
+     <x>298</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
-     <x>238</x>
-     <y>577</y>
+     <x>206</x>
+     <y>602</y>
     </hint>
    </hints>
   </connection>
@@ -816,12 +905,12 @@
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>293</x>
-     <y>113</y>
+     <x>298</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
-     <x>441</x>
-     <y>524</y>
+     <x>469</x>
+     <y>549</y>
     </hint>
    </hints>
   </connection>
@@ -832,12 +921,12 @@
    <slot>setHidden(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>265</x>
-     <y>113</y>
+     <x>298</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
-     <x>435</x>
-     <y>454</y>
+     <x>455</x>
+     <y>517</y>
     </hint>
    </hints>
   </connection>
@@ -848,8 +937,8 @@
    <slot>OnButtonAdd()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>361</x>
-     <y>501</y>
+     <x>368</x>
+     <y>549</y>
     </hint>
     <hint type="destinationlabel">
      <x>489</x>
@@ -864,12 +953,12 @@
    <slot>setDisabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>294</x>
-     <y>108</y>
+     <x>298</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
-     <x>220</x>
-     <y>159</y>
+     <x>196</x>
+     <y>225</y>
     </hint>
    </hints>
   </connection>
@@ -880,12 +969,12 @@
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>332</x>
-     <y>128</y>
+     <x>298</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
-     <x>332</x>
-     <y>159</y>
+     <x>298</x>
+     <y>225</y>
     </hint>
    </hints>
   </connection>
@@ -896,12 +985,12 @@
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>270</x>
-     <y>117</y>
+     <x>298</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
-     <x>404</x>
-     <y>141</y>
+     <x>469</x>
+     <y>225</y>
     </hint>
    </hints>
   </connection>
@@ -912,11 +1001,11 @@
    <slot>UpdateGraph()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>290</x>
-     <y>144</y>
+     <x>298</x>
+     <y>225</y>
     </hint>
     <hint type="destinationlabel">
-     <x>560</x>
+     <x>489</x>
      <y>228</y>
     </hint>
    </hints>
@@ -928,11 +1017,11 @@
    <slot>UpdateGraph()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>380</x>
-     <y>146</y>
+     <x>469</x>
+     <y>225</y>
     </hint>
     <hint type="destinationlabel">
-     <x>620</x>
+     <x>489</x>
      <y>204</y>
     </hint>
    </hints>
@@ -944,12 +1033,12 @@
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>292</x>
-     <y>117</y>
+     <x>298</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
-     <x>471</x>
-     <y>131</y>
+     <x>469</x>
+     <y>198</y>
     </hint>
    </hints>
   </connection>
@@ -960,12 +1049,12 @@
    <slot>FlipMarkers()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>471</x>
-     <y>131</y>
+     <x>469</x>
+     <y>198</y>
     </hint>
     <hint type="destinationlabel">
-     <x>330</x>
-     <y>204</y>
+     <x>376</x>
+     <y>468</y>
     </hint>
    </hints>
   </connection>
@@ -976,12 +1065,12 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>305</x>
-     <y>39</y>
+     <x>322</x>
+     <y>126</y>
     </hint>
     <hint type="destinationlabel">
-     <x>352</x>
-     <y>42</y>
+     <x>382</x>
+     <y>128</y>
     </hint>
    </hints>
   </connection>
@@ -992,12 +1081,12 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>279</x>
-     <y>52</y>
+     <x>322</x>
+     <y>126</y>
     </hint>
     <hint type="destinationlabel">
-     <x>400</x>
-     <y>49</y>
+     <x>422</x>
+     <y>128</y>
     </hint>
    </hints>
   </connection>
@@ -1008,11 +1097,11 @@
    <slot>OnSmoothChanged()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>306</x>
-     <y>44</y>
+     <x>322</x>
+     <y>126</y>
     </hint>
     <hint type="destinationlabel">
-     <x>647</x>
+     <x>489</x>
      <y>95</y>
     </hint>
    </hints>
@@ -1024,11 +1113,11 @@
    <slot>OnSmoothChanged()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>363</x>
-     <y>51</y>
+     <x>382</x>
+     <y>128</y>
     </hint>
     <hint type="destinationlabel">
-     <x>591</x>
+     <x>489</x>
      <y>16</y>
     </hint>
    </hints>
@@ -1040,11 +1129,11 @@
    <slot>OnTextThresholdChanged(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>138</x>
-     <y>461</y>
+     <x>167</x>
+     <y>508</y>
     </hint>
     <hint type="destinationlabel">
-     <x>613</x>
+     <x>489</x>
      <y>420</y>
     </hint>
    </hints>
@@ -1056,11 +1145,11 @@
    <slot>OnTextThresholdChanged(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>272</x>
-     <y>462</y>
+     <x>296</x>
+     <y>508</y>
     </hint>
     <hint type="destinationlabel">
-     <x>697</x>
+     <x>489</x>
      <y>438</y>
     </hint>
    </hints>
@@ -1072,12 +1161,60 @@
    <slot>OnTextThresholdChanged(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>402</x>
-     <y>473</y>
+     <x>428</x>
+     <y>508</y>
     </hint>
     <hint type="destinationlabel">
-     <x>657</x>
+     <x>489</x>
      <y>463</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>radioButtonPiecewise</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>lineEditMid</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>295</x>
+     <y>602</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>296</x>
+     <y>508</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>sliderFrame</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>WindowConfigureOverlay</receiver>
+   <slot>OnFrameChanged(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>116</x>
+     <y>55</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>310</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBoxFrame</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>WindowConfigureOverlay</receiver>
+   <slot>OnFrameChanged(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>192</x>
+     <y>41</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>195</x>
+     <y>0</y>
     </hint>
    </hints>
   </connection>
@@ -1093,5 +1230,6 @@
   <slot>OnButtonFlip()</slot>
   <slot>OnSmoothChanged()</slot>
   <slot>OnTextThresholdChanged(QString)</slot>
+  <slot>OnFrameChanged(int)</slot>
  </slots>
 </ui>

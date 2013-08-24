@@ -1,5 +1,5 @@
 /**
- * @file  dmri_pathstats.c
+ * @file  dmri_pathstats.cxx
  * @brief Compute measures on probabilistic or deterministic tractography paths
  *
  * Compute measures on probabilistic or deterministic tractography paths
@@ -7,9 +7,9 @@
 /*
  * Original Author: Anastasia Yendiki
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/05/09 19:36:47 $
- *    $Revision: 1.4.2.2 $
+ *    $Author: ayendiki $
+ *    $Date: 2013/02/20 01:43:43 $
+ *    $Revision: 1.4.2.5 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -54,6 +54,8 @@ double round(double x);
 #include "cmdargs.h"
 #include "timer.h"
 
+#include "TrackIO.h"
+
 using namespace std;
 
 static int  parse_commandline(int argc, char **argv);
@@ -74,7 +76,8 @@ const char *Progname = "dmri_pathstats";
 
 char *inTrkFile = NULL, *inRoi1File = NULL, *inRoi2File = NULL,
      *inTrcDir = NULL, *dtBase = NULL,
-     *outFile = NULL, *outVoxFile = NULL, *outStrFile = NULL,
+     *outFile = NULL, *outVoxFile = NULL,
+     *outStrFile = NULL, *outEndBase = NULL, *refVolFile = NULL,
      fname[PATH_MAX];
 
 MRI *l1, *l2, *l3, *v1;
@@ -93,7 +96,7 @@ int main(int argc, char **argv) {
   ofstream fout;
 
   /* rkt: check for and handle version tag */
-  nargs = handle_version_option (argc, argv, vcid, "$Name: stable5 $");
+  nargs = handle_version_option (argc, argv, vcid, "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1) exit (0);
   argc -= nargs;
   cmdline = argv2cmdline(argc,argv);
@@ -144,7 +147,10 @@ int main(int argc, char **argv) {
 
     ofstream fvox(outVoxFile, ios::app);
     fvox << "# pathway start" << endl;
-    fvox << "x y z AD RD MD FA" << endl;
+    if (inTrcDir > 0)			// Probabilistic paths
+      fvox << "x y z AD RD MD FA AD_Avg RD_Avg MD_Avg FA_Avg" << endl;
+    else				// Deterministic paths
+      fvox << "x y z AD RD MD FA" << endl;
     fvox.close();
   }
 
@@ -181,17 +187,10 @@ int main(int argc, char **argv) {
     ny = post->height;
     nz = post->depth;
 
-    // Find maximum value of posterior distribution
-    for (int iz = 0; iz < nz; iz++)
-      for (int iy = 0; iy < ny; iy++)
-        for (int ix = 0; ix < nx; ix++) {
-          const float h = MRIgetVoxVal(post, ix, iy, iz, 0);
+    // Find (robust) maximum value of posterior distribution
+    thresh = (float) MRIfindPercentile(post, .99, 0);
 
-          if (h > thresh)
-            thresh = h;
-        }
-
-    // Set threshold at 20% of maximum
+    // Set threshold at 20% of (robust) maximum
     thresh *= .2;
 
     // Compute average and weighted average of measures on thresholded posterior
@@ -249,8 +248,110 @@ int main(int argc, char **argv) {
       cavg = myspline.ComputeAvg(meas);
 
     // Measures by voxel on MAP streamline
-    if (outVoxFile)
-      myspline.WriteValues(meas, outVoxFile);
+    if (outVoxFile) {
+//      myspline.WriteValues(meas, outVoxFile);
+      int npts;
+      CTrackReader trkreader;
+      TRACK_HEADER trkheadin;
+      vector<float> valsum(meas.size());
+      vector<float>::iterator ivalsum;
+      vector< vector<int> > pathsamples;
+      ofstream outfile(outVoxFile, ios::app);
+
+      if (!outfile) {
+        cout << "ERROR: Could not open " << outVoxFile << " for writing"
+             << endl;
+        exit(1);
+      }
+
+      // Read sample paths from .trk file
+      sprintf(fname, "%s/path.pd.trk", inTrcDir);
+
+      if (!trkreader.Open(fname, &trkheadin)) {
+        cout << "ERROR: Cannot open input file " << fname << endl;
+        cout << "ERROR: " << trkreader.GetLastErrorMessage() << endl;
+        exit(1);
+      }
+
+      while (trkreader.GetNextPointCount(&npts)) {
+        float *iraw, *rawpts = new float[npts*3];
+        vector<int> coords(npts*3);
+        vector<int>::iterator icoord = coords.begin();
+
+        // Read a streamline from input file
+        trkreader.GetNextTrackData(npts, rawpts);
+
+        // Divide by input voxel size and make 0-based to get voxel coords
+        iraw = rawpts;
+        for (int ipt = npts; ipt > 0; ipt--)
+          for (int k = 0; k < 3; k++) {
+            *icoord = (int) round(*iraw / trkheadin.voxel_size[k] - .5);
+            iraw++;
+            icoord++;
+          }
+
+        pathsamples.push_back(coords);
+        delete[] rawpts;
+      }
+
+      // Loop over all points along the MAP path
+      for (vector<int>::const_iterator ipt = myspline.GetAllPointsBegin();
+                                       ipt < myspline.GetAllPointsEnd();
+                                       ipt += 3) {
+        // Write coordinates of this point
+        outfile << ipt[0] << " " << ipt[1] << " " << ipt[2];
+
+        // Write value of each diffusion measure at this point
+        for (vector<MRI *>::const_iterator ivol = meas.begin();
+                                           ivol < meas.end(); ivol++)
+          outfile << " " << MRIgetVoxVal(*ivol, ipt[0], ipt[1], ipt[2], 0);
+
+        // Find closest point on each sample path
+        fill(valsum.begin(), valsum.end(), 0.0);
+
+        for (vector< vector<int> >::const_iterator ipath = pathsamples.begin();
+                                                   ipath < pathsamples.end();
+                                                   ipath++) {
+          int dmin = 1000000;
+          vector<int>::const_iterator iptmin = ipath->begin();
+
+          for (vector<int>::const_iterator ipathpt = ipath->begin();
+                                           ipathpt < ipath->end();
+                                           ipathpt += 3) {
+            int dist = 0;
+
+            for (int k = 0; k < 3; k++) {
+              const int diff = ipathpt[k] - ipt[k];
+              dist += diff*diff;
+            }
+
+            if (dist < dmin) {
+              dmin = dist;
+              iptmin = ipathpt;
+            }
+          }
+
+          ivalsum = valsum.begin();
+
+          for (vector<MRI *>::const_iterator ivol = meas.begin();
+                                             ivol < meas.end(); ivol++) {
+            *ivalsum += MRIgetVoxVal(*ivol, iptmin[0], iptmin[1], iptmin[2], 0);
+            ivalsum++;
+          }
+        }
+
+        // Write average value of each diffusion measure around this point
+        ivalsum = valsum.begin();
+
+        for (vector<MRI *>::const_iterator ivol = meas.begin();
+                                           ivol < meas.end(); ivol++) {
+          outfile << " " << *ivalsum / pathsamples.size();
+          ivalsum++;
+        }
+
+        outfile << endl;
+      }
+    }
   }
   else {				// Deterministic paths
     // Read .trk file
@@ -281,6 +382,18 @@ int main(int argc, char **argv) {
     // Save center streamline
     if (outStrFile)
       myblood.WriteCenterStreamline(outStrFile, inTrkFile);
+
+    // Save streamline end points
+    if (outEndBase) {
+      MRI *refvol;
+
+      if (refVolFile)
+        refvol = MRIread(refVolFile);
+      else
+        refvol = l1;
+
+      myblood.WriteEndPoints(outEndBase, refvol);
+    }
   }
 
   if (outFile) {
@@ -394,6 +507,16 @@ static int parse_commandline(int argc, char **argv) {
       outStrFile = fio_fullpath(pargv[0]);
       nargsused = 1;
     }
+    else if (!strcmp(option, "--outend")) {
+      if (nargc < 1) CMDargNErr(option,1);
+      outEndBase = fio_fullpath(pargv[0]);
+      nargsused = 1;
+    }
+    else if (!strcmp(option, "--ref")) {
+      if (nargc < 1) CMDargNErr(option,1);
+      refVolFile = fio_fullpath(pargv[0]);
+      nargsused = 1;
+    }
     nargc -= nargsused;
     pargv += nargsused;
   }
@@ -424,6 +547,10 @@ static void print_usage(void)
   printf("     Output text file for voxel-by-voxel measures along path (optional)\n");
   printf("   --outstr <file>:\n");
   printf("     Output .trk file of center streamline (optional)\n");
+  printf("   --outend <base>:\n");
+  printf("     Base name of output volumes of streamline ends (optional)\n");
+  printf("   --ref <file>:\n");
+  printf("     Reference volume (needed only if using --outend without --dtbase)\n");
   printf("\n");
   printf("\n");
   printf("   --debug:     turn on debugging\n");
@@ -464,12 +591,24 @@ static void check_options(void) {
     printf("ERROR: must specify input .trk file or tracula directory\n");
     exit(1);
   }
-  if(!outFile && !outVoxFile && !outStrFile) {
-    printf("ERROR: must specify at least one type of output file\n");
+  if(!outFile && !outVoxFile && !outStrFile && !outEndBase) {
+    printf("ERROR: must specify at least one type of output\n");
     exit(1);
   }
   if(outVoxFile && !dtBase) {
     printf("ERROR: must specify dtifit base name for voxel-by-voxel output\n");
+    exit(1);
+  }
+  if(outStrFile && !inTrkFile) {
+    printf("ERROR: must specify input .trk file to use --outstr\n");
+    exit(1);
+  }
+  if(outEndBase && !inTrkFile) {
+    printf("ERROR: must specify input .trk file to use --outend\n");
+    exit(1);
+  }
+  if(outEndBase && !refVolFile && !dtBase) {
+    printf("ERROR: must specify reference volume to use --outend\n");
     exit(1);
   }
   return;
@@ -526,7 +665,11 @@ static void dump_options(FILE *fp) {
   if (outVoxFile)
     fprintf(fp, "Output file for voxel-by-voxel measures: %s\n", outVoxFile);
   if (outStrFile)
-    fprintf(fp, "Output center streamline volume: %s\n", outStrFile);
+    fprintf(fp, "Output center streamline .trk file: %s\n", outStrFile);
+  if (outEndBase)
+    fprintf(fp, "Base name of output end point volumes: %s\n", outEndBase);
+  if (refVolFile)
+    fprintf(fp, "Reference for output end point volumes: %s\n", refVolFile);
 
   return;
 }

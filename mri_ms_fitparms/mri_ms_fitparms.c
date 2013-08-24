@@ -220,14 +220,14 @@ main(int argc, char *argv[])
   make_cmd_version_string
   (argc, argv,
    "$Id: mri_ms_fitparms.c,v 1.68.2.1 2011/05/16 17:53:06 nicks Exp $",
-   "$Name: stable5 $",
+   "$Name: release_5_3_0 $",
    cmdline);
 
   /* rkt: check for and handle version tag */
   nargs = handle_version_option (
             argc, argv,
             "$Id: mri_ms_fitparms.c,v 1.68.2.1 2011/05/16 17:53:06 nicks Exp $",
-            "$Name: stable5 $");
+            "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
   {
     exit (0);

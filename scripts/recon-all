@@ -8,10 +8,10 @@
 # Original Author: Doug Greve
 # CVS Revision Info:
 #    $Author: nicks $
-#    $Date: 2011/12/12 17:07:48 $
-#    $Revision: 1.379.2.31 $
+#    $Date: 2013/05/12 23:15:37 $
+#    $Revision: 1.379.2.73 $
 #
-# Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+# Copyright © 2011-2013 The General Hospital Corporation (Boston, MA) "MGH"
 #
 # Terms and conditions for use, reproduction, distribution and contribution
 # are found in the 'FreeSurfer Software License Agreement' contained
@@ -26,7 +26,7 @@
 #
 umask 002;
 
-set VERSION = '$Id: recon-all,v 1.379.2.31 2011/12/12 17:07:48 nicks Exp $';
+set VERSION = '$Id: recon-all,v 1.379.2.73 2013/05/12 23:15:37 nicks Exp $';
 set ProgName = `basename $0`;
 
 set inputargs = ($argv);
@@ -51,6 +51,15 @@ set fs_time = "";
 set ErrorFile = /dev/null
 set cmd = ();
 
+set tcsh61706 = (`tcsh --version | grep "6\.17\.06"`)
+if ("$tcsh61706" != "") then
+     echo ""
+     echo "WARNING: tcsh v6.17.06 has an exit code bug! Please update tcsh!"
+     echo ""
+     # workaround to force expected behavior:
+    set anyerror
+endif
+
 set Force = 0;
 set DoCleanCSDF  = 0;
 set DoCleanCW256 = 0;
@@ -64,6 +73,8 @@ set DoCleanBFSE  = 0;
 set DoCleanASeg  = 0;
 set DoCleanWM    = 0;
 set DoCleanXopts = 0;
+set DoCleanT2    = 0;
+set DoCleanFLAIR = 0;
 
 set DoShowEdits  = 0;
 
@@ -112,7 +123,7 @@ set NoAsegInorm2 = 0 # when set to 1 (using -noaseg-inorm2), then aseg.mgz
 set UseNoNeg = 0 # if 1, add '-remove_negative 1' to mris_sphere,mris_register
 set NoThicken = 0 # if 1, add '-thicken 0' to mri_segment
 set UnCompress = 0    # if 1, add '-uncompress' to mri_ca_reg
-set BigVentricles = 0 # if 1, add '-bigventricles' to mri_ca_label and reg.
+set BigVentricles = 0 # if 1, add '-bigventricles' to mri_ca_reg.
                       # else, add '-nobigventricles'
 set DoSecondPassRenorm = 0 # if 1, add -secondpassrenorm to mri_ca_register
 set UseOldTopoFix = 1 # if 1, use mris_fix_topology instead of mris_topo_fixer
@@ -148,6 +159,7 @@ set SmoothCortexOnly = 1; # For -qcache. smooths only within ?h.cortex.label
 
 set UseMincMritotal = 0; # if 1, then use the BIC-MNI mritotal tal reg tools
 set UseYa3tTalAtlas = 0; # if 1, use 3T18yoSchwartz young-adult 3T atlas for tal_avi
+set CustomTalAtlas = ""; # -custom-tal-atlas <name of atlas in average dir>
 set DoMakefile = 0; # if 1, run make -f recon-all.makefile $(MakefileTarget)
 set MakefileTarget = () # argument to recon-all -make
 set DoAsegStatsDiff = 0; # if 1, then run asegstatsdiff
@@ -167,6 +179,8 @@ set PialNoAparc = 0; # if 1 (-pial-noaparc), then add -noaparc flag to
 set DoNuMakeUchar = 1; # if 1, then run mri_nu_correct.mni using talairach.xfm
                        # to run mri_make_uchar to correct histogram problem
 set DoTalairachUseNu = 0; # if 1, use nu.mgz as input to talairach stage
+setenv OMP_NUM_THREADS 1 # -openmp <num_threads> allows specifying more threads
+set UseCPsWithCaNorm = 0 # -canorm-usecps flag allows usage of control points with ca_norm
 
 # Longitudinal processing:
 set longitudinal = 0;    # if 1, will run the longitudinal scheme
@@ -184,7 +198,10 @@ set BaseSubjsListFname = (base-tps); # file containing BaseSubjsList
 set robust_template_avg_arg = 1; # construct template from: 0 Mean, 1 Median
 set DoNuIntensityCor3T = 0; # if 1, use Zheng, Chee, Zagorodnov params for 3T
 set DoAddTp = 0; # if 1, then 'fake'-add this timepoint to long subj set
-set DoAffineBase = 0; # if 1, allow affine when creating the base (fix callibration)
+set DoAffineBase = 0; # if 1, allow affine when creating base (fix calibration)
+set UseCubic = 0; # if 1, use cubic spline when mri_convert does conform step
+set DoT2pial = 0; # if 1, mris_make_surfaces refines pial using T2
+set DoFLAIRpial = 0; # if 1, mris_make_surfaces refines pial using FLAIR
 
 # Hippocampal subfields:
 set DoGEMS = 0;      # if 1, will run the hippocampal subfields processing
@@ -221,6 +238,10 @@ set OLD_DESTRIEUX_NAME = a2005s
 set DESTRIEUX_GCS = destrieux.simple.2009-07-29.gcs
 set DESTRIEUX_NAME = a2009s
 
+# Mindboggle cortical parcellation atlas (-cortparc3):
+set DKTATLAS40_GCS = DKTatlas40.gcs
+set DKTATLAS40_NAME = DKTatlas40
+
 # Set this to 0 to do everything but run the command.
 # This is good for debugging.
 set RunIt = 1;
@@ -230,6 +251,8 @@ set DoVersionsOnly = 0;
 
 #----- Volume -----------#
 set DoConvertInput   = 0;
+set DoConvertT2Input = 0;
+set DoConvertFlairInput = 0;
 set DoCreateBaseInput = 0;
 set DoMotionCor      = 0;
 set DoDeface         = 0;
@@ -271,12 +294,14 @@ set DoAvgCurv        = 0;
 set DoMorphRGB       = 0;
 set DoWhiteSurfs     = 0;
 set DoCortParc       = 0;
+set DoCortParc2      = 0;
+set DoCortParc3      = 0;
 set DoPialSurfs      = 0;
 set DoPctSurfCon     = 0;
 set DoSurfVolume     = 0;
-set DoCortParc2      = 0;
 set DoParcStats      = 0;
 set DoParcStats2     = 0;
+set DoParcStats3     = 0;
 set DoCurvStats      = 0;
 set DoVnoMatchCheck  = 0;
 set DoLocalGyriIndex = 0;
@@ -299,6 +324,7 @@ set IsRunningFile  = ();
 setenv LANG C # Required by MNI tool
 
 # -------------------------------------------------- #
+set argv0 = ($argv); # make a copy
 set PWD = pwd;
 # better yet, make sure the real pwd is used:
 if ( -e /bin/pwd ) set PWD = /bin/pwd
@@ -318,6 +344,9 @@ goto parse_args;
 parse_args_return:
 goto check_params;
 check_params_return:
+
+set StartTime = `date`;
+set tSecStart = `date '+%s'`;
 
 # This allows the user to require that the build stamp be
 # consistent from one recon-all invocation to the next.
@@ -352,7 +381,9 @@ if ($DoMakefile) then
   if ( ! $RunIt) set make_flags=( -n $make_flags )
   echo "Subject '$subjid': make $make_flags"
   make -f $FREESURFER_HOME/bin/recon-all.makefile ${make_flags}
-  exit ($status)
+  set makestatus=($status)
+  unsetenv RECONALL_MAKE_SUBJECT
+  exit ($makestatus)
 endif
 
 if ($DoTime) then
@@ -413,6 +444,8 @@ if($#LF == 0) then
     if(! $AppendLog) then
       mv $LF $LF.old
     else
+      # if running using -make, then dont bother with repeated info dumps
+      if ($?RECONALL_MAKE_SUBJECT) goto skip_new_invo
       echo "\n\n"  >> $LF
       echo "New invocation of recon-all "  >> $LF
       echo "\n\n"  >> $LF
@@ -420,11 +453,13 @@ if($#LF == 0) then
   endif
 else
   if(-e $LF) then
+    if ($?RECONALL_MAKE_SUBJECT) goto skip_new_invo
     echo "\n\n"  >> $LF
     echo "New invocation of recon-all "  >> $LF
     echo "\n\n"  >> $LF
   endif
 endif
+skip_new_invo:
 
 date >> $LF
 $PWD >> $LF
@@ -695,6 +730,16 @@ if($DoCleanXopts) then
   echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
   if($RunIt) $cmd  |& tee -a $LF
 endif
+if($DoCleanT2) then
+  set cmd = (mv -f $subjdir/mri/T2.mgz $subjdir/trash)
+  echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+  if($RunIt) $cmd  |& tee -a $LF
+endif
+if($DoCleanFLAIR) then
+  set cmd = (mv -f $subjdir/mri/FLAIR.mgz $subjdir/trash)
+  echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+  if($RunIt) $cmd  |& tee -a $LF
+endif
 
 #------------ Handle Seed Points for Fill/Cut, and Watershed ---------------#
 set seedfile = $subjdir/scripts/seed-pons.crs.man.dat
@@ -788,7 +833,7 @@ if($DoShowEdits) then
 
   # expert opts
   if($#XOptsFile != 0) then
-    if (-e $XOptsFile)) then
+    if (-e $XOptsFile) then
       @ edit_count = $edit_count + 1;
       echo "Expert options declared in file $XOptsFile" |& tee -a $LF
     endif
@@ -861,7 +906,7 @@ if($longitudinal) then
   endif
 endif
 
-#----------- Convert Input ------------------#
+#----------- Convert T1 Input ------------------#
 if($#InputList != 0) then
   @ nth = 1;
   foreach InputVol ($InputList)
@@ -902,6 +947,36 @@ if($#InputList != 0) then
   end
 endif
 
+#----------- Input T2 or FLAIR images ------------------#
+if ($DoConvertT2Input || $DoConvertFlairInput) then
+
+  echo "#--------------------------------------------" \
+    |& tee -a $LF |& tee -a $CF
+  echo "#@# T2/FLAIR Input `date`" \
+    |& tee -a $SF |& tee -a $LF |& tee -a $CF
+
+  if ($DoConvertT2Input) then
+    set cmd = (mri_convert $InputT2Vol $subjdir/mri/orig/T2raw.mgz)
+    $PWD |& tee -a $LF
+    echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
+    if($RunIt) then
+      $fs_time $cmd |& tee -a $LF
+      if($status) goto error_exit;
+    endif
+  endif
+
+  if ($DoConvertFlairInput) then
+    set cmd = (mri_convert $InputFlairVol $subjdir/mri/orig/FLAIRraw.mgz)
+    $PWD |& tee -a $LF
+    echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
+    if($RunIt) then
+      $fs_time $cmd |& tee -a $LF
+      if($status) goto error_exit;
+    endif
+  endif
+
+endif
+
 #------------- Longitudinal 'base' subject input file creation ------------#
 if ($DoCreateBaseInput && $DoCreateBaseSubj) then
   echo "#--------------------------------------------" \
@@ -921,91 +996,122 @@ if ($DoCreateBaseInput && $DoCreateBaseSubj) then
   set ltaXforms=();
   set lta1forms=();
   set ltaAforms=();
-  set headInVols=(); 
-  set rawInVols=();
+  set headInVols=();
+  set geodiff=0;
   foreach s ($BaseSubjsList)
     if($RunIt) echo "${s}" >> ${BaseSubjsListFname};
     set normInVols = ($normInVols ${SUBJECTS_DIR}/${s}/mri/norm.mgz)
     set headInVols = ($headInVols ${SUBJECTS_DIR}/${s}/mri/T1.mgz)
-    set rawInVols = ($rawInVols ${SUBJECTS_DIR}/${s}/mri/rawavg.mgz)
     set subjInVols = ($subjInVols ${SUBJECTS_DIR}/${s}/mri/${BaseSubjInvol})
     set ltaname = ${s}_to_${subjid}.lta
     set ltaXforms = ($ltaXforms ${subjdir}/mri/transforms/${ltaname})
     set lta1forms = ($lta1forms ${subjdir}/mri/transforms/${s}_to_${subjid}_norm.lta)
-    set ltaAforms = ($ltaAforms ${subjdir}/mri/transforms/${s}_to_${subjid}_affine.lta)    
+    set ltaAforms = ($ltaAforms ${subjdir}/mri/transforms/${s}_to_${subjid}_affine.lta)
+
+    # check if geometry differs across time
+    if ( "$s" != "$BaseSubjsList[1]" ) then
+      set cmd = (  mri_diff --notallow-pix ${SUBJECTS_DIR}/$s/mri/rawavg.mgz \
+                       ${SUBJECTS_DIR}/$BaseSubjsList[1]/mri/rawavg.mgz )
+      echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
+      if($RunIt) then
+        $fs_time $cmd |& tee -a $LF
+        if($status) set geodiff = 1;
+      endif
+    endif
   end
-  # create the 'mean/median' norm volume:
-  set cmd = (mri_robust_template --mov ${normInVols})
-  if ($DoAffineBase) then
-    # this is only initial rigid reg
-    set cmd = ($cmd --lta ${lta1forms})
-    set cmd = ($cmd --template ${subjdir}/mri/norm1_template.mgz)
-  else
-    # this is final rigid reg
-    set cmd = ($cmd --lta ${ltaXforms})
-    set cmd = ($cmd --template ${subjdir}/mri/norm_template.mgz)
+
+  if ( "$geodiff" == "1" ) then
+    echo "\n*******************************************************************************" |& tee -a $LF
+    echo "WARNING: Image geometries differ across time, maybe due to aquisition changes?" |& tee -a $LF
+    echo "         This can potentially bias a longitudinal study! Will continue in 10s." |& tee -a $LF
+    echo "*******************************************************************************\n" |& tee -a $LF
+    sleep 10
   endif
-  set cmd = ($cmd --average ${robust_template_avg_arg})
-  set cmd = ($cmd --sat 4.685 )
-  echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
-  if($RunIt) then
-    $fs_time $cmd |& tee -a $LF
-    if($status) goto error_exit;
-  endif
-  
-  if ($DoAffineBase) then
-    # use registration on norm.mgz to initialize affine reg on full head imgs:
-    set cmd = (mri_robust_template --mov ${headInVols})
-    set cmd = ($cmd --lta ${ltaAforms})
-    set cmd = ($cmd --average ${robust_template_avg_arg})
-    set cmd = ($cmd --template ${subjdir}/mri/head_template.mgz)
-    set cmd = ($cmd --sat 4.685 )
-    set cmd = ($cmd --ixforms ${lta1forms})
-    set cmd = ($cmd --affine)
+
+  if ($#BaseSubjsList == 1) then
+    # if only a single time point, create fake 'base' by making the image upright
+    # this assures that also subjects with a single time point get processes as the other
+    # subjects in the longitudinal stream
+
+    # 1. make the norm upright (base space)
+    set cmd = ( make_upright $normInVols[1] ${subjdir}/mri/norm_template.mgz $ltaXforms[1] )
     echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
     if($RunIt) then
       $fs_time $cmd |& tee -a $LF
       if($status) goto error_exit;
     endif
-    # use affine reg to init rigid reg on norm,.mgz (fine tuning)
-    # not sure if it is really necessary
-    set cmd = (mri_robust_template --mov ${normInVols})
-    set cmd = ($cmd --lta ${ltaXforms})
-    set cmd = ($cmd --average ${robust_template_avg_arg})
-    set cmd = ($cmd --template ${subjdir}/mri/norm_template.mgz)
-    set cmd = ($cmd --sat 4.685 )
-    set cmd = ($cmd --ixforms ${ltaAforms})
+
+    # 2. create the upright orig volume
+    set cmd = ( mri_convert -rt cubic -at $ltaXforms[1] $subjInVols[1] ${subjdir}/mri/orig.mgz )
     echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
     if($RunIt) then
       $fs_time $cmd |& tee -a $LF
       if($status) goto error_exit;
-    endif  
-  endif
-  
-  # create the 'mean/median' input (orig) volume:
-  set cmd = (mri_robust_template --mov ${subjInVols})
-  set cmd = ($cmd --average ${robust_template_avg_arg})
-  set cmd = ($cmd --ixforms ${ltaXforms})
-  set cmd = ($cmd --noit)
-  set cmd = ($cmd --template ${subjdir}/mri/orig.mgz)
-  echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
-  if($RunIt) then
-    $fs_time $cmd |& tee -a $LF
-    if($status) goto error_exit;
-  endif
-  
-  # create the 'mean/median' rawavg volume
-  # (here we assume same RAS space for rawavg and orig)
-  set cmd = (mri_robust_template --mov ${rawInVols})
-  set cmd = ($cmd --average ${robust_template_avg_arg})
-  set cmd = ($cmd --ixforms ${ltaXforms})
-  set cmd = ($cmd --noit)
-  set cmd = ($cmd --template ${subjdir}/mri/rawavg.mgz)
-  echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
-  if($RunIt) then
-    $fs_time $cmd |& tee -a $LF
-    if($status) goto error_exit;
-  endif
+    endif
+
+  else #more than 1 time point:
+
+    # create the 'mean/median' norm volume:
+    set cmd = (mri_robust_template --mov ${normInVols})
+    if ($DoAffineBase) then
+      # this is only initial rigid reg
+      set cmd = ($cmd --lta ${lta1forms})
+      set cmd = ($cmd --template ${subjdir}/mri/norm1_template.mgz)
+    else
+      # this is final rigid reg
+      set cmd = ($cmd --lta ${ltaXforms})
+      set cmd = ($cmd --template ${subjdir}/mri/norm_template.mgz)
+    endif
+    set cmd = ($cmd --average ${robust_template_avg_arg})
+    set cmd = ($cmd --sat 4.685 )
+    echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
+    if($RunIt) then
+      $fs_time $cmd |& tee -a $LF
+      if($status) goto error_exit;
+    endif
+
+    if ($DoAffineBase) then
+      # use registration on norm.mgz to initialize affine reg on full head imgs:
+      set cmd = (mri_robust_template --mov ${headInVols})
+      set cmd = ($cmd --lta ${ltaAforms})
+      set cmd = ($cmd --average ${robust_template_avg_arg})
+      set cmd = ($cmd --template ${subjdir}/mri/head_template.mgz)
+      set cmd = ($cmd --sat 4.685 )
+      set cmd = ($cmd --ixforms ${lta1forms})
+      set cmd = ($cmd --affine)
+      echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
+      if($RunIt) then
+        $fs_time $cmd |& tee -a $LF
+        if($status) goto error_exit;
+      endif
+      # use affine reg to init rigid reg on norm,.mgz (fine tuning)
+      # not sure if it is really necessary
+      set cmd = (mri_robust_template --mov ${normInVols})
+      set cmd = ($cmd --lta ${ltaXforms})
+      set cmd = ($cmd --average ${robust_template_avg_arg})
+      set cmd = ($cmd --template ${subjdir}/mri/norm_template.mgz)
+      set cmd = ($cmd --sat 4.685 )
+      set cmd = ($cmd --ixforms ${ltaAforms})
+      echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
+      if($RunIt) then
+        $fs_time $cmd |& tee -a $LF
+        if($status) goto error_exit;
+      endif
+    endif
+
+    # create the 'mean/median' input (orig) volume:
+    set cmd = (mri_robust_template --mov ${subjInVols})
+    set cmd = ($cmd --average ${robust_template_avg_arg})
+    set cmd = ($cmd --ixforms ${ltaXforms})
+    set cmd = ($cmd --noit)
+    set cmd = ($cmd --template ${subjdir}/mri/orig.mgz)
+    echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
+    if($RunIt) then
+      $fs_time $cmd |& tee -a $LF
+      if($status) goto error_exit;
+    endif
+
+  endif # more than one time point
 
   # now create the inverse transforms
   cd $subjdir/mri/transforms > /dev/null
@@ -1207,13 +1313,14 @@ if($DoMotionCor) then
   endif #longitudinal
 
   # base processing (we do not need to do anything,
-  #   as rawavg and orig should be there)
+  #   as orig should be there, rawavg is not there, due to difficulties of
+  #   averaging different image geometries across time)
   if ($DoCreateBaseSubj) then
     set origvol = $subjdir/mri/orig.mgz
     goto motioncor_post_process
   endif
-  
-  
+
+
   # default processing:
   set cmd = ();
 
@@ -1330,7 +1437,7 @@ if($DoMotionCor) then
   # At this point, rawavg.mgz exists. Use it to create orig.mgz,
   # conform to COR FOV but keep mgz format.
   set cmd = (mri_convert $rawavg $origvol)
-  set cmd = ($cmd -rt cubic)
+  if($UseCubic) set cmd = ($cmd -rt cubic)
   if($ConformMin) then
     set cmd = ($cmd --conform_min)
   else
@@ -1359,11 +1466,12 @@ if($DoMotionCor) then
     echo "\n****************************************" |& tee -a $LF
     echo "ERROR! FOV=${FOV} > 256" |& tee -a $LF
     echo "Include the flag -cw256 with recon-all!" |& tee -a $LF
+    echo "Inspect orig.mgz to ensure the head is fully visible." |& tee -a $LF
     echo "****************************************\n" |& tee -a $LF
     goto error_exit;
   endif
 
-  # Add xfm to orig, eventhough it does not exist yet. This is a
+  # Add xfm to orig, even though it does not exist yet. This is a
   # compromise to keep from having to change the time stamp of
   # the orig volume after talairaching.
   set cmd = (mri_add_xform_to_header -c \
@@ -1374,7 +1482,6 @@ if($DoMotionCor) then
     $fs_time $cmd |& tee -a $LF
     if($status) goto error_exit;
   endif
-
 
 endif # Motion Correction
 
@@ -1408,7 +1515,7 @@ talairach:
     else
       # default: run one pass of nu_correct, as its been found that scans
       # with strong bias fields can cause talairach_avi to fail.  note that
-      # this orig_nu gets deleted, as it doesnt do as much correction as
+      # this orig_nu doesnt do as much correction as
       # the nuintensitycor stage (which does more passes and uses talairach.xfm
       # to find the wm ball so as to do histogramming).
       set tal_input = orig_nu.mgz
@@ -1427,9 +1534,14 @@ talairach:
       # Avi Snyder's registration tools
       set xopts = `fsr-getxopts talairach_avi $XOptsFile`;
       set cmd = (talairach_avi --i $tal_input --xfm $xfma)
-      if($UseYa3tTalAtlas) then
-        # special atlas composed of young adults scanned at 3T
-        set cmd = ($cmd --atlas 3T18yoSchwartzReactN32_as_orig)
+      if($?CustomTalAtlas && "$CustomTalAtlas" != "") then
+        # use user-specified atlas found in average dir
+        set cmd = ($cmd --atlas "$CustomTalAtlas")
+      else
+        if($UseYa3tTalAtlas) then
+          # special atlas composed of young adults scanned at 3T
+          set cmd = ($cmd --atlas 3T18yoSchwartzReactN32_as_orig)
+        endif
       endif
       set cmd = ($cmd $xopts)
     endif
@@ -1437,9 +1549,6 @@ talairach:
   echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
   if($RunIt) $fs_time $cmd |& tee -a $LF
   if($status) goto error_exit;
-  if (-e orig_nu.mgz) then
-    rm -vf orig_nu.mgz orig_nu.log
-  endif
 
   if( -e $xfm && ! $DoCleanTal) then
     echo "\nINFO: $xfm already exists!" \
@@ -1491,6 +1600,7 @@ if($DoTalCheck) then
         echo "INFO: Attempting MINC mritotal to perform Talairach align" \
           |& tee -a $LF
         set UseMincMritotal = 1;
+        set DoCleanTal = 1;
         goto talairach;
       else
         echo "Manual Talairach alignment may be necessary, or" |& tee -a $LF
@@ -1503,18 +1613,35 @@ if($DoTalCheck) then
     endif
   endif
   # now run Avi's QA check on the results found in talairach_avi.log
+  # see document RLB700_preprocessing_statistics.pdf for details
   set avilog = ($subjdir/mri/transforms/talairach_avi.log)
   if ( ! $UseMincMritotal && -e $avilog) then
     set cmd = (awk -f $FREESURFER_HOME/bin/extract_talairach_avi_QA.awk)
     set cmd = ($cmd $avilog)
     set qalog = ($subjdir/mri/transforms/talairach_avi_QA.log)
     echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+    set cmd2 = (tal_QC_AZS $avilog)
+    set qalog2 = ($subjdir/mri/transforms/talairach_avi_QA2.log)
+    echo "\n $cmd2 \n"|& tee -a $LF |& tee -a $CF
     if($RunIt) then
+      rm -f $qalog $qalog2
       $fs_time $cmd >& $qalog
       if($status) then
         echo "ERROR: ${cmd} failed!  See logfile ${qalog}" |& tee -a $LF
         goto error_exit;
       endif
+# tal_QC_AZS disabled.  failing in weird ways. getting caught in infinite 'test' loops.
+if (0) then
+      $fs_time $cmd2 >& $qalog2
+      set tal_QC_AZS_status = $status
+      if($tal_QC_AZS_status) then
+        echo "INFO: ${cmd2} failed!  See logfile ${qalog2}" |& tee -a $LF
+        echo "      skipping tal_QC_AZS test" |& tee -a $LF
+        #NJS: skip instead of exit because tal_QC_AZS doesnt work on centos5.4
+        #goto error_exit;
+      endif
+endif
+      # first set of QA data:
       set talAviQA=`grep "TalAviQA" ${qalog} | awk '{print $2}'`
       echo "TalAviQA: ${talAviQA}" |& tee -a $LF
       set mean=(0.9781) # buckner40 mean TalAviQA
@@ -1522,9 +1649,29 @@ if($DoTalCheck) then
       set zscore=`echo "scale=0;(${talAviQA} - ${mean}) / ${std}" | bc`
       echo "z-score: ${zscore}" |& tee -a $LF
       set zscoreThreshold=(-9) # conservative value, but catches M.Harms subjs.
-      if ($zscore < $zscoreThreshold) then
+if (0) then
+      # second set:
+      if ( ! $tal_QC_AZS_status ) then
+        set talAviQA2=`grep "atlas_transform_error" ${qalog2} | awk '{print $6}'`
+        echo "TalAviQA2: ${talAviQA2}" |& tee -a $LF
+        set atlaserrhi=`echo "${talAviQA2} > 24" | bc`
+        set atlaserrlo=`echo "${talAviQA2} < -60" | bc`
+      else
+        set talAviQA2=0
+        set atlaserrhi=0
+        set atlaserrlo=0
+      endif
+else
+  set talAviQA2=0
+  set atlaserrhi=0
+  set atlaserrlo=0
+endif
+
+      # check both:
+      if (($zscore < $zscoreThreshold) || $atlaserrhi || $atlaserrlo) then
         echo "ERROR: Talairach QA check failed!" |& tee -a $LF
-        echo "       z-score = ${zscore} <= ${zscoreThreshold} = threshold" \
+        echo "       z-score = ${zscore} <= ${zscoreThreshold} = threshold\n" \
+             "      atlas xform error = $talAviQA2 < -60 | > 24" \
              |& tee -a $LF
         echo "Manual Talairach alignment may be necessary, or" |& tee -a $LF
         echo "include the -notal-check flag to skip this test," |& tee -a $LF
@@ -1540,6 +1687,7 @@ if($DoTalCheck) then
           echo "INFO: Attempting MINC mritotal to perform Talairach align" \
             |& tee -a $LF
           set UseMincMritotal = 1;
+          set DoCleanTal = 1;
           goto talairach;
         else
           goto error_exit;
@@ -1590,6 +1738,15 @@ if($DoNuIntensityCor) then
   echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
   if($RunIt) $fs_time $cmd |& tee -a $LF
   if($status) goto error_exit;
+  # Add xfm to nu
+  set cmd = (mri_add_xform_to_header -c \
+             $subjdir/mri/transforms/talairach.xfm \
+             nu.mgz nu.mgz)
+  echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
+  if($RunIt) then
+    $fs_time $cmd |& tee -a $LF
+    if($status) goto error_exit;
+  endif
   touch $touchdir/nu.touch
 endif
 
@@ -1724,18 +1881,30 @@ skullstrip:
       set ltaname = ${s}_to_${subjid}.lta
       set ltaXforms = ($ltaXforms ${subjdir}/mri/transforms/${ltaname})
     end
-    # map all brainmask with nearest neighbor and average 0=mean=logicalOR:
-    set cmd = (mri_robust_template --mov ${bmInVols})
-    set cmd = ($cmd --average 0)
-    set cmd = ($cmd --ixforms ${ltaXforms})
-    set cmd = ($cmd --noit)
-    set cmd = ($cmd --finalnearest)
-    set cmd = ($cmd --template brainmask_template.mgz)
-    echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
-    if($RunIt) then
-      $fs_time $cmd |& tee -a $LF
-      if($status) goto error_exit;
-    endif
+
+    if ($#bmInVols == 1) then
+      # only a single time point in base
+      set cmd = (mri_convert -at $ltaXforms[1] -rt nearest $bmInVols[1] brainmask_template.mgz )
+      echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
+      if($RunIt) then
+        $fs_time $cmd |& tee -a $LF
+        if($status) goto error_exit;
+      endif
+    else
+      # map all brainmask with nearest neighbor and average 0=mean=logicalOR:
+      set cmd = (mri_robust_template --mov ${bmInVols})
+      set cmd = ($cmd --average 0)
+      set cmd = ($cmd --ixforms ${ltaXforms})
+      set cmd = ($cmd --noit)
+      set cmd = ($cmd --finalnearest)
+      set cmd = ($cmd --template brainmask_template.mgz)
+      echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
+      if($RunIt) then
+        $fs_time $cmd |& tee -a $LF
+        if($status) goto error_exit;
+      endif
+    endif # more than 1 tp
+
     # create brainmask.auto by applying brainmask_template to T1
     # first apply mask and keep deletion edits (1)
     set cmd = (mri_mask -keep_mask_deletion_edits)
@@ -2063,7 +2232,7 @@ if($DoCANormalize) then
 
   set xopts = `fsr-getxopts mri_ca_normalize $XOptsFile`;
   set cmd = (mri_ca_normalize)
-  if($UseControlPoints)  set cmd = ($cmd -f $ControlPointsFile)
+  if($UseCPsWithCaNorm)  set cmd = ($cmd -f $ControlPointsFile)
   if ($longitudinal) then
     # longitudinal processing:
     # use the aseg_base (just created) as initialization of the current TP:
@@ -2283,8 +2452,6 @@ if($DoCALabel) then
   set xopts = `fsr-getxopts mri_ca_label $XOptsFile`;
   set cmd = (mri_ca_label)
   set cmd = ($cmd $UseCAAlign)
-  if($BigVentricles) set cmd = ($cmd -bigventricles)
-  if( ! $BigVentricles) set cmd = ($cmd -nobigventricles)
   if($NoWMSA) set cmd = ($cmd -nowmsa)
   set asegbasename=(aseg.auto_noCCseg)
   if($longitudinal && $UseAsegFusion) then
@@ -2304,7 +2471,7 @@ if($DoCALabel) then
   # Run mri_cc to create aseg.auto.mgz
   set xopts = `fsr-getxopts mri_cc $XOptsFile`;
   set cmd = (mri_cc -aseg aseg.auto_noCCseg.mgz -o aseg.auto.mgz \
-    -lta ${subjdir}/mri/transforms/cc_up.lta $subjid $xopts);
+    -lta ${subjdir}/mri/transforms/cc_up.lta $xopts $subjid);
   echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
   if($RunIt) $fs_time $cmd |& tee -a $LF
   if($status) goto error_exit;
@@ -2778,7 +2945,7 @@ foreach hemi ($hemilist)
       echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
       if($RunIt) $fs_time $cmd |& tee -a $LF
       if($status) goto error_exit;
-      
+
       # also copy pial just in case (needed if $DoPialSurf == 0 below)
       set cmd = (cp -vf $longbasedir/surf/${hemi}.pial \
                         $subjdir/surf/${hemi}.orig_pial)
@@ -3112,7 +3279,8 @@ foreach hemi ($hemilist)
   endif
 
   # ---------- WM/GM Contrast (pctsurfcon) ---------------------------
-  if($DoPctSurfCon) then
+  # skip in base (as rawavg does not exist)
+  if($DoPctSurfCon && ( ! $DoCreateBaseSubj )) then
     echo "#-----------------------------------------" \
       |& tee -a $LF |& tee -a $CF
     echo "#@# WM/GM Contrast $hemi `date`" \
@@ -3199,6 +3367,55 @@ foreach hemi ($hemilist)
     echo $cmd > $touchdir/$hemi.aparcstats2.touch
   endif
 
+  #---------------- Cortical Parcellation 3 ------------------------#
+  if($DoCortParc3) then
+    echo "#-----------------------------------------"\
+      |& tee -a $LF |& tee -a $CF
+    echo "#@# Cortical Parc 3 $hemi `date`" \
+      |& tee -a $SF |& tee -a $LF |& tee -a $CF
+    cd $subjdir/scripts > /dev/null
+    set xopts = `fsr-getxopts mris_ca_label $XOptsFile`;
+    set CPAtlas = ${GCSDIR}/${hemi}.${DKTATLAS40_GCS}
+    set annot = ../label/$hemi.aparc.${DKTATLAS40_NAME}.annot
+    set cmd = (mris_ca_label)
+    if($UseAseg) set cmd = ($cmd -l ../label/$hemi.cortex.label)
+    if($UseAseg) set cmd = ($cmd -aseg ../mri/aseg.mgz)
+    if($NoRandomness) set cmd = ($cmd -seed $RngSeed)
+    set cmd = ($cmd $xopts)
+    if($longitudinal) then
+      # longitudinal:
+      set cmd = ($cmd -long -R \
+                   $longbasedir/label/${hemi}.aparc.${DKTATLAS40_NAME}.annot)
+    endif
+    set cmd = ($cmd $subjid $hemi ../surf/$hemi.sphere.reg $CPAtlas $annot)
+    $PWD |& tee -a $LF
+    echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
+    if($RunIt) $fs_time $cmd |& tee -a $LF
+    if($status) goto error_exit;
+    echo $cmd > $touchdir/$hemi.aparc2.touch
+  endif
+
+  # ---------- Surface Anatomical Stats 3 ---------------------------
+  if($DoParcStats3) then
+    echo "#-----------------------------------------" \
+      |& tee -a $LF |& tee -a $CF
+    echo "#@# Parcellation Stats 3 $hemi `date`" \
+      |& tee -a $SF |& tee -a $LF |& tee -a $CF
+    cd $subjdir/scripts > /dev/null
+    set annot = ../label/$hemi.aparc.${DKTATLAS40_NAME}.annot
+    set stats = ../stats/$hemi.aparc.${DKTATLAS40_NAME}.stats
+    set ctab  = ../label/aparc.annot.${DKTATLAS40_NAME}.ctab
+    set xopts = `fsr-getxopts mris_anatomical_stats $XOptsFile`;
+    set cmd = (mris_anatomical_stats -mgz)
+    if($UseAseg) set cmd = ($cmd -cortex ../label/$hemi.cortex.label)
+    set cmd = ($cmd -f $stats -b -a $annot -c $ctab $xopts $subjid $hemi white);
+    $PWD |& tee -a $LF
+    echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+    if($RunIt) $fs_time $cmd |& tee -a $LF
+    if($status) goto error_exit;
+    echo $cmd > $touchdir/$hemi.aparcstats3.touch
+  endif
+
   # ---------- Surface Vertices Number Match Check --------------
   if($DoVnoMatchCheck) then
     echo "#-----------------------------------------" \
@@ -3262,6 +3479,159 @@ foreach hemi ($hemilist)
 
 end # Loop over hemilist
 
+
+#---------------- Refine Pial Surfaces Using T2/FLAIR -----------------------#
+if($DoT2pial || $DoFLAIRpial) then
+  echo "#--------------------------------------------" \
+    |& tee -a $LF |& tee -a $CF
+  echo "#@# Refine Pial Surfs w/ T2/FLAIR `date`" \
+    |& tee -a $SF |& tee -a $LF |& tee -a $CF
+  cd $subjdir/scripts > /dev/null
+
+  # should be one or the other.  check params checks for this.
+  if($DoT2pial) set t2flair=(T2)
+  if($DoFLAIRpial) set t2flair=(FLAIR)
+
+  set mdir=$SUBJECTS_DIR/${subjid}/mri
+  set sdir=$SUBJECTS_DIR/${subjid}/surf
+
+  if (! -e $mdir/${t2flair}.mgz) then
+  
+    set t2flairraw = $mdir/orig/${t2flair}raw.mgz
+    
+    # Longitudinal processing
+    if ($longitudinal) then
+    
+      # use T2/FLAIR raw from cross if missing in long
+      if (! -e $t2flairraw) then
+        set t2flairraw = ${SUBJECTS_DIR}/${tpNid}/mri/orig/${t2flair}raw.mgz
+      endif
+      if (! -e $t2flairraw) then
+          echo "ERROR: mri/orig/${t2flair}raw.mgz missing in long and cross." \
+            |& tee -a $LF
+          goto error_exit;
+      endif  
+      
+      # concatenate lta if created in cross (T2cross->T1cross->longspace)
+      # this avoids registering again if already done in cross
+      if ( -e ${SUBJECTS_DIR}/${tpNid}/mri/transforms/${t2flair}raw.lta ) then
+        set cmd = (mri_concatenate_lta )
+        set cmd = ($cmd ${SUBJECTS_DIR}/${tpNid}/mri/transforms/${t2flair}raw.lta )
+        set cmd = ($cmd $tpNtobase_regfile $mdir/transforms/${t2flair}raw.lta)
+        echo "\n $cmd \n" |& tee -a $LF |& tee -a $CF
+        if($RunIt) $fs_time $cmd |& tee -a $LF
+        if($status) goto error_exit;
+      else
+        # if t2flairraw.lta does not exist in cross, register T2raw to longspace
+        set bbcmd = (bbregister \
+            --s $subjid \
+            --mov $t2flairraw \
+            --lta $mdir/transforms/${t2flair}raw.lta \
+            --init-fsl \
+            --T2 )
+        echo "\n $bbcmd \n"|& tee -a $LF |& tee -a $CF
+        if($RunIt) $fs_time $bbcmd |& tee -a $LF
+        if($status) goto error_exit;
+      endif
+      
+    else #regular processing, register T2flairraw to T1 and create lta
+
+      # first create a T2/FLAIR that is registered to the T1s
+      set bbcmd = (bbregister \
+          --s $subjid \
+          --mov $t2flairraw \
+          --lta $mdir/transforms/${t2flair}raw.lta \
+          --init-fsl \
+          --T2 )
+      echo "\n $bbcmd \n"|& tee -a $LF |& tee -a $CF
+      if($RunIt) $fs_time $bbcmd |& tee -a $LF
+      if($status) goto error_exit;
+
+    endif 
+    
+    # both regular and long processing:
+    
+    # actually map the input (and make conform as the T1 target)
+    set mapcmd = ( mri_convert -at $mdir/transforms/${t2flair}raw.lta )
+    if($UseCubic) set mapcmd = ($mapcmd -rt cubic )
+    set mapcmd = ($mapcmd -rl $mdir/orig.mgz )
+    set mapcmd = ($mapcmd $t2flairraw )
+    set mapcmd = ($mapcmd $mdir/${t2flair}.mgz )
+    echo "\n $mapcmd \n"|& tee -a $LF |& tee -a $CF
+    if($RunIt) $fs_time $mapcmd |& tee -a $LF
+    if($status) goto error_exit;
+    
+    # then give the T2/FLAIR a little normalizing
+    set normcmd = (mri_normalize \
+        -aseg $mdir/aseg.mgz \
+        -sigma 4 \
+        -surface $sdir/rh.white identity.nofile \
+        -surface $sdir/lh.white identity.nofile \
+        $mdir/${t2flair}.mgz \
+        $mdir/${t2flair}.mgz)
+    echo "\n $normcmd \n"|& tee -a $LF |& tee -a $CF
+    if($RunIt) $fs_time $normcmd |& tee -a $LF
+    if($status) goto error_exit;
+  endif
+
+  foreach hemi ($hemilist)
+    $PWD |& tee -a $LF
+    set xopts = `fsr-getxopts mris_make_surfaces $XOptsFile`;
+    set nv1=(`mris_info $sdir/${hemi}.pial |& grep nvertices`)
+    set nv2=(`mris_info $sdir/${hemi}.wo${t2flair}.pial |& grep nvertices`)
+    if ( (! -e $sdir/${hemi}.wo${t2flair}.pial) || \
+         ("$nv1" != "$nv2") ) then
+      set cmd = (cp -v $sdir/${hemi}.pial $sdir/${hemi}.wo${t2flair}.pial)
+      echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+      if($RunIt) $fs_time $cmd |& tee -a $LF
+      if($status) goto error_exit;
+    endif    
+    set cmd = (mris_make_surfaces \
+        -orig_white white \
+        -orig_pial wo${t2flair}.pial)
+    if ( ! $UseAseg) set cmd = ($cmd -noaseg)
+    if ($PialNoAparc) set cmd = ($cmd -noaparc)
+    # -white NOWRITE: dont overwrite white, curv, area, and cortex.label files
+    set cmd = ($cmd -white NOWRITE)
+    set cmd = ($cmd -mgz -T1 brain.finalsurfs)
+    # if using a T2 or FLAIR to remove dura that might be confused with pial...
+    if ($DoT2pial) set cmd = ($cmd -T2 ../mri/T2)
+    if ($DoFLAIRpial) set cmd = ($cmd -FLAIR ../mri/FLAIR)
+    set cmd = ($cmd $WMSeg_wlo $WMSeg_ghi $xopts $subjid $hemi);
+    echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+    if($RunIt) $fs_time $cmd |& tee -a $LF
+    if($status) goto error_exit;
+    echo $cmd > $touchdir/$hemi.pial_refine.touch
+  end # for each hemi
+
+  # redo ?h.volume files
+  if(-e $subjdir/surf/rh.volume || -e $subjdir/surf/lh.volume) then
+    foreach hemi ($hemilist)
+      echo "#--------------------------------------------" \
+        |& tee -a $LF |& tee -a $CF
+      echo "#@# Surf Volume $hemi `date`" \
+        |& tee -a $SF |& tee -a $LF |& tee -a $CF
+      cd $subjdir/surf > /dev/null
+      $PWD |& tee -a $LF
+      set cmd=(mris_calc -o ${hemi}.area.mid ${hemi}.area add ${hemi}.area.pial)
+      echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+      if($RunIt) $fs_time $cmd |& tee -a $LF
+      if($status) goto error_exit;
+      set cmd=(mris_calc -o ${hemi}.area.mid ${hemi}.area.mid div 2)
+      echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+      if($RunIt) $fs_time $cmd |& tee -a $LF
+      if($status) goto error_exit;
+      set cmd=(mris_calc -o ${hemi}.volume)
+      set cmd=($cmd ${hemi}.area.mid mul ${hemi}.thickness)
+      echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+      if($RunIt) $fs_time $cmd |& tee -a $LF
+      if($status) goto error_exit;
+      if(-e .xdebug_mris_calc) rm -f .xdebug_mris_calc
+      echo $cmd > $touchdir/$hemi.surfvolume.touch
+    end # Loop over hemilist
+  endif
+
+endif # if correct pial w/ T2/FLAIR
 
 #-------Edit Aseg with Surfaces -------------#
 if($DoSurfSegEdit) then
@@ -3329,6 +3699,7 @@ if($DoSegStats) then
   set cmd = (mri_segstats --seg mri/aseg.mgz --sum stats/aseg.stats)
 #  if($UseCuda) set cmd = (mri_segstats_cuda --seg mri/aseg.mgz --sum stats/aseg.stats)
   set cmd = ($cmd --pv mri/norm.mgz --empty)
+  set cmd = ($cmd --brainmask mri/brainmask.mgz --brain-vol-from-seg)
   set cmd = ($cmd --excludeid 0 --excl-ctxgmwm)
   if ( -e mri/ribbon.mgz ) then
     set cmd = ($cmd --supratent)
@@ -3356,6 +3727,9 @@ if($DoSegStats) then
   else
     echo "\nINFO: ?h.white surfaces not available to mri_segstats.\n"\
      |& tee -a $SF |& tee -a $LF |& tee -a $CF
+  endif
+  if( ( -e surf/lh.orig.nofix ) && ( -e surf/rh.orig.nofix ) ) then
+     set cmd = ($cmd --euler)
   endif
   set cmd = ($cmd --ctab $FREESURFER_HOME/ASegStatsLUT.txt)
   set cmd = ($cmd --subject $subjid $xopts);
@@ -3433,7 +3807,7 @@ if($DoWMParc) then
   set cmd = (mri_segstats)
 #  if($UseCuda) set cmd = (mri_segstats_cuda)
   set cmd = ($cmd --seg mri/wmparc.mgz --sum stats/wmparc.stats \
-    --pv mri/norm.mgz --excludeid 0 --brain-vol-from-seg  \
+    --pv mri/norm.mgz --excludeid 0 \
     --brainmask mri/brainmask.mgz --in mri/norm.mgz --in-intensity-name norm \
     --in-intensity-units MR --subject $subjid --surf-wm-vol \
     --ctab $FREESURFER_HOME/WMParcStatsLUT.txt )
@@ -3449,6 +3823,7 @@ if($DoWMParc) then
   if($status) goto error_exit;
   echo $cmd > $touchdir/wmaparc.stats.touch
 endif
+
 
 # -----------------------------------------------------------
 # Do Contra Surface Registration here so don't have
@@ -3627,9 +4002,27 @@ if ($DoBaLabels) then
         |& tee -a $LF |& tee -a $CF
     echo "#@# BA Labels $hemi `date`" \
         |& tee -a $SF |& tee -a $LF |& tee -a $CF
+    set HaveFsAverage=1;
     if ( ! -e $SUBJECTS_DIR/fsaverage) then
       echo "INFO: fsaverage subject does not exist in SUBJECTS_DIR" \
         |& tee -a $LF |& tee -a $CF
+      set HaveFsAverage=0;
+    else
+      # check if the latest-greatest fsaverage is here (which would not be
+      # the case if running on subjects processed by an older version)
+      if ( ! -e $SUBJECTS_DIR/fsaverage/label/lh.perirhinal.label) then
+        echo "INFO: fsaverage subject does not have perirhinal labels!" \
+          |& tee -a $LF |& tee -a $CF
+        set HaveFsAverage=0;
+        set cmd=(rm -Rf fsaverage)
+        echo "\n cd $SUBJECTS_DIR; $cmd; cd - \n"|& tee -a $LF |& tee -a $CF
+        cd $SUBJECTS_DIR
+        if($RunIt && -e fsaverage) $fs_time $cmd |& tee -a $LF
+        cd -
+      endif
+    endif
+
+    if ( ! $HaveFsAverage ) then
       echo "INFO: Creating symlink to fsaverage subject..." \
         |& tee -a $LF |& tee -a $CF
       set cmd=(ln -s $FREESURFER_HOME/subjects/fsaverage)
@@ -3640,12 +4033,27 @@ if ($DoBaLabels) then
     endif
 
     # generate labels
-    foreach balabel (BA1 BA2 BA3a BA3b BA4a BA4p BA6 BA44 BA45 V1 V2 MT)
+     foreach balabel (BA1 BA2 BA3a BA3b BA4a BA4p BA6 BA44 BA45 V1 V2 MT \
+                      perirhinal)
       set cmd=(mri_label2label \
         --srcsubject fsaverage \
         --srclabel $SUBJECTS_DIR/fsaverage/label/${hemi}.${balabel}.label \
         --trgsubject $subjid \
         --trglabel ./${hemi}.${balabel}.label \
+        --hemi ${hemi} \
+        --regmethod surface)
+      echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+      if($RunIt) $fs_time $cmd |& tee -a $LF
+      if($status) goto error_exit;
+    end # balabel
+
+    # generate .thresh labels
+     foreach balabel (BA1 BA2 BA3a BA3b BA4a BA4p BA6 BA44 BA45 V1 V2 MT)
+      set cmd=(mri_label2label \
+        --srcsubject fsaverage \
+        --srclabel $SUBJECTS_DIR/fsaverage/label/${hemi}.${balabel}.thresh.label \
+        --trgsubject $subjid \
+        --trglabel ./${hemi}.${balabel}.thresh.label \
         --hemi ${hemi} \
         --regmethod surface)
       echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
@@ -3670,6 +4078,7 @@ if ($DoBaLabels) then
         --l $hemi.V1.label \
         --l $hemi.V2.label \
         --l $hemi.MT.label \
+        --l $hemi.perirhinal.label \
         --a BA \
         --maxstatwinner \
         --noverbose )
@@ -3678,10 +4087,46 @@ if ($DoBaLabels) then
     if($RunIt) $fs_time $cmd |& tee -a $LF
     if($status) goto error_exit;
 
+    # create .thresh.annot
+    set cmd=(mris_label2annot \
+        --s $subjid \
+        --hemi $hemi \
+        --ctab $FREESURFER_HOME/average/colortable_BA.txt \
+        --l $hemi.BA1.thresh.label \
+        --l $hemi.BA2.thresh.label \
+        --l $hemi.BA3a.thresh.label \
+        --l $hemi.BA3b.thresh.label \
+        --l $hemi.BA4a.thresh.label \
+        --l $hemi.BA4p.thresh.label \
+        --l $hemi.BA6.thresh.label \
+        --l $hemi.BA44.thresh.label \
+        --l $hemi.BA45.thresh.label \
+        --l $hemi.V1.thresh.label \
+        --l $hemi.V2.thresh.label \
+        --l $hemi.MT.thresh.label \
+        --a BA.thresh \
+        --maxstatwinner \
+        --noverbose )
+    if($RunIt) if ( -e ./$hemi.BA.thresh.annot) rm -fv ./$hemi.BA.thresh.annot
+    echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+    if($RunIt) $fs_time $cmd |& tee -a $LF
+    if($status) goto error_exit;
+
     # generate stats
     set annot = ./$hemi.BA.annot
     set stats = ../stats/$hemi.BA.stats
     set ctab  = ./BA.ctab
+    set xopts = `fsr-getxopts mris_anatomical_stats $XOptsFile`;
+    set cmd = (mris_anatomical_stats -mgz -f $stats \
+            -b -a $annot -c $ctab $xopts $subjid $hemi white);
+    echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
+    if($RunIt) $fs_time $cmd |& tee -a $LF
+    if($status) goto error_exit;
+
+    # generate .thresh stats
+    set annot = ./$hemi.BA.thresh.annot
+    set stats = ../stats/$hemi.BA.thresh.stats
+    set ctab  = ./BA.thresh.ctab
     set xopts = `fsr-getxopts mris_anatomical_stats $XOptsFile`;
     set cmd = (mris_anatomical_stats -mgz -f $stats \
             -b -a $annot -c $ctab $xopts $subjid $hemi white);
@@ -3792,13 +4237,13 @@ if($DoGEMS) then
     if($RunIt) $cmd |& tee -a $GEMSF
 
     set kvltmpd = (${subjdir}/tmp/subfieldResults)
-      
+
     # do hippocampal processing
-    set cmd = (kvlSegmentHippocampalSubfields.sh $subjid left $SUBJECTS_DIR ${kvltmpd} ) 
+    set cmd = (kvlSegmentHippocampalSubfields.sh $subjid left $SUBJECTS_DIR ${kvltmpd} )
     echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
     if($RunIt) $fs_time $cmd |& tee -a $GEMSF
     if($status) goto error_exit;
-    set cmd = (kvlSegmentHippocampalSubfields.sh $subjid right $SUBJECTS_DIR ${kvltmpd} ) 
+    set cmd = (kvlSegmentHippocampalSubfields.sh $subjid right $SUBJECTS_DIR ${kvltmpd} )
     echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
     if($RunIt) $fs_time $cmd |& tee -a $GEMSF
     if($status) goto error_exit;
@@ -3821,7 +4266,7 @@ if($DoGEMS) then
     if($RunIt) $fs_time $cmd |& tee -a $GEMSF
     if($status) goto error_exit;
 
-    # delete the tmp directory 
+    # delete the tmp directory
     set cmd = (rm -rf ${kvltmpd} )
     echo "\n $cmd \n"|& tee -a $LF |& tee -a $CF
     if($RunIt) $fs_time $cmd |& tee -a $GEMSF
@@ -3838,6 +4283,15 @@ echo "" |& tee -a $LF
 echo "#------------------------------------------" |& tee -a $LF
 echo "" |& tee -a $LF
 
+set EndTime = `date`;
+set tSecEnd = `date '+%s'`;
+@ tSecRun = $tSecEnd - $tSecStart;
+set tRunHours = `echo $tSecRun/3600|bc -l`
+set tRunHours = `printf %6.3f $tRunHours`
+echo "Started at $StartTime " |& tee -a $LF
+echo "Ended   at $EndTime" |& tee -a $LF
+echo "#@#%# recon-all-run-time-hours $tRunHours" |& tee -a $LF
+
 if($#NotifyFile != 0) then
   echo "INFO: touching notification file $NotifyFile" |& tee -a $LF
   touch $NotifyFile
@@ -3848,18 +4302,20 @@ if($DoIsRunning && $#IsRunningFile) rm -f $IsRunningFile
 # Create the Done File
 echo "------------------------------" > $DoneFile
 echo "SUBJECT $subjid" >> $DoneFile
-echo "DATE `date`"     >> $DoneFile
+echo "START_TIME $StartTime"     >> $DoneFile
+echo "END_TIME $EndTime"     >> $DoneFile
+echo "RUNTIME_HOURS $tRunHours" >> $DoneFile
 echo "USER $user"      >> $DoneFile
 echo "HOST `hostname`" >> $DoneFile
 echo "PROCESSOR `uname -m`" >> $DoneFile
 echo "OS `uname -s`"       >> $DoneFile
-uname -a         >> $DoneFile
-echo $VERSION    >> $DoneFile
-echo $0          >> $DoneFile
+echo "UNAME `uname -a`"  >> $DoneFile
+echo "VERSION $VERSION"    >> $DoneFile
+echo "CMDPATH $0"          >> $DoneFile
+echo "CMDARGS $argv0"      >> $DoneFile
 
 echo "recon-all -s $subjid finished without error at `date`" \
     |& tee -a $LF |& tee -a $SF
-
 
 if($#mailuser != 0) then
   echo "recon-all -s $subjid finished without error at `date`" | \
@@ -3971,6 +4427,11 @@ while( $#argv != 0 )
         echo "ERROR: cannot find $InputVol"
         goto error_exit;
       endif
+      if (-d "$InputVol") then
+        echo "ERROR: You cannot give recon-all a folder as input. It must be an image file."
+        echo "If you have multiple files, you need multiple -i flags."
+        goto error_exit;
+      endif
       if(! -r "$InputVol") then
         echo "ERROR: $InputVol exists but is not readable"
         goto error_exit;
@@ -3983,6 +4444,48 @@ while( $#argv != 0 )
       set InputVol = "$InVolDir/$InVolBase";
       set InputList = ($InputList "$InputVol");
       set DoConvertInput = 1;
+      breaksw
+
+    case "-T2"
+    case "-t2"
+      if( $#argv < 1) goto arg1err;
+      set InputT2Vol = "$argv[1]"; shift;
+      if(! -e "$InputT2Vol") then
+        echo "ERROR: cannot find $InputT2Vol"
+        goto error_exit;
+      endif
+      if(! -r "$InputT2Vol") then
+        echo "ERROR: $InputT2Vol exists but is not readable"
+        goto error_exit;
+      endif
+      set T2InVolDir  = `dirname  "$InputT2Vol"`;
+      set T2InVolBase = `basename "$InputT2Vol"`;
+      pushd $T2InVolDir > /dev/null
+      set T2InVolDir = `pwd`;
+      popd > /dev/null
+      set InputT2Vol = "$T2InVolDir/$T2InVolBase";
+      set DoConvertT2Input = 1;
+      breaksw
+
+    case "-FLAIR"
+    case "-flair"
+      if( $#argv < 1) goto arg1err;
+      set InputFlairVol = "$argv[1]"; shift;
+      if(! -e "$InputFlairVol") then
+        echo "ERROR: cannot find $InputFlairVol"
+        goto error_exit;
+      endif
+      if(! -r "$InputFlairVol") then
+        echo "ERROR: $InputFlairVol exists but is not readable"
+        goto error_exit;
+      endif
+      set FlairInVolDir  = `dirname  "$InputFlairVol"`;
+      set FlairInVolBase = `basename "$InputFlairVol"`;
+      pushd $FlairInVolDir > /dev/null
+      set FlairInVolDir = `pwd`;
+      popd > /dev/null
+      set InputFlairVol = "$FlairInVolDir/$FlairInVolBase";
+      set DoConvertFlairInput = 1;
       breaksw
 
     case "-base-affine":
@@ -4081,6 +4584,10 @@ while( $#argv != 0 )
     case "-schwartzya3t-atlas":
       set UseYa3tTalAtlas = 1;
       breaksw
+    case "-custom-tal-atlas":
+      if ( $#argv < 1) goto arg1err;
+      set CustomTalAtlas = $argv[1]; shift;
+      breaksw
 
     case "-deface":
       set DoDeface = 1;
@@ -4103,6 +4610,12 @@ while( $#argv != 0 )
       set DoNuIntensityCor3T = 1;
       breaksw
 
+    case "-3T":
+    case "-3t":
+      set UseYa3tTalAtlas = 1;
+      set DoNuIntensityCor3T = 1;
+      breaksw
+
     case "-nuiterations":
       if ( $#argv < 1) goto arg1err;
       set NuIterations = $argv[1]; shift;
@@ -4116,8 +4629,8 @@ while( $#argv != 0 )
       set DoNuMakeUchar = 0;
       breaksw
 
-    # note: norm3diters and normmaxgrads is applied to both runs of 
-    # mri_normalize.  use -norm1-b, -norm1-n, -norm2-b, -norm2-n to 
+    # note: norm3diters and normmaxgrads is applied to both runs of
+    # mri_normalize.  use -norm1-b, -norm1-n, -norm2-b, -norm2-n to
     # distinguish -b and -n of the two mri_normalize runs
     case "-norm3diters":
       if ( $#argv < 1) goto arg1err;
@@ -4210,6 +4723,10 @@ while( $#argv != 0 )
       breaksw
     case "-nocanorm":
       set DoCANormalize = 0;
+      breaksw
+    case "-canorm-usecps":
+      set DoCANormalize = 1;
+      set UseCPsWithCaNorm = 1;
       breaksw
 
     case "-careg":
@@ -4649,6 +5166,13 @@ while( $#argv != 0 )
       set DoCortParc2 = 0;
       breaksw
 
+    case "-cortparc3":
+      set DoCortParc3 = 1;
+      breaksw
+    case "-nocortparc3":
+      set DoCortParc3 = 0;
+      breaksw
+
     case "-parcstats":
       set DoParcStats = 1;
       breaksw
@@ -4661,6 +5185,13 @@ while( $#argv != 0 )
       breaksw
     case "-noparcstats2":
       set DoParcStats2 = 0;
+      breaksw
+
+    case "-parcstats3":
+      set DoParcStats3 = 1;
+      breaksw
+    case "-noparcstats3":
+      set DoParcStats3 = 0;
       breaksw
 
     case "-surfsegedit":
@@ -4737,6 +5268,8 @@ while( $#argv != 0 )
       set DoCleanWM    = 1;
       set DoCleanBFSE  = 1;
       set DoCleanXopts = 1;
+      set DoCleanT2    = 1;
+      set DoCleanFLAIR = 1;
       breaksw
 
     case "-clean-xopts":
@@ -4789,6 +5322,14 @@ while( $#argv != 0 )
       set DoCleanBFSE   = 1;
       breaksw
 
+    case "-clean-T2":
+      set DoCleanT2 = 1;
+      breaksw
+
+    case "-clean-FLAIR":
+      set DoCleanFLAIR = 1;
+      breaksw
+
     case "-all":
     case "-autorecon-all":
       set DoCreateBaseInput = 1;
@@ -4828,6 +5369,8 @@ while( $#argv != 0 )
       set DoParcStats      = 1;
       set DoCortParc2      = 1;
       set DoParcStats2     = 1;
+      set DoCortParc3      = 1;
+      set DoParcStats3     = 1;
       set DoCortRibbonVolMask = 1;
       set DoSegStats       = 1;
       set DoAParc2ASeg     = 1;
@@ -4848,7 +5391,6 @@ while( $#argv != 0 )
       breaksw
 
     case "-autorecon2":
-    case "-autorecon2-cp":
       set DoGCAReg         = 1;
       set DoCARegInv       = 1;
       set DoRemoveNeck     = 1;
@@ -4920,7 +5462,9 @@ while( $#argv != 0 )
       set DoInflate1       = 1;
       breaksw
 
+    case "-autorecon2-cp":
     case "-autorecon2-noaseg":
+    case "-autorecon2-wm":
       set DoNormalization2 = 1;
       set DoSegmentation   = 1;
       set DoFill           = 1;
@@ -4930,20 +5474,6 @@ while( $#argv != 0 )
       set DoQSphere        = 1;
       set DoFix            = 1;
       set DoMaskBFS        = 1;
-      set DoWhiteSurfs     = 1;
-      set DoSmooth2        = 1;
-      set DoInflate2       = 1;
-      set DoSegStats       = 1;
-      set DoCurvStats      = 1;
-      breaksw
-
-    case "-autorecon2-wm":
-      set DoFill           = 1;
-      set DoTessellate     = 1;
-      set DoSmooth1        = 1;
-      set DoInflate1       = 1;
-      set DoQSphere        = 1;
-      set DoFix            = 1;
       set DoWhiteSurfs     = 1;
       set DoSmooth2        = 1;
       set DoInflate2       = 1;
@@ -4969,9 +5499,12 @@ while( $#argv != 0 )
       set DoParcStats      = 1;
       set DoCortParc2      = 1;
       set DoParcStats2     = 1;
+      set DoCortParc3      = 1;
+      set DoParcStats3     = 1;
       set DoCortRibbonVolMask = 1;
       set DoAParc2ASeg     = 1;
       set DoWMParc         = 1;
+      set DoCurvStats      = 1;
       set DoBaLabels       = 1;
       set DoLabelExvivoEC  = 1;
       breaksw
@@ -4988,10 +5521,13 @@ while( $#argv != 0 )
       set DoParcStats      = 1;
       set DoCortParc2      = 1;
       set DoParcStats2     = 1;
+      set DoCortParc3      = 1;
+      set DoParcStats3     = 1;
       set DoSegStats       = 1;
       set DoCortRibbonVolMask = 1;
       set DoAParc2ASeg     = 1;
       set DoWMParc         = 1;
+      set DoCurvStats      = 1;
       set DoBaLabels       = 1;
       set DoLabelExvivoEC  = 1;
       breaksw
@@ -5025,6 +5561,8 @@ while( $#argv != 0 )
       set DoParcStats      = 1;
       set DoCortParc2      = 1;
       set DoParcStats2     = 1;
+      set DoCortParc3      = 1;
+      set DoParcStats3     = 1;
       set DoCortRibbonVolMask = 0;
       set DoAParc2ASeg     = 0;
       set DoWMParc         = 0;
@@ -5410,11 +5948,49 @@ while( $#argv != 0 )
       # then set LD_LIBRARY_PATH to distributed cuda libs
       source $FREESURFER_HOME/bin/cuda_setup
       breaksw;
-  
+
+    case "-openmp":
+      if ( $#argv < 1) goto arg1err;
+      setenv OMP_NUM_THREADS $argv[1]; shift;
+      breaksw;
+
     # hippocampal subfield processing
     case "-hippo-subfields":
       set DoGEMS = 1;
       breaksw;
+
+    case "-cubic":
+      set UseCubic = 1;
+      breaksw
+    case "-nocubic":
+    case "-no-cubic":
+    case "-no_cubic":
+      set UseCubic = 0;
+      breaksw
+
+    case "-T2pial":
+    case "-t2pial":
+      set DoT2pial = 1;
+      breaksw
+    case "-noT2pial":
+    case "-no-T2pial":
+    case "-no_T2pial":
+    case "-no-t2pial":
+    case "-no_t2pial":
+      set DoT2pial = 0;
+      breaksw
+
+    case "-FLAIRpial":
+    case "-flairpial":
+      set DoFLAIRpial = 1;
+      breaksw
+    case "-noFLAIRpial":
+    case "-no-FLAIRpial":
+    case "-no_FLAIRpial":
+    case "-no-flairpial":
+    case "-no_flairpial":
+      set DoFLAIRpial = 0;
+      breaksw
 
     default:
       echo ERROR: Flag $flag unrecognized.
@@ -5440,6 +6016,11 @@ arg3err:
 
 ############--------------##################
 check_params:
+  if($DoT2pial && $DoFLAIRpial) then
+    echo "Cannot specify both T2 and FLAIR for pial correction."
+    goto error_exit;
+  endif
+
   if($UseCuda || $GetCuda) then
     # test a binary
     echo "Testing for CUDA device:"
@@ -5494,8 +6075,10 @@ check_params:
       set haslong = `echo $tpNid | grep "\.long\."`
       if ( "$haslong" != "" ) then
         echo ""
-        echo "ERROR: Are you trying to run or re-run a longitudinal time point?"
-        echo "       If so, please specify the following parameters:"
+        echo "ERROR: Detected \'.long.\' in a subject id!
+        echo ""
+        echo "       If you are trying to run or re-run a longitudinal time point"
+        echo "       please specify the following parameters:"
         echo ""
         echo "       \' -long <tpNid> <templateid> \'"
         echo ""
@@ -5503,6 +6086,10 @@ check_params:
         echo "       ID) and <templateid> is the ID created in the -base run."
         echo "       The directory <tpNid>.long.<templateid> will be created"
         echo "       automatically or used for output, if it already exists."
+        echo ""
+        echo "       If you are running a \'-base\' please specify a different name."
+        echo "       Usage of \'.long.\' is reserved for the automatically created"
+        echo "       longitudinal output."
         echo ""
         exit 1;
       endif
@@ -5552,15 +6139,19 @@ check_params:
         echo ""
         exit 1;
       else
-        grep -w $tpNid ${longbasedir}/${BaseSubjsListFname} >& /dev/null
-        if ($status) then
+        set found_tpNid = 0
+        set found_longbaseid = 0
+        foreach f (`cat ${longbasedir}/${BaseSubjsListFname}`)
+          if (${f} == ${tpNid}) set found_tpNid = 1
+          if (${f} == ${longbaseid}) set found_longbaseid = 1
+        end
+        if ( ! $found_tpNid ) then
           echo "ERROR: $tpNid is not in ${longbasedir}/${BaseSubjsListFname}"
-        echo ""
+          echo ""
           exit 1
         endif
         # check that baseid is not the same as any of the timepoint subj IDs
-        grep -w $longbaseid ${longbasedir}/${BaseSubjsListFname} >& /dev/null
-        if ( ! $status) then
+        if ( $found_longbaseid ) then
           echo "ERROR: Template/base ID cannot be the same as a time point ID"
           echo "       (in ${longbasedir}/${BaseSubjsListFname})"
           echo ""
@@ -5770,7 +6361,9 @@ check_params:
      ! $DoSurfVolume && ! $DoASegMerge && ! $DoCurvStats && ! $DoLabelV1 && \
      ! $DoCreateBaseSubj && ! $DoBaLabels && ! $DoShowEdits && \
      ! $DoLabelExvivoEC && ! $DoSurfSegEdit && ! $DoPialSurfs && \
-     ! $DoGEMS && ! $DoPctSurfCon ) then
+     ! $DoGEMS && ! $DoPctSurfCon && ! $DoT2pial && ! $DoFLAIRpial && \
+     ! $DoConvertT2Input && ! $DoConvertFlairInput && \
+     ! $DoCortParc3 && ! $DoParcStats3) then
      echo "ERROR: nothing to do"
      exit 1;
   endif
@@ -5834,7 +6427,7 @@ usage_exit:
   echo "                     a. if wm edit was required, then run -autorecon2-wm"
   echo "                     b. if control points added, then run -autorecon2-cp"
   echo "                     c. proceed to run -autorecon3"
-  echo "  -autorecon2-cp : process stages 6-23 (uses -f w/ mri_normalize, -keep w/ mri_seg)"
+  echo "  -autorecon2-cp : process stages 12-23 (uses -f w/ mri_normalize, -keep w/ mri_seg)"
   echo "  -autorecon2-wm : process stages 15-23"
   echo "  -autorecon2-inflate1 : 6-18"
   echo "  -autorecon2-perhemi : tess, sm1, inf1, q, fix, sm2, inf2, finalsurf, ribbon"
@@ -6045,7 +6638,7 @@ Subcortical segmentation through make white surfaces.
 
 -autorecon2-cp
 
-Deprecated.  Same as -autorecon2, as control points affect subcortical.
+Normalization2 through make final surfaces.
 
 -autorecon2-wm
 
@@ -6106,6 +6699,8 @@ Run times are approximate for an AMD Opteron 64bit 2.5GHz processor:
   -<no>parcstats        < 1 min     per hemisphere
   -<no>cortparc2          1 min     per hemisphere
   -<no>parcstats2       < 1 min     per hemisphere
+  -<no>cortparc3          1 min     per hemisphere
+  -<no>parcstats3       < 1 min     per hemisphere
   -<no>pial               1 hour    per hemisphere
   -<no>cortribbon        20 min
   -<no>aparc2aseg         1 min
@@ -6224,7 +6819,7 @@ Passes "-g maxgrad" to _both_ runs of mri_normalize. Max grad default is 1.
 
 -norm1-b N
 
-In the _first_ usage of mri_normalize (during creation of T1.mgz), use 
+In the _first_ usage of mri_normalize (during creation of T1.mgz), use
 control point with intensity N below target (default=10.0)
 
 -norm1-n N
@@ -6233,7 +6828,7 @@ In the _first_ usage of mri_normalize, do N number of iterations
 
 -norm2-b N
 
-In the _second_ usage of mri_normalize (during creation of brain.mgz), use 
+In the _second_ usage of mri_normalize (during creation of brain.mgz), use
 control point with intensity N below target (default=10.0)
 
 -norm2-n N
@@ -6255,8 +6850,8 @@ Does not use aseg.mgz for the second mri_normalize step.
 
 If a subject has enlarged ventricles due to atrophy, include the -bigventricles
 flag with the -autorecon2 stage in order to prevent surfaces extending into
-the ventricle regions. The flag directly affects the binaries mri_ca_register
-and mri_ca_label, and mris_make_surfaces indirectly via aseg.mgz.
+the ventricle regions. The flag directly affects the binary mri_ca_register,
+and mris_make_surfaces indirectly via aseg.mgz.
 
 -norandomness
 
@@ -6566,8 +7161,8 @@ Normalization2 (-<no>normalization)
 Performs a second (major) intensity correction using only the brain
 volume as the input (so that it has to be done after the skull strip).
 Intensity normalization works better when the skull has been removed.
-Creates a new brain.mgz volume. If -noaseg flag is used, then aseg.mgz
-is not used by mri_normalize.
+Creates a new brain.mgz volume. The -autorecon2-cp stage begins here.
+If -noaseg flag is used, then aseg.mgz is not used by mri_normalize.
 
 WM Segmentation (-<no>segmentation)
 
@@ -6687,13 +7282,14 @@ Allows the user to display activity on the surface of an individual
 with the folding pattern (ie, anatomy) of a group. Calls mrisp_paint.
 Creates surf/?h.avg_curv.
 
-Cortical Parcellation (-<no>cortparc, -<no>cortparc2)
+Cortical Parcellation (-<no>cortparc, -<no>cortparc2, -<no>cortparc3 )
 
 Assigns a neuroanatomical label to each location on the cortical surface.
 Incorporates both geometric information derived from the cortical model
 (sulcus and curvature), and neuroanatomical convention.
-Calls mris_ca_label.  -cortparc creates label/?h.aparc.annot, and
--cortparc2 creates /label/?h.aparc.a2009s.annot.
+Calls mris_ca_label.  -cortparc creates label/?h.aparc.annot,
+-cortparc2 creates /label/?h.aparc.a2009s.annot, and
+-cortparc3 creates /label/?h.aparc.DKTatlas40.annot.
 
 Pial Surface (-<no>pial)
 
@@ -6731,7 +7327,7 @@ adding ?h.area(.white) to ?h.area.pial, then dividing by two.  Then
 ?h.volume is created by multiplying ?.mid.area with ?h.thickness.
 This step is also run at the end of the -pial step.
 
-Parcellation Statistics (-<no>parcstats, -<no>parcstats2)
+Parcellation Statistics (-<no>parcstats, -<no>parcstats2, -<no>parcstats3)
 
 Runs mris_anatomical_stats to create a summary table of cortical
 parcellation statistics for each structure, including 1. structure
@@ -6742,6 +7338,7 @@ curvature 8. integrated rectified Gaussian wm curvature 9. folding index
 10. intrinsic curvature index.
 For -parcstats, the file is saved in stats/?h.aparc.stats.
 For -parcstats2, the file is saved in stats/?h.aparc.${DESTRIEUX_NAME}.stats.
+For -parcstats3, the file is saved in stats/?h.aparc.${DKTATLAS40_NAME}.stats.
 
 Cortical Ribbon Mask (-<no>cortribbon)
 
@@ -6759,7 +7356,7 @@ LONGITUDINAL PROCESSING
 
 The longitudinal processing scheme aims to incorporate the subject-wise
 correlation of longitudinal data into the processing stream in order to
-increase sensitivity and repeatability, see [14][15]. Care is taken to
+increase sensitivity and repeatability, see [14-16]. Care is taken to
 avoid introduction of asymmetry-induced bias.
 
 Here is a summary of the longitudinal workflow, where tpN refers to the
@@ -6776,7 +7373,7 @@ given to the base subject of a collection of timepoints:
 3) longitudinally process tpN subjects:
   recon-all -long tp1 longbase -all
   recon-all -long tp2 longbase -all
- 
+
 4) do comparisons on results from 3), e.g. calculate differences
 between tp2.long.longbase - tp1.long.longbase
 
@@ -6816,7 +7413,7 @@ If a new timepoint needs to be added to a longitudinal run where a base subject
 has already been created (from prior timepoints), then the -addtp command
 can be added to the -long command in order to 'fix-up' the longitudinal
 stream to accept the new timepoint. Note that the base subject is *not*
-recomputed using the new timepoint. This potentially introduces a bias, and it 
+recomputed using the new timepoint. This potentially introduces a bias, and it
 is recommended to NOT add a time point this way! Instead recreate the base
 from all time points and run all longitudinals again.
 See the LongitudinalProcessing wiki page.
@@ -6979,8 +7576,12 @@ Gyrification (2007) IEEE Transactions on Medical Imaging.
 
 [14] Martin Reuter, H Diana Rosas, Bruce Fischl.
 Highly Accurate Inverse Consistent Registration: A Robust Approach.
-NeuroImage (2010). http://dx.doi.org/10.1016/j.neuroimage.2010.07.020
+NeuroImage 53(4), 1181-1196, 2010. http://dx.doi.org/10.1016/j.neuroimage.2010.07.020
 
 [15] Martin Reuter, Bruce Fischl.
 Avoiding Asymmetry-Induced Bias in Longitudinal Image Processing.
-NeuroImage (2011). http://dx.doi.org/10.1016/j.neuroimage.2011.02.076
+NeuroImage 51(1), 19-21, 2011. http://dx.doi.org/10.1016/j.neuroimage.2011.02.076
+
+[16] Martin Reuter, Nicholas J Schmansky, H Diana Rosas, Bruce Fischl.
+Within-Subject Template Estimation for Unbiased Longitudinal Image Analysis.
+NeuroImage 61(4), 1402-1418, 2012. http://dx.doi.org/10.1016/j.neuroimage.2012.02.084

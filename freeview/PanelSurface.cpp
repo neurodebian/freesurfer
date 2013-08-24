@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/05/13 15:04:32 $
- *    $Revision: 1.39.2.1 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:35 $
+ *    $Revision: 1.39.2.7 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -33,6 +33,7 @@
 #include "SurfaceAnnotation.h"
 #include "SurfaceOverlay.h"
 #include "SurfaceLabel.h"
+#include "SurfaceSpline.h"
 #include "WindowConfigureOverlay.h"
 #include "MyUtils.h"
 #include <QMessageBox>
@@ -69,7 +70,12 @@ PanelSurface::PanelSurface(QWidget *parent) :
                 << ui->labelMeshColor;
 
   m_widgetsLabel << ui->colorpickerLabelColor
-                 << ui->labelLabelColor;
+                 << ui->labelLabelColor
+                 << ui->checkBoxLabelOutline;
+
+  m_widgetsSpline << ui->colorpickerSplineColor
+                  << ui->labelSplineColor
+                  << ui->checkBoxSplineProjection;
 
   ui->actionSurfaceMain->setData( FSSurface::SurfaceMain );
   ui->actionSurfaceInflated->setData( FSSurface::SurfaceInflated );
@@ -93,6 +99,8 @@ PanelSurface::PanelSurface(QWidget *parent) :
   m_wndConfigureOverlay->hide();
   connect( mainwnd->GetLayerCollection("Surface"), SIGNAL(ActiveLayerChanged(Layer*)),
            m_wndConfigureOverlay, SLOT(OnActiveSurfaceChanged(Layer*)));
+  connect(m_wndConfigureOverlay, SIGNAL(ActiveFrameChanged()), mainwnd, SLOT(UpdateInfoPanel()));
+  connect(mainwnd, SIGNAL(SlicePositionChanged()), m_wndConfigureOverlay, SLOT(OnCurrentVertexChanged()));
 }
 
 PanelSurface::~PanelSurface()
@@ -116,8 +124,6 @@ void PanelSurface::ConnectLayer( Layer* layer_in )
            this, SLOT(UpdateWidgets()), Qt::UniqueConnection );
   connect( layer, SIGNAL(SurfaceLabelAdded(SurfaceLabel*)),
            this, SLOT(UpdateWidgets()), Qt::UniqueConnection );
-  connect( layer, SIGNAL(SurfaceAnnotationAdded(SurfaceAnnotation*)),
-           this, SLOT(UpdateWidgets()), Qt::UniqueConnection );
   connect( layer, SIGNAL(SurfaceCurvatureLoaded()), this, SLOT(UpdateWidgets()) );
   connect( layer, SIGNAL(SurfaceVectorLoaded()), this, SLOT(UpdateWidgets()) );
   connect( layer, SIGNAL(SurfaceOverlayAdded(SurfaceOverlay*)), this, SLOT(UpdateWidgets()) );
@@ -134,6 +140,13 @@ void PanelSurface::ConnectLayer( Layer* layer_in )
   connect( ui->spinBoxVectorPointSize, SIGNAL(valueChanged(int)), p, SLOT(SetVectorPointSize(int)) );
   connect( ui->spinBoxVertexPointSize, SIGNAL(valueChanged(int)), p, SLOT(SetVertexPointSize(int)) );
   connect( ui->colorpickerLabelColor, SIGNAL(colorChanged(QColor)), layer, SLOT(SetActiveLabelColor(QColor)));
+  connect( ui->checkBoxLabelOutline, SIGNAL(toggled(bool)), layer, SLOT(SetActiveLabelOutline(bool)));
+  connect( ui->checkBoxAnnotationOutline, SIGNAL(toggled(bool)), layer, SLOT(SetActiveAnnotationOutline(bool)));
+
+  SurfaceSpline* spline = layer->GetSpline();
+  connect( ui->colorpickerSplineColor, SIGNAL(colorChanged(QColor)), spline, SLOT(SetColor(QColor)));
+  connect(ui->checkBoxSplineProjection, SIGNAL(toggled(bool)), spline, SLOT(SetProjection(bool)));
+  connect(spline, SIGNAL(SplineChanged()), this, SLOT(UpdateWidgets()));
 }
 
 void PanelSurface::DoIdle()
@@ -230,6 +243,22 @@ void PanelSurface::DoUpdateWidgets()
   ui->comboBoxVectorDisplay->addItem( "Load vector data..." );
   ui->comboBoxVectorDisplay->setCurrentIndex( surf ? 1 + surf->GetActiveVector() : 0 );
 
+  // update spline contorls
+  ui->comboBoxSplineDisplay->clear();
+  ui->comboBoxSplineDisplay->addItem("Off");
+  SurfaceSpline* spline = (layer? layer->GetSpline() : NULL);
+  if (spline && spline->IsValid())
+  {
+      ui->comboBoxSplineDisplay->addItem(spline->GetName());
+  }
+  ui->comboBoxSplineDisplay->addItem("Load spline data...");
+  ui->comboBoxSplineDisplay->setCurrentIndex((spline && spline->IsValid() && spline->IsVisible())?1:0);
+  if (spline)
+  {
+    ui->colorpickerSplineColor->setCurrentColor(spline->GetColor());
+    ui->checkBoxSplineProjection->setChecked(spline->GetProjection());
+  }
+
   // update overlay controls
   ui->comboBoxOverlay->clear();
   ui->comboBoxOverlay->addItem( "Off" );
@@ -252,14 +281,17 @@ void PanelSurface::DoUpdateWidgets()
   // update annotation controls
   ui->comboBoxAnnotation->clear();
   ui->comboBoxAnnotation->addItem( "Off" );
+  ui->comboBoxAnnotation->setItemData(0, "Off", Qt::ToolTipRole);
   if ( layer )
   {
     for ( int i = 0; i < layer->GetNumberOfAnnotations(); i++ )
     {
       ui->comboBoxAnnotation->addItem( layer->GetAnnotation( i )->GetName() );
+      ui->comboBoxAnnotation->setItemData(i+1, layer->GetAnnotation(i)->GetFilename(), Qt::ToolTipRole);
     }
   }
   ui->comboBoxAnnotation->addItem( "Load from file..." );
+  ui->comboBoxAnnotation->setItemData(ui->comboBoxAnnotation->count()-1, "Load from file", Qt::ToolTipRole);
   ui->comboBoxAnnotation->setCurrentIndex( layer ? 1 + layer->GetActiveAnnotationIndex() : 0 );
 
   // update label controls
@@ -288,6 +320,11 @@ void PanelSurface::DoUpdateWidgets()
   {
     double* rgb = layer->GetActiveLabel()->GetColor();
     ui->colorpickerLabelColor->setCurrentColor( QColor( (int)(rgb[0]*255), (int)(rgb[1]*255), (int)(rgb[2]*255) ) );
+    ui->checkBoxLabelOutline->setChecked(layer->GetActiveLabel()->GetShowOutline());
+  }
+  if ( layer && layer->GetActiveAnnotation() )
+  {
+    ui->checkBoxAnnotationOutline->setChecked(layer->GetActiveAnnotation()->GetShowOutline());
   }
 
   int nCurvatureMap = layer ? layer->GetProperty()->GetCurvatureMap() : 0;
@@ -297,6 +334,8 @@ void PanelSurface::DoUpdateWidgets()
   ShowWidgets( m_widgetsVertex,   ui->checkBoxShowVertices->isChecked() );
   ShowWidgets( m_widgetsMesh,     layer && layer->GetProperty()->GetSurfaceRenderMode() != LayerPropertySurface::SM_Surface );
   ShowWidgets( m_widgetsLabel,    layer && layer->GetActiveLabelIndex() >= 0 );
+  ShowWidgets(m_widgetsSpline, spline && spline->IsValid() && spline->IsVisible());
+  ui->checkBoxAnnotationOutline->setVisible(layer && layer->GetActiveAnnotation());
   ui->colorpickerSurfaceColor->setEnabled( layer ); // && nCurvatureMap != LayerPropertySurface::CM_Threshold );
 
   BlockAllSignals( false );
@@ -304,8 +343,8 @@ void PanelSurface::DoUpdateWidgets()
 
 void PanelSurface::OnChangeSurfaceType( QAction* act )
 {
-  LayerSurface* layer = GetCurrentLayer<LayerSurface*>();
-  if ( layer )
+  QList<LayerSurface*> layers = GetSelectedLayers<LayerSurface*>();
+  foreach (LayerSurface* layer, layers)
   {
     layer->SetActiveSurface( act->data().toInt() );
   }
@@ -313,8 +352,8 @@ void PanelSurface::OnChangeSurfaceType( QAction* act )
 
 void PanelSurface::OnSliderOpacity( int nVal )
 {
-  LayerSurface* layer = GetCurrentLayer<LayerSurface*>();
-  if ( layer )
+  QList<LayerSurface*> layers = GetSelectedLayers<LayerSurface*>();
+  foreach (LayerSurface* layer, layers)
   {
     layer->GetProperty()->SetOpacity( nVal / 100.0 );
   }
@@ -322,8 +361,8 @@ void PanelSurface::OnSliderOpacity( int nVal )
 
 void PanelSurface::OnSliderMidPoint( int nVal )
 {
-  LayerSurface* layer = GetCurrentLayer<LayerSurface*>();
-  if ( layer )
+  QList<LayerSurface*> layers = GetSelectedLayers<LayerSurface*>();
+  foreach (LayerSurface* layer, layers)
   {
     double range[2];
     layer->GetCurvatureRange( range );
@@ -333,8 +372,8 @@ void PanelSurface::OnSliderMidPoint( int nVal )
 
 void PanelSurface::OnSliderSlope( int nVal )
 {
-  LayerSurface* layer = GetCurrentLayer<LayerSurface*>();
-  if ( layer )
+  QList<LayerSurface*> layers = GetSelectedLayers<LayerSurface*>();
+  foreach (LayerSurface* layer, layers)
   {
     double fMin = 0;
     double fMax = 100;
@@ -344,8 +383,8 @@ void PanelSurface::OnSliderSlope( int nVal )
 
 void PanelSurface::OnComboCurvature( int nSel )
 {
-  LayerSurface* layer = GetCurrentLayer<LayerSurface*>();
-  if ( layer )
+  QList<LayerSurface*> layers = GetSelectedLayers<LayerSurface*>();
+  foreach (LayerSurface* layer, layers)
   {
     if ( nSel < 3 )
     {
@@ -361,23 +400,29 @@ void PanelSurface::OnComboCurvature( int nSel )
 
 void PanelSurface::OnLineEditMidPoint( const QString& text )
 {
-  LayerSurface* layer = GetCurrentLayer<LayerSurface*>();
-  bool bOK;
-  double dval = text.toDouble( &bOK );
-  if ( layer && dval && dval != layer->GetProperty()->GetThresholdMidPoint() )
+  QList<LayerSurface*> layers = GetSelectedLayers<LayerSurface*>();
+  foreach (LayerSurface* layer, layers)
   {
-    layer->GetProperty()->SetThresholdMidPoint( dval );
+    bool bOK;
+    double dval = text.toDouble( &bOK );
+    if ( layer && dval && dval != layer->GetProperty()->GetThresholdMidPoint() )
+    {
+      layer->GetProperty()->SetThresholdMidPoint( dval );
+    }
   }
 }
 
 void PanelSurface::OnLineEditSlope( const QString& text )
 {
-  LayerSurface* layer = GetCurrentLayer<LayerSurface*>();
-  bool bOK;
-  double dval = text.toDouble( &bOK );
-  if ( layer && dval && dval != layer->GetProperty()->GetThresholdSlope() )
+  QList<LayerSurface*> layers = GetSelectedLayers<LayerSurface*>();
+  foreach (LayerSurface* layer, layers)
   {
-    layer->GetProperty()->SetThresholdSlope( dval );
+    bool bOK;
+    double dval = text.toDouble( &bOK );
+    if ( layer && dval && dval != layer->GetProperty()->GetThresholdSlope() )
+    {
+      layer->GetProperty()->SetThresholdSlope( dval );
+    }
   }
 }
 
@@ -456,6 +501,23 @@ void PanelSurface::OnComboVector( int nSel )
   }
 }
 
+void PanelSurface::OnComboSpline(int nSel)
+{
+  LayerSurface* surf = GetCurrentLayer<LayerSurface*>();
+  if ( surf )
+  {
+    if (surf->GetSpline()->IsValid() && nSel == 1)
+      surf->GetSpline()->SetVisible(true);
+    else if (nSel == 0)
+      surf->GetSpline()->SetVisible(false);
+    else
+    {
+      MainWindow::GetMainWindow()->LoadSurfaceSpline();
+    }
+    UpdateWidgets();
+  }
+}
+
 void PanelSurface::OnButtonConfigureOverlay()
 {
   m_wndConfigureOverlay->show();
@@ -463,8 +525,8 @@ void PanelSurface::OnButtonConfigureOverlay()
 
 void PanelSurface::OnEditPositionOffset()
 {
-  LayerSurface* surf = GetCurrentLayer<LayerSurface*>();
-  if ( surf )
+  QList<LayerSurface*> layers = GetSelectedLayers<LayerSurface*>();
+  foreach (LayerSurface* layer, layers)
   {
     QStringList args = ui->lineEditPositionOffset->text().trimmed().split(" ", QString::SkipEmptyParts);
     args << "n/a" << "n/a" << "n/a";
@@ -481,7 +543,7 @@ void PanelSurface::OnEditPositionOffset()
     }
     if (bOK)
     {
-      surf->GetProperty()->SetPosition( pos );
+      layer->GetProperty()->SetPosition( pos );
     }
     else
     {

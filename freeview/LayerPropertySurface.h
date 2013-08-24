@@ -9,9 +9,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/14 23:44:47 $
- *    $Revision: 1.4 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:32 $
+ *    $Revision: 1.4.2.7 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -32,6 +32,7 @@
 #include "vtkSmartPointer.h"
 #include "LayerProperty.h"
 #include <QColor>
+#include <QVariantMap>
 
 class vtkLookupTable;
 class vtkRGBAColorTransferFunction;
@@ -147,6 +148,10 @@ public:
   }
   void SetPosition( double* p );
 
+  QVariantMap GetFullSettings();
+
+  void RestoreFullSettings(const QVariantMap& map);
+
 public slots:
   void SetOpacity( double opacity );
   void SetCurvatureMap( int nMap );
@@ -178,6 +183,7 @@ Q_SIGNALS:
   void MeshRenderChanged();
   void ColorMapChanged();
   void PositionChanged();
+  void PositionChanged(double dx, double dy, double dz);
 
 private:
   void SetColorMapChanged();

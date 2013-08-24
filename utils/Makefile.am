@@ -102,6 +102,7 @@ libutils_main_SOURCES=\
 	fmriutils.c \
 	fsenv.c \
 	fsglm.c \
+	fsinit.c \
 	fsPrintHelp.c \
 	gcaboundary.c \
 	gca.c \
@@ -149,6 +150,7 @@ libutils_main_SOURCES=\
 	mosaic.c \
 	mri2.c \
 	mri.c \
+	mriBSpline.c \
 	mriclass.c \
 	mri_conform.c \
 	mricurv.c \
@@ -238,7 +240,8 @@ libutils_main_SOURCES=\
 	gcamorphtestutils.cpp\
 	gcautils.cpp\
 	gcalinearnode.cpp\
-	gcalinearprior.cpp
+	gcalinearprior.cpp\
+	cmat.c
 
 libutils_cephes_SOURCES=\
 	$(srcdir)/$(cephes_dir)/bdtr.c \
@@ -310,7 +313,7 @@ libutils_a_SOURCES=\
 # BUILDCUDA is defined if configure.in finds CUDA
 if BUILDCUDA
 # rules for building cuda files
-NVCCINCLUDES = -I$(top_srcdir)/include $(MNI_CFLAGS)
+NVCCINCLUDES = $(CUDA_CFLAGS) -I$(top_srcdir)/include $(MNI_CFLAGS)
 
 if HAVE_FERMI_GPU
 # Fermi flags:

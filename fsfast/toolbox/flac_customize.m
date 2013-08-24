@@ -16,9 +16,9 @@ function flacnew = flac_customize(flac)
 %
 % Original Author: Doug Greve
 % CVS Revision Info:
-%    $Author: nicks $
-%    $Date: 2011/03/02 00:04:05 $
-%    $Revision: 1.54 $
+%    $Author: greve $
+%    $Date: 2012/11/19 22:33:32 $
+%    $Revision: 1.54.2.1 $
 %
 % Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
 %
@@ -95,7 +95,7 @@ flacnew.ntp = mri.nframes;
 flacnew.funcfspec = fstem;
 
 % MC parameters
-if(strcmp(flac.RawSpace,'native'))
+if(flac.PerSession)
   fname = sprintf('%s/fmc.mcdat',runpath);
 else
   fname = sprintf('%s/fmcpr.mcdat',runpath);
@@ -381,14 +381,17 @@ flacnew.resfspec = sprintf('%s/%s/%s/%s/res',flacnew.sess,...
 			    flacnew.fsd,flacnew.name,...
 			    flacnew.runlist(flacnew.nthrun,:));
 
-if(strcmp(flac.RawSpace,'native'))
-  flacnew.maskfspec = sprintf('%s/%s/masks/%s',flacnew.sess,...
-		      flacnew.fsd,flacnew.mask);
+maskstem = flac_funcstem(flac,1);
+if(isempty(maskstem))
+  flacnew.maskfspec = ''; % mask=nomask
 else
-  maskstem = flac_funcstem(flac,1);
-  flacnew.maskfspec = sprintf('%s/masks/%s',runpath,maskstem);
+  if(flac.PerSession)
+    flacnew.maskfspec = sprintf('%s/%s/masks/%s',flacnew.sess,...
+				flacnew.fsd,maskstem);
+  else
+    flacnew.maskfspec = sprintf('%s/masks/%s',runpath,maskstem);
+  end
 end
-
 flacnew.acfsegfspec = sprintf('%s/%s/masks/%s',flacnew.sess,...
 		      flacnew.fsd,flacnew.acfsegstem);
 

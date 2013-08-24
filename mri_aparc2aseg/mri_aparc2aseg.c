@@ -20,9 +20,9 @@
 /*
  * Original Author: Doug Greve
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/02 00:04:13 $
- *    $Revision: 1.41 $
+ *    $Author: greve $
+ *    $Date: 2012/11/15 16:34:37 $
+ *    $Revision: 1.41.2.1 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -51,6 +51,7 @@
 #include "annotation.h"
 #include "version.h"
 #include "mrisegment.h"
+#include "cma.h"
 
 static int  parse_commandline(int argc, char **argv);
 static void check_options(void);
@@ -74,7 +75,7 @@ int CCSegment(MRI *seg, int segid, int segidunknown);
 int main(int argc, char *argv[]) ;
 
 static char vcid[] =
-  "$Id: mri_aparc2aseg.c,v 1.41 2011/03/02 00:04:13 nicks Exp $";
+  "$Id: mri_aparc2aseg.c,v 1.41.2.1 2012/11/15 16:34:37 greve Exp $";
 char *Progname = NULL;
 static char *SUBJECTS_DIR = NULL;
 static char *subject = NULL;
@@ -104,6 +105,7 @@ static int RipUnknown = 0;
 static char tmpstr[2000];
 static char annotfile[1000];
 static char *annotname = "aparc";
+static char *asegname = "aseg";
 static int baseoffset = 0;
 static float hashres = 16;
 
@@ -124,7 +126,7 @@ int main(int argc, char **argv)
   float dmin=0.0, lhRibbonVal=0, rhRibbonVal=0;
 
   /* rkt: check for and handle version tag */
-  nargs = handle_version_option (argc, argv, vcid, "$Name: stable5 $");
+  nargs = handle_version_option (argc, argv, vcid, "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
   {
     exit (0);
@@ -328,10 +330,10 @@ int main(int argc, char **argv)
   rhpial_hash = MHTfillVertexTableRes(rhpial, NULL,CURRENT_VERTICES,hashres);
 
   /* ------ Load ASeg ------ */
-  sprintf(tmpstr,"%s/%s/mri/aseg.mgz",SUBJECTS_DIR,subject);
+  sprintf(tmpstr,"%s/%s/mri/%s.mgz",SUBJECTS_DIR,subject,asegname);
   if (!fio_FileExistsReadable(tmpstr))
   {
-    sprintf(tmpstr,"%s/%s/mri/aseg.mgh",SUBJECTS_DIR,subject);
+    sprintf(tmpstr,"%s/%s/mri/%s.mgh",SUBJECTS_DIR,subject,asegname);
     if (!fio_FileExistsReadable(tmpstr))
     {
       sprintf(tmpstr,"%s/%s/mri/aseg/COR-.info",SUBJECTS_DIR,subject);
@@ -640,6 +642,23 @@ int main(int argc, char **argv)
           annotid = 0;
         }
 
+	/* If the cortical label is "unkown", it is difficult to
+	   determine what to put here. If the aseg says it is WM, then
+	   that is kept. If the aseg says it is GM, then it is given
+	   "ctx-?h-unknown". These voxels can show up in funny places
+	   (eg, between hippo and amyg), so this is really just a
+	   hack. The real fix should be the surface creation or the
+	   aseg. */
+	if(annotid == 0 && !LabelWM){
+	  if(asegid == Left_Cerebral_Cortex)  MRIsetVoxVal(ASeg,c,r,s,0,1000);
+	  else if(asegid == Right_Cerebral_Cortex) MRIsetVoxVal(ASeg,c,r,s,0,2000);
+	  else MRIsetVoxVal(ASeg,c,r,s,0,asegid);
+	  continue;
+	  //{if(hemi == 1) MRIsetVoxVal(ASeg,c,r,s,0,Left_Cerebral_White_Matter);
+	  //if(hemi == 2) MRIsetVoxVal(ASeg,c,r,s,0,Right_Cerebral_White_Matter);
+	  //continue;
+	}
+
         // why was this here in the first place?
         /*
                if (annotid == 0 &&
@@ -681,7 +700,7 @@ int main(int argc, char **argv)
         }
 
         // This is a hack for getting the right cortical seg with --rip-unknown
-        // The aparc+aseg should be passed as CtxSeg.
+        // The aparc+aseg should be passed as CtxSeg. Used with WMParc
         if (IsCortex && CtxSeg)
         {
           segval = MRIgetVoxVal(CtxSeg,c,r,s,0);
@@ -897,6 +916,15 @@ static int parse_commandline(int argc, char **argv)
     {
       annotname = "aparc.a2009s";
       baseoffset = 10100;
+    }
+   else if (!strcmp(option, "--aseg"))
+    {
+      if (nargc < 1)
+      {
+        argnerr(option,1);
+      }
+      asegname = pargv[0];
+      nargsused = 1;
     }
     else if (!strcmp(option, "--annot"))
     {

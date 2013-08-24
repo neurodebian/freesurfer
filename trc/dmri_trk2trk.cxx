@@ -1,5 +1,5 @@
 /**
- * @file  dmri_trk2trk.c
+ * @file  dmri_trk2trk.cxx
  * @brief Apply affine and non-linear warp to streamlines in .trk file
  *
  * Apply affine and non-linear warp to streamlines in .trk file
@@ -7,9 +7,9 @@
 /*
  * Original Author: Anastasia Yendiki
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/05/09 19:36:47 $
- *    $Revision: 1.8.2.1 $
+ *    $Author: ayendiki $
+ *    $Date: 2013/02/16 20:58:44 $
+ *    $Revision: 1.8.2.3 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) ;
 static char vcid[] = "";
 const char *Progname = "dmri_trk2trk";
 
-int doFill = 0, nin = 0, nout = 0, nvol = 0;
+int doInvNonlin = 0, doFill = 0, nin = 0, nout = 0, nvol = 0;
 char *inDir = NULL, *inFile[100],
      *outDir = NULL, *outFile[100], *outVolFile[100],
      *inRefFile = NULL, *outRefFile = NULL,
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
 #endif
 
   /* rkt: check for and handle version tag */
-  nargs = handle_version_option (argc, argv, vcid, "$Name: stable5 $");
+  nargs = handle_version_option (argc, argv, vcid, "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1) exit (0);
   argc -= nargs;
   cmdline = argv2cmdline(argc,argv);
@@ -133,6 +133,7 @@ int main(int argc, char **argv) {
       affinereg.ReadXfm(affineXfmFile, inref, 0);
     nonlinreg.ReadXfm(nonlinXfmFile, outref);
   }
+  else
 #endif
   if (affineXfmFile)
     affinereg.ReadXfm(affineXfmFile, inref, outref);
@@ -229,8 +230,12 @@ int main(int argc, char **argv) {
 
 #ifndef NO_CVS_UP_IN_HERE
         // Apply nonlinear transform
-        if (!nonlinreg.IsEmpty())
-          nonlinreg.ApplyXfm(point, point.begin());
+        if (!nonlinreg.IsEmpty()) {
+          if (doInvNonlin)
+            nonlinreg.ApplyXfmInv(point, point.begin());
+          else
+            nonlinreg.ApplyXfm(point, point.begin());
+        }
 #endif
 
         copy(point.begin(), point.end(), iraw-3);
@@ -353,7 +358,7 @@ static int parse_commandline(int argc, char **argv) {
     else if (!strcmp(option, "--in")) {
       if (nargc < 1) CMDargNErr(option,1);
       nargsused = 0;
-      while (strncmp(pargv[nargsused], "--", 2)) {
+      while (nargsused < nargc && strncmp(pargv[nargsused], "--", 2)) {
         inFile[nin] = pargv[nargsused];
         nargsused++;
         nin++;
@@ -367,7 +372,7 @@ static int parse_commandline(int argc, char **argv) {
     else if (!strcmp(option, "--out")) {
       if (nargc < 1) CMDargNErr(option,1);
       nargsused = 0;
-      while (strncmp(pargv[nargsused], "--", 2)) {
+      while (nargsused < nargc && strncmp(pargv[nargsused], "--", 2)) {
         outFile[nout] = pargv[nargsused];
         nargsused++;
         nout++;
@@ -376,7 +381,7 @@ static int parse_commandline(int argc, char **argv) {
     else if (!strcmp(option, "--outvol")) {
       if (nargc < 1) CMDargNErr(option,1);
       nargsused = 0;
-      while (strncmp(pargv[nargsused], "--", 2)) {
+      while (nargsused < nargc && strncmp(pargv[nargsused], "--", 2)) {
         outVolFile[nvol] = pargv[nargsused];
         nargsused++;
         nvol++;
@@ -402,6 +407,8 @@ static int parse_commandline(int argc, char **argv) {
       nonlinXfmFile = fio_fullpath(pargv[0]);
       nargsused = 1;
     }
+    else if (!strcasecmp(option, "--invnl"))
+      doInvNonlin = 1;
     else if (!strcasecmp(option, "--fill"))
       doFill = 1;
     else {
@@ -442,7 +449,9 @@ static void print_usage(void)
   printf("   --reg <file>:\n");
   printf("     Affine registration (.mat), applied first\n");
   printf("   --regnl <file>:\n");
-  printf("     Nonlinear registration (.tm3d), applied second\n");
+  printf("     Nonlinear registration (.m3z), applied second\n");
+  printf("   --invnl:\n");
+  printf("     Apply inverse of nonlinear warp (with --regnl, default: no)\n");
   printf("   --fill:\n");
   printf("     Fill gaps b/w mapped points by linear interpolation\n");
   printf("     (Default: don't fill)\n");
@@ -540,8 +549,11 @@ static void dump_options(FILE *fp) {
   fprintf(fp, "Output reference: %s\n", outRefFile);
   if (affineXfmFile)
     fprintf(fp, "Affine registration: %s\n", affineXfmFile);
-  if (nonlinXfmFile)
+  if (nonlinXfmFile) {
     fprintf(fp, "Nonlinear registration: %s\n", nonlinXfmFile);
+    fprintf(fp, "Invert nonlinear morph: %d\n", doInvNonlin);
+  }
+  fprintf(fp, "Fill gaps between points: %d\n", doFill);
 
   return;
 }

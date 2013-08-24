@@ -1,43 +1,10 @@
-/**
- * @file  kvlAtlasMeshBuilder.cxx
- * @brief REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
- *
- * REPLACE_WITH_LONG_DESCRIPTION_OR_REFERENCE
- */
-/*
- * Original Author: Koen Van Leemput
- * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/09/28 21:04:04 $
- *    $Revision: 1.1.2.4 $
- *
- * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
- *
- * Terms and conditions for use, reproduction, distribution and contribution
- * are found in the 'FreeSurfer Software License Agreement' contained
- * in the file 'LICENSE' found in the FreeSurfer distribution, and here:
- *
- * https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
- *
- * Reporting: freesurfer@nmr.mgh.harvard.edu
- *
- */
 #include "kvlAtlasMeshBuilder.h"
 
 #include "kvlAtlasMeshCollectionModelLikelihoodCalculator.h"
 #include "kvlAtlasMeshCollectionPositionCostCalculator2.h"
-#include "itkPowellOptimizer.h"
+#include "kvlParameterOrderPowellOptimizer.h"
 #include "kvlAtlasMeshCollectionReferencePositionCost.h"
 #include "kvlAtlasMeshCollectionFastReferencePositionCost.h"
-#if 0
-#include "kvlAtlasMeshCollectionKCost.h"
-#endif
-
-#if 1
-// Remove me!!!
-#include <fstream>
-#include "kvlAtlasMeshCollectionValidator.h"
-#endif
 
 
 
@@ -2394,6 +2361,29 @@ AtlasMeshBuilder
 //
 //
 //
+  void
+  AtlasMeshBuilder
+  ::GetCurrentDataAndAlphasCost( float& currentDataCost, float& currentAlphasCost ) const
+  {
+
+    if ( !m_Current )
+    {
+      currentDataCost = 0.0f;
+      currentAlphasCost = 0.0f;
+
+      return;
+    }
+
+    this->GetDataCostAndAlphasCost( m_Current, currentDataCost, currentAlphasCost );
+
+
+  }
+
+
+
+//
+//
+//
   float
   AtlasMeshBuilder
   ::GetCurrentPositionCost() const
@@ -2510,7 +2500,7 @@ AtlasMeshBuilder
     if ( canMoveX || canMoveY || canMoveZ )
     {
       // Decide what to optimize
-      itk::PowellOptimizer::ParameterOrderType  parameterOrder( 3 );
+      ParameterOrderPowellOptimizer::ParameterOrderType  parameterOrder( 3 );
       int  cumulativeSum = 0;
       if ( canMoveX )
       {
@@ -2547,16 +2537,17 @@ AtlasMeshBuilder
 
       // Optimize the reference position
       //std::cout << "Optimizing the position of the unified point " << unifiedPointId << std::endl;
-      itk::PowellOptimizer::Pointer  optimizer = itk::PowellOptimizer::New();
+      ParameterOrderPowellOptimizer::Pointer  optimizer = ParameterOrderPowellOptimizer::New();
       optimizer->SetCostFunction( costFunction );
       optimizer->SetInitialPosition( initialPosition );
-      optimizer->SetAbsolutePrecisionBrent( m_PowellAbsolutePrecision );
-      optimizer->SetAbsolutePrecision( m_PowellAbsolutePrecision );
+      //optimizer->SetAbsolutePrecisionBrent( m_PowellAbsolutePrecision );
+      optimizer->SetStepTolerance( m_PowellAbsolutePrecision );
+      //optimizer->SetAbsolutePrecision( m_PowellAbsolutePrecision );
       optimizer->SetParameterOrder( parameterOrder );
       optimizer->StartOptimization();
 
       // Retrieve the optimal reference position
-      if ( optimizer->GetCurrentValue() != itk::NumericTraits< float >::max() )
+      if ( optimizer->GetCurrentCost() != itk::NumericTraits< float >::max() )
       {
         optimalPosition = optimizer->GetCurrentPosition();
         //std::cout << "Changed reference position for the unified point " << unifiedPointId
@@ -2697,11 +2688,47 @@ AtlasMeshBuilder
     const AtlasMesh::PointIdentifier  unifiedPointId =
       *( child->GetCells()->ElementAt( unifiedVertexId )->PointIdsBegin() );
 
+
     // Set up the cost calculator
     kvl::AtlasMeshCollectionFastReferencePositionCost::ParametersType  initialPosition( 3 );
     initialPosition[ 0 ] = child->GetReferencePosition()->ElementAt( unifiedPointId )[ 0 ];
     initialPosition[ 1 ] = child->GetReferencePosition()->ElementAt( unifiedPointId )[ 1 ];
     initialPosition[ 2 ] = child->GetReferencePosition()->ElementAt( unifiedPointId )[ 2 ];
+
+
+
+#if 1
+
+
+    // Decide whether or not we're gonna subdivide this hexahedron
+    bool  optimizeUnifiedPointReferencePosition = false;
+
+    // Look up the label with the highest alpha in the first point of the miniCollection
+    AtlasMesh::PointDataContainer::ConstIterator  pointParamIt = miniCollection->GetPointParameters()->Begin();
+    int  maximumAlphaLabelNumber = 0;
+    float  maximumAlpha = itk::NumericTraits< float >::min();
+    for ( unsigned int classNumber = 0; classNumber < pointParamIt.Value().m_Alphas.Size(); classNumber++ )
+    {
+      if ( pointParamIt.Value().m_Alphas[ classNumber ] > maximumAlpha )
+      {
+        maximumAlpha = pointParamIt.Value().m_Alphas[ classNumber ];
+        maximumAlphaLabelNumber = classNumber;
+      }
+    }
+
+    // Look at the alphas in each of the points of miniCollection
+    const float threshold = 0.90f;
+    for ( ; pointParamIt != miniCollection->GetPointParameters()->End(); ++pointParamIt )
+    {
+      if ( pointParamIt.Value().m_Alphas[ maximumAlphaLabelNumber ] < threshold )
+      {
+        optimizeUnifiedPointReferencePosition = true;
+      }
+    }
+
+#endif
+
+    // Set up cost function
     kvl::AtlasMeshCollectionFastReferencePositionCost::Pointer  costFunction =
       kvl::AtlasMeshCollectionFastReferencePositionCost::New();
     costFunction->SetLabelImages( m_LabelImages );
@@ -2710,74 +2737,90 @@ AtlasMeshBuilder
     kvl::AtlasMeshCollectionFastReferencePositionCost::ParametersType  optimalPosition = initialPosition;
 
 
-    // Optimize the position of the unified vertex in the reference position
-    const bool canMoveX = child->GetPointParameters()->ElementAt( unifiedPointId ).m_CanMoveX;
-    const bool canMoveY = child->GetPointParameters()->ElementAt( unifiedPointId ).m_CanMoveY;
-    const bool canMoveZ = child->GetPointParameters()->ElementAt( unifiedPointId ).m_CanMoveZ;
-    if ( canMoveX || canMoveY || canMoveZ )
+#if 1
+
+    if ( !optimizeUnifiedPointReferencePosition )
     {
-      // Decide what to optimize
-      itk::PowellOptimizer::ParameterOrderType  parameterOrder( 3 );
-      int  cumulativeSum = 0;
-      if ( canMoveX )
+      std::cout << "NOT optimizing unified reference position" << std::endl;
+    }
+    else
+    {
+
+#endif
+
+
+      // Optimize the position of the unified vertex in the reference position
+      const bool canMoveX = child->GetPointParameters()->ElementAt( unifiedPointId ).m_CanMoveX;
+      const bool canMoveY = child->GetPointParameters()->ElementAt( unifiedPointId ).m_CanMoveY;
+      const bool canMoveZ = child->GetPointParameters()->ElementAt( unifiedPointId ).m_CanMoveZ;
+      if ( canMoveX || canMoveY || canMoveZ )
       {
-        parameterOrder[ 0 ] = 1;
-        cumulativeSum++;
-      }
-      else
-      {
-        parameterOrder[ 0 ] = 0;
-      }
+        // Decide what to optimize
+        ParameterOrderPowellOptimizer::ParameterOrderType  parameterOrder( 3 );
+        int  cumulativeSum = 0;
+        if ( canMoveX )
+        {
+          parameterOrder[ 0 ] = 1;
+          cumulativeSum++;
+        }
+        else
+        {
+          parameterOrder[ 0 ] = 0;
+        }
 
-      if ( canMoveY )
-      {
-        parameterOrder[ 1 ] = cumulativeSum + 1;
-        cumulativeSum++;
-      }
-      else
-      {
-        parameterOrder[ 1 ] = 0;
-      }
+        if ( canMoveY )
+        {
+          parameterOrder[ 1 ] = cumulativeSum + 1;
+          cumulativeSum++;
+        }
+        else
+        {
+          parameterOrder[ 1 ] = 0;
+        }
 
-      if ( canMoveZ )
-      {
-        parameterOrder[ 2 ] = cumulativeSum + 1;
-      }
-      else
-      {
-        parameterOrder[ 2 ] = 0;
-      }
+        if ( canMoveZ )
+        {
+          parameterOrder[ 2 ] = cumulativeSum + 1;
+        }
+        else
+        {
+          parameterOrder[ 2 ] = 0;
+        }
 
-      //std::cout << "parameterOrder: " << parameterOrder << std::endl;
-
-
-
-      // Optimize the reference position
-      //std::cout << "Optimizing the position of the unified point " << unifiedPointId << std::endl;
-      itk::PowellOptimizer::Pointer  optimizer = itk::PowellOptimizer::New();
-      optimizer->SetCostFunction( costFunction );
-      optimizer->SetInitialPosition( initialPosition );
-      optimizer->SetAbsolutePrecisionBrent( m_PowellAbsolutePrecision );
-      optimizer->SetAbsolutePrecision( m_PowellAbsolutePrecision );
-      optimizer->SetParameterOrder( parameterOrder );
-      optimizer->StartOptimization();
-
-      // Retrieve the optimal reference position
-      if ( optimizer->GetCurrentValue() != itk::NumericTraits< float >::max() )
-      {
-        optimalPosition = optimizer->GetCurrentPosition();
-        //std::cout << "Changed reference position for the unified point " << unifiedPointId
-        //          << " from " << initialPosition << " to " << optimalPosition << std::endl;
-      }
-      else
-      {
-        return 0;
-      }
+        //std::cout << "parameterOrder: " << parameterOrder << std::endl;
 
 
 
-    }  // End test if point can move
+        // Optimize the reference position
+        //std::cout << "Optimizing the position of the unified point " << unifiedPointId << std::endl;
+        ParameterOrderPowellOptimizer::Pointer  optimizer = ParameterOrderPowellOptimizer::New();
+        optimizer->SetCostFunction( costFunction );
+        optimizer->SetInitialPosition( initialPosition );
+        // optimizer->SetAbsolutePrecisionBrent( m_PowellAbsolutePrecision );
+        optimizer->SetStepTolerance( m_PowellAbsolutePrecision );
+        // optimizer->SetAbsolutePrecision( m_PowellAbsolutePrecision );
+        optimizer->SetParameterOrder( parameterOrder );
+        optimizer->StartOptimization();
 
+        // Retrieve the optimal reference position
+        if ( optimizer->GetCurrentCost() != itk::NumericTraits< float >::max() )
+        {
+          optimalPosition = optimizer->GetCurrentPosition();
+          //std::cout << "Changed reference position for the unified point " << unifiedPointId
+          //          << " from " << initialPosition << " to " << optimalPosition << std::endl;
+        }
+        else
+        {
+          return 0;
+        }
+
+
+
+      }  // End test if point can move
+
+#if 1
+    } // End test if we are going to optimize position
+#endif
 
 
     // Get the cost at the optimal position
@@ -3821,7 +3864,7 @@ AtlasMeshBuilder
     if ( optimize )
     {
       // Decide what to optimize
-      itk::PowellOptimizer::ParameterOrderType  parameterOrder( 3 );
+      ParameterOrderPowellOptimizer::ParameterOrderType  parameterOrder( 3 );
       int  cumulativeSum = 0;
       if ( canMoveX )
       {
@@ -3857,16 +3900,17 @@ AtlasMeshBuilder
 
       // Optimize the reference position
       std::cout << "Optimizing the position of the unified point " << pointId << std::endl;
-      itk::PowellOptimizer::Pointer  optimizer = itk::PowellOptimizer::New();
+      ParameterOrderPowellOptimizer::Pointer  optimizer = ParameterOrderPowellOptimizer::New();
       optimizer->SetCostFunction( costFunction );
       optimizer->SetInitialPosition( initialPosition );
-      optimizer->SetAbsolutePrecisionBrent( m_PowellAbsolutePrecision );
-      optimizer->SetAbsolutePrecision( m_PowellAbsolutePrecision );
+      // optimizer->SetAbsolutePrecisionBrent( m_PowellAbsolutePrecision );
+      optimizer->SetStepTolerance( m_PowellAbsolutePrecision );
+      // optimizer->SetAbsolutePrecision( m_PowellAbsolutePrecision );
       optimizer->SetParameterOrder( parameterOrder );
       optimizer->StartOptimization();
 
       // Retrieve the optimal reference position
-      if ( optimizer->GetCurrentValue() != itk::NumericTraits< float >::max() )
+      if ( optimizer->GetCurrentCost() != itk::NumericTraits< float >::max() )
       {
         optimalPosition = optimizer->GetCurrentPosition();
         std::cout << "                               Changed reference position for the point " << pointId
@@ -3982,7 +4026,7 @@ AtlasMeshBuilder
     if ( optimize )
     {
       // Decide what to optimize
-      itk::PowellOptimizer::ParameterOrderType  parameterOrder( 3 );
+      ParameterOrderPowellOptimizer::ParameterOrderType  parameterOrder( 3 );
       int  cumulativeSum = 0;
       if ( canMoveX )
       {
@@ -4018,16 +4062,17 @@ AtlasMeshBuilder
 
       // Optimize the reference position
       std::cout << "Optimizing the position of the unified point " << pointId << std::endl;
-      itk::PowellOptimizer::Pointer  optimizer = itk::PowellOptimizer::New();
+      ParameterOrderPowellOptimizer::Pointer  optimizer = ParameterOrderPowellOptimizer::New();
       optimizer->SetCostFunction( costFunction );
       optimizer->SetInitialPosition( initialPosition );
-      optimizer->SetAbsolutePrecisionBrent( m_PowellAbsolutePrecision );
-      optimizer->SetAbsolutePrecision( m_PowellAbsolutePrecision );
+      // optimizer->SetAbsolutePrecisionBrent( m_PowellAbsolutePrecision );
+      optimizer->SetStepTolerance( m_PowellAbsolutePrecision );
+      // optimizer->SetAbsolutePrecision( m_PowellAbsolutePrecision );
       optimizer->SetParameterOrder( parameterOrder );
       optimizer->StartOptimization();
 
       // Retrieve the optimal reference position
-      if ( optimizer->GetCurrentValue() != itk::NumericTraits< float >::max() )
+      if ( optimizer->GetCurrentCost() != itk::NumericTraits< float >::max() )
       {
         optimalPosition = optimizer->GetCurrentPosition();
         std::cout << "                               Changed reference position for the point " << pointId
@@ -4179,6 +4224,7 @@ AtlasMeshBuilder
     calculator->SetLabelImages( m_LabelImages );
 
     calculator->GetDataCostAndAlphasCost( dataCost, alphasCost );
+
   }
 
 

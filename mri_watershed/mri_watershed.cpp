@@ -839,7 +839,7 @@ int main(int argc, char *argv[])
   make_cmd_version_string
   (argc, argv,
    "$Id: mri_watershed.cpp,v 1.96.2.1 2011/11/08 22:18:44 nicks Exp $",
-   "$Name: stable5 $",
+   "$Name: release_5_3_0 $",
    cmdline);
 
   Progname=argv[0];
@@ -852,7 +852,7 @@ int main(int argc, char *argv[])
   nargs = handle_version_option
           (argc, argv,
            "$Id: mri_watershed.cpp,v 1.96.2.1 2011/11/08 22:18:44 nicks Exp $",
-           "$Name: stable5 $");
+           "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
   {
     exit (0);

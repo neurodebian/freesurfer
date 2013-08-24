@@ -1,14 +1,14 @@
 /**
  * @file  RenderView.h
- * @brief REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+ * @brief View class for rendering 2D and 3D actors
  *
  */
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/14 23:44:48 $
- *    $Revision: 1.30 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:37 $
+ *    $Revision: 1.30.2.6 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -26,6 +26,7 @@
 
 #include "GenericRenderView.h"
 #include "vtkSmartPointer.h"
+#include <QPointer>
 
 class Interactor;
 class QEvent;
@@ -35,6 +36,8 @@ class QWheelEvent;
 class QFocusEvent;
 class vtkActor2D;
 class vtkScalarBarActor;
+class vtkProp;
+class Layer;
 
 class RenderView : public GenericRenderView
 {
@@ -44,8 +47,10 @@ public:
 
   enum InteractionMode { IM_Navigate = 0, IM_Measure, IM_VoxelEdit, IM_ROIEdit, IM_PointSetEdit, IM_VolumeCrop };
 
-  void SetWorldCoordinateInfo( const double* origin, const double* size );
+  void SetWorldCoordinateInfo( const double* origin, const double* size, bool bResetView = true );
   virtual void UpdateViewByWorldCoordinate() {}
+
+  int PickCell( vtkProp* prop, int posX, int posY, double* pos_out = NULL );
 
   int GetInteractionMode();
   virtual void SetInteractionMode( int nMode );
@@ -78,6 +83,9 @@ public:
 
   virtual void TriggerContextMenu( QMouseEvent* event ) {}
 
+signals:
+  void ViewChanged();
+
 public slots:
   void RequestRedraw( bool bForce = false );
   void MoveUp();
@@ -88,6 +96,9 @@ public slots:
   void Reset();
   void SetAction( int nAction );
   void ShowScalarBar( bool bShow );
+  void SetScalarBarLayer( Layer* layer );
+  void SetScalarBarLayer( QAction* act );
+  void CenterAtWorldPosition( double* pos );
 
 protected:
   virtual void paintEvent(QPaintEvent *event);
@@ -109,6 +120,7 @@ protected:
 
   vtkSmartPointer<vtkActor2D>   m_actorFocusFrame;
   vtkSmartPointer<vtkScalarBarActor>  m_actorScalarBar;
+  QPointer<Layer>        m_layerScalarBar;
 };
 
 #endif // RENDERVIEW_H

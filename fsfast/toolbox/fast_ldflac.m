@@ -13,9 +13,9 @@ function flac = fast_ldflac(flacfile,flac)
 %
 % Original Author: Doug Greve
 % CVS Revision Info:
-%    $Author: nicks $
-%    $Date: 2011/03/02 00:04:04 $
-%    $Revision: 1.55 $
+%    $Author: greve $
+%    $Date: 2012/11/26 23:07:24 $
+%    $Revision: 1.55.2.2 $
 %
 % Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
 %
@@ -83,6 +83,7 @@ if(isempty(flac))
   flac.RawSpaceType = '';
   flac.RawSpaceRes = [];
   flac.RawSpace = '';
+  flac.PerSession = []; % Binary, 1 if persession
   flac.ExpKey = '';
   % subject surface analysis is being performed on. Can be 'self'.
   flac.subject = ''; 
@@ -93,6 +94,7 @@ if(isempty(flac))
   flac.mc = []; % For motion correction regressors
   flac.globalmean = [];
   flac.IsRetinotopy = 0;
+  flac.IsABBlocked = 0;
   flac.stimtype = ''; % for retinotopy
   flac.direction = ''; % for retinotopy
   inherit = 0;
@@ -115,6 +117,7 @@ if(isempty(flac))
   ana.ncycles      = [];
   ana.nregressors  = [];
   ana.ConditionNames = '';
+  ana.info = '';
   flac.ana = ana;
 else
   flac.inheritlevel = flac.inheritlevel + 1;

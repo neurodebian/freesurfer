@@ -14,9 +14,9 @@
 /*
  * Original Author: Bruce Fischl
  * CVS Revision Info:
- *    $Author: lzollei $
- *    $Date: 2011/03/05 22:04:19 $
- *    $Revision: 1.101 $
+ *    $Author: nicks $
+ *    $Date: 2012/08/28 22:11:20 $
+ *    $Revision: 1.101.2.1 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -36,13 +36,15 @@
 #include "mri.h"
 #include "gca.h"
 #include "transform.h"
+#include "label.h"
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-#define GCAM_UNLABELED   0
-#define GCAM_LABELED     1
+#define GCAM_UNLABELED                   0x0000
+#define GCAM_LABELED                     0x0001
+#define GCAM_PRESERVE_METRIC_PROPERTIES  0x0002
 
 #define EXP_K            20.0
 #define GCAM_RAS         1
@@ -166,6 +168,7 @@ typedef struct
   double l_lsmoothness ;
   double l_distance ;
   double l_expansion ;
+  double l_elastic ;
   double l_label ;
   double l_binary ;
   double l_map ;
@@ -219,8 +222,18 @@ typedef struct
   MRI    *mri_diag2 ;
   double last_sse;
   double min_sigma;
-}
-GCA_MORPH_PARMS, GMP ;
+  double lame_mu ;
+  double lame_lambda ;
+/*
+  E = Young's Modulus
+  v = Poisson Ratio
+  mu = G = shear modulus
+lambda = E v / ((1+v) (1-2v))
+mu = G = E / (2 ( 1+v))
+
+ */
+  MRI *mri_twm ;     // for manually specified temporal lobe white matter 
+} GCA_MORPH_PARMS, GMP ;
 
 
 typedef struct
@@ -242,16 +255,19 @@ typedef struct
 }
 MRI_SUBCORTCONN ;
 
+int GCAMdilateUseLikelihood(GCA_MORPH *gcam, int ndilations) ;
+int GCAMcomputeVentricleExpansionGradient(GCA_MORPH *gcam) ;
 GCA_MORPH *GCAMupsample2(GCA_MORPH *gcam) ;
 int       GCAMcopy(GCA_MORPH *gcamsrc, GCA_MORPH *gcamdst) ;
-  //GCA_MORPH *GCAMconcatenate(GCA_MORPH *gcam1, GCA_MORPH *gcam2, 
-  //			     GCA_MORPH *gcamcomp) ;
-  int GCAMconcatenate(GCA_MORPH *gcam1, GCA_MORPH *gcam2);
+int GCAMconcatenate(GCA_MORPH *gcam1, GCA_MORPH *gcam2, GCA_MORPH *gcam_comp);
+GCA_MORPH *GCAMdownsample2(GCA_MORPH *gcam) ;
 GCA_MORPH *GCAMalloc( const int width, const int height, const int depth );
 
 int       GCAMinit(GCA_MORPH *gcam, MRI *mri_image, GCA *gca, 
                    TRANSFORM *transform, int relabel) ;
 int       GCAMinitLookupTables(GCA_MORPH *gcam) ;
+double    GCAMelasticEnergy(GCA_MORPH *gcam) ;
+MRI       *GCAMestimateLameConstants(GCA_MORPH *gcam) ;
 int       GCAMwrite( const GCA_MORPH *gcam, const char *fname );
 int       GCAMwriteInverse(const char *gcamfname, GCA_MORPH *gcam);
 int       GCAMwriteInverseNonTal(const char *gcamfname, GCA_MORPH *gcam);
@@ -263,6 +279,7 @@ int       GCAMfreeContents(GCA_MORPH *gcam) ;
 
 MRI       *GCAMmorphFromAtlas(MRI *mri_src, GCA_MORPH *gcam, MRI *mri_dst, int sample_type) ;
 int GCAMmorphPlistFromAtlas(int N, float *points_in, GCA_MORPH *gcam, float *points_out) ;
+int GCAMmorphPlistToSource(int N, float *points_in, GCA_MORPH *gcam, float *points_out);
   //int       GCAMmorphPointlistFromAtlas(float *points_in, int N, GCA_MORPH *gcam, float *points_out, float thickness) ;
 MRI_SUBCORTCONN *
 SubcortConn_alloc(int nLHLines, int nLHConnections, int nRHLines, int nRHConnections);
@@ -272,8 +289,8 @@ MRI       *GCAMmorphToAtlasWithDensityCorrection(MRI *mri_src,
                                                  MRI *mri_morphed, int frame) ;
 MRI       *GCAMmorphToAtlas(MRI *mri_src, 
                             GCA_MORPH *gcam, MRI *mri_dst, int frame, int sample_type) ;
-MRI       *GCAMmorphToAtlasLZ(MRI *mri_src, 
-			      GCA_MORPH *gcam, MRI *mri_dst, int frame, int sample_type) ; //, MRI *template) ;
+MRI       *GCAMmorphToAtlasToMNI(MRI *mri_src, GCA_MORPH *gcam, GCA_MORPH *MNIgcam, 
+			    MRI *mri_dst, int frame, int sample_type) ;
 MRI       *GCAMmorphToAtlasType(MRI *mri_src, 
                                 GCA_MORPH *gcam, 
                                 MRI *mri_dst, int frame, int interp_type) ;
@@ -281,6 +298,8 @@ MRI       *GCAMmorphDTIToAtlasType(MRI *mri_src,
 					  GCA_MORPH *gcam, 
 					  MRI *mri_dst, int interp_type, int reorient) ;
 int       GCAMmarkNegativeNodesInvalid(GCA_MORPH *gcam) ;
+int       GCAMmarkNegativeBorderNodesInvalid(GCA_MORPH *gcam) ;
+int       GCAMregisterVentricles(GCA_MORPH *gcam, MRI *mri, GCA_MORPH_PARMS *parms) ;
 int       GCAMregister(GCA_MORPH *gcam, MRI *mri, GCA_MORPH_PARMS *parms) ;
 int       GCAMregisterWithSubcorticalConnections(GCA_MORPH *gcam, MRI *mri, GCA_MORPH_PARMS *parms, 
 						 MRI_SUBCORTCONN *mri_source_subcort, MRI_SUBCORTCONN *mri_target_subcort) ;
@@ -318,6 +337,7 @@ MRI       *GCAMbuildMostLikelyVolume(GCA_MORPH *gcam, MRI *mri) ;
 MRI       *GCAMbuildLabelVolume(GCA_MORPH *gcam, MRI *mri) ;
 MRI       *GCAMbuildVolume(GCA_MORPH *gcam, MRI *mri) ;
 int       GCAMinvert(GCA_MORPH *gcam, MRI *mri) ;
+GCA_MORPH* GCAMfillInverse(GCA_MORPH* gcam);
 int       GCAMfreeInverse(GCA_MORPH *gcam) ;
 int       GCAMcomputeMaxPriorLabels(GCA_MORPH *gcam) ;
 int       GCAMcomputeOriginalProperties(GCA_MORPH *gcam) ;
@@ -341,11 +361,16 @@ int GCAMresetLabelNodeStatus(GCA_MORPH *gcam)  ;
 #define GCAM_BINARY_ZERO           0x0004
 #define GCAM_NEVER_USE_LIKELIHOOD  0x0008
 #define GCAM_TARGET_DEFINED        0x0010
+#define GCAM_IGNORE_DISTANCES      0x0020
+#define GCAM_DISCOUNT_LIKELIHOOD   0x0040
+#define GCAM_MANUAL_LABEL          0x0080
 
+int GCAMpreserveLabelMetricProperties(GCA_MORPH *gcam, LABEL *area, MRI *mri) ;
 int GCAMresetLikelihoodStatus(GCA_MORPH *gcam) ;
 int GCAMsetLabelStatus(GCA_MORPH *gcam, int label, int status) ;
 int GCAMsetStatus(GCA_MORPH *gcam, int status) ;
 int GCAMapplyTransform(GCA_MORPH *gcam, TRANSFORM *transform) ;
+int GCAMapplyInverseTransform(GCA_MORPH *gcam, TRANSFORM *transform) ;
 int GCAMinitVolGeom(GCAM *gcam, MRI *mri_src, MRI *mri_atlas) ;
 MRI *GCAMmorphFieldFromAtlas(GCA_MORPH *gcam, 
                              MRI *mri, 
@@ -544,7 +569,7 @@ double MRIlabelMorphSSE(MRI *mri_source, MRI *mri_atlas, MRI *mri_morph) ;
 
   int gcamLabelTerm( GCA_MORPH *gcam,
 		     const MRI *mri,
-		     double l_label, double label_dist );
+		     double l_label, double label_dist , MRI *mri_twm);
 
   int
   remove_label_outliers( GCA_MORPH *gcam,
@@ -559,7 +584,7 @@ double MRIlabelMorphSSE(MRI *mri_source, MRI *mri_atlas, MRI *mri_morph) ;
 
   void gcamLabelTermMainLoop( GCA_MORPH *gcam, const MRI *mri,
 			      MRI *mri_dist,
-			      const double l_label, const double label_dist );
+			      const double l_label, const double label_dist , MRI *mri_twm);
   void gcamLabelTermCopyDeltas( GCA_MORPH *gcam,
 				const MRI* mri_dist,
 				const double l_label );

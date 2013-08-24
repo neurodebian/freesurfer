@@ -365,13 +365,13 @@ int main(int argc, char **argv) {
   make_cmd_version_string
     (argc, argv,
      "$Id: mri_segreg.c,v 1.103.2.1 2011/10/07 19:14:42 greve Exp $",
-     "$Name: stable5 $", cmdline);
+     "$Name: release_5_3_0 $", cmdline);
 
   /* rkt: check for and handle version tag */
   nargs = handle_version_option
     (argc, argv,
      "$Id: mri_segreg.c,v 1.103.2.1 2011/10/07 19:14:42 greve Exp $",
-     "$Name: stable5 $");
+     "$Name: release_5_3_0 $");
   if(nargs && argc - nargs == 1) exit (0);
 
   cmdline2 = argv2cmdline(argc,argv);

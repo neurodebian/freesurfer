@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/05/13 15:04:32 $
- *    $Revision: 1.4.2.3 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:34 $
+ *    $Revision: 1.4.2.10 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -42,6 +42,7 @@
 #include <vtkImageDilateErode3D.h>
 #include <vtkContourFilter.h>
 #include <vtkMarchingContourFilter.h>
+#include <vtkMarchingCubes.h>
 #include <vtkPolyDataConnectivityFilter.h>
 #include <vtkPolyData.h>
 #include <vtkCellArray.h>
@@ -79,6 +80,9 @@
 #include <vtkImageGaussianSmooth.h>
 #include <vtkImageClip.h>
 #include <vtkDijkstraImageGeodesicPath.h>
+#include <vtkCleanPolyData.h>
+#include <vtkImageResample.h>
+#include <vtkWindowedSincPolyDataFilter.h>
 #include <QFileInfo>
 
 bool MyVTKUtils::VTKScreenCapture( vtkRenderWindow* renderWnd,
@@ -203,95 +207,115 @@ void MyVTKUtils::WorldToViewport( vtkRenderer* renderer,
   renderer->NormalizedViewportToViewport( x, y );
 }
 
-/*
-bool MyVTKUtils::BuildContourActor( vtkImageData* data_in,
-                                 double dTh1, double dTh2,
-                                 vtkActor* actor_out )
+// test multiple contours
+bool MyVTKUtils::BuildLabelContourActor( vtkImageData* data_in,
+                                    double dTh1, double dTh2,
+                                    vtkActor* actor_out, int nSmoothIterations, int* ext, bool bAllRegions, bool bUpsample )
 {
-  vtkImageData* imagedata = data_in;
-
-// int nValue = nThreshold;
+  double nValue = 1;
   int nSwell = 2;
-  vtkSmartPointer<vtkImageDilateErode3D> dilate =
-    vtkSmartPointer<vtkImageDilateErode3D>::New();
-  dilate->SetInput( imagedata );
-  dilate->SetKernelSize( nSwell, nSwell, nSwell );
-  dilate->SetDilateValue( dTh1 );
-  dilate->SetErodeValue( 0 );
-  vtkSmartPointer<vtkImageDilateErode3D> erode =
-    vtkSmartPointer<vtkImageDilateErode3D>::New();
-  erode->SetInput( dilate->GetOutput() );
-  erode->SetKernelSize( 1, 1, 1 );
-  erode->SetDilateValue( 0 );
-  erode->SetErodeValue( dTh1 );
 
-  vtkSmartPointer<vtkImageThreshold> threshold =
-    vtkSmartPointer<vtkImageThreshold>::New();
-  threshold->SetOutputScalarTypeToShort();
-  threshold->SetInput( dilate->GetOutput() );
-  threshold->ThresholdBetween( dTh1, dTh2+0.0001 );
-  threshold->ReplaceOutOn();
-  threshold->SetOutValue( 0 );
-  vtkSmartPointer<vtkContourFilter> contour =
-    vtkSmartPointer<vtkContourFilter>::New();
-  contour->SetInput( threshold->GetOutput() );
-  contour->SetValue( 0, dTh1 );
-  vtkSmartPointer<vtkTriangleFilter> tri =
-    vtkSmartPointer<vtkTriangleFilter>::New();
-  tri->SetInput( contour->GetOutput() );
-  vtkSmartPointer<vtkDecimatePro> decimate =
-    vtkSmartPointer<vtkDecimatePro>::New();
-  decimate->SetTargetReduction( 0.9 );
-  decimate->SetInput( tri->GetOutput() );
-
+  vtkSmartPointer<vtkAppendPolyData> append = vtkSmartPointer<vtkAppendPolyData>::New();
+  for (int i = ((int)dTh1); i <= dTh2; i++)
+  {
+    vtkSmartPointer<vtkImageThreshold> threshold = vtkSmartPointer<vtkImageThreshold>::New();
+    threshold->SetInput( data_in );
+    threshold->ThresholdBetween( i-0.5, i+0.5 );
+    threshold->ReplaceOutOn();
+    threshold->SetOutValue( 0 );
+    vtkSmartPointer<vtkImageResample> resampler = vtkSmartPointer<vtkImageResample>::New();
+    if (bUpsample)
+    {
+      resampler->SetAxisMagnificationFactor(0, 2.0);
+      resampler->SetAxisMagnificationFactor(1, 2.0);
+      resampler->SetAxisMagnificationFactor(2, 2.0);
+      resampler->SetInputConnection(threshold->GetOutputPort());
+    }
+    vtkSmartPointer<vtkMarchingCubes> contour = vtkSmartPointer<vtkMarchingCubes>::New();
+    contour->SetInputConnection( bUpsample? resampler->GetOutputPort() : threshold->GetOutputPort());
+    contour->SetValue(0, i);
+    append->AddInput(contour->GetOutput());
+  }
+  /*
+  contour->Update();
   vtkPolyData* polydata = contour->GetOutput();
   polydata->Update();
+  bool ret = true;
+  if ( polydata->GetNumberOfPoints() < 1 ||
+      polydata->GetNumberOfCells() < 1 )
+  {
+    vtkPolyDataMapper* mapper = vtkPolyDataMapper::SafeDownCast( actor_out->GetMapper() );
+    mapper->SetInput( polydata );
+    ret = false;
+  }
+  else*/
+  {
+    vtkSmartPointer<vtkPolyDataConnectivityFilter> conn = vtkSmartPointer<vtkPolyDataConnectivityFilter>::New();
+    conn->SetInputConnection( append->GetOutputPort() );
+    conn->SetExtractionModeToLargestRegion();
+    vtkSmartPointer<vtkWindowedSincPolyDataFilter> smoother = vtkSmartPointer<vtkWindowedSincPolyDataFilter>::New();
+    if ( bAllRegions )
+    {
+      smoother->SetInputConnection( append->GetOutputPort() );
+    }
+    else
+    {
+      smoother->SetInputConnection( conn->GetOutputPort() );
+    }
+    smoother->SetNumberOfIterations( nSmoothIterations );
+ //   smoother->FeatureEdgeSmoothingOn();
+ //   smoother->SetEdgeAngle( 90 );
+    vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
+    normals->SetInputConnection( smoother->GetOutputPort() );
+//    normals->SetInput( polydata );
+    normals->SetFeatureAngle( 90 );
+    vtkSmartPointer<vtkTriangleFilter> stripper = vtkSmartPointer<vtkTriangleFilter>::New();
+    stripper->SetInputConnection( normals->GetOutputPort() );
+    vtkSmartPointer<vtkCleanPolyData> cleaner = vtkSmartPointer<vtkCleanPolyData>::New();
+    cleaner->SetInputConnection(stripper->GetOutputPort());
+    vtkPolyDataMapper* mapper = vtkPolyDataMapper::SafeDownCast( actor_out->GetMapper() );
+    mapper->SetInputConnection( cleaner->GetOutputPort() );
+    mapper->ScalarVisibilityOn();
+  }
 
-  if ( polydata->GetNumberOfPoints() <= 0 )
-  {
-    return false;
-  }
-  else
-  {
-    vtkSmartPointer<vtkSmoothPolyDataFilter> smoother =
-      vtkSmartPointer<vtkSmoothPolyDataFilter>::New();
-    smoother->SetInput( contour->GetOutput() );
-    smoother->SetNumberOfIterations( 30 );
-    vtkSmartPointer<vtkPolyDataNormals> normals =
-      vtkSmartPointer<vtkPolyDataNormals>::New();
-    normals->SetInput( smoother->GetOutput()) ;
-    normals->SetFeatureAngle( 90.0 );
-    vtkSmartPointer<vtkStripper> stripper =
-      vtkSmartPointer<vtkStripper>::New();
-    stripper->SetInput( normals->GetOutput() );
-    vtkSmartPointer<vtkPolyDataMapper> mapper =
-      vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInput( decimate->GetOutput() );
-    // mapper->ScalarVisibilityOff();
-    actor_out->SetMapper( mapper );
-    return true;
-  }
+  return true;
 }
-*/
 
 bool MyVTKUtils::BuildContourActor( vtkImageData* data_in,
                                     double dTh1, double dTh2,
-                                    vtkActor* actor_out, int nSmoothIterations, int* ext, bool bAllRegions )
+                                    vtkActor* actor_out, int nSmoothIterations, int* ext, bool bAllRegions,
+                                    bool bUpsample)
 {
   double nValue = 1;
   int nSwell = 2;
   vtkSmartPointer<vtkImageThreshold> threshold = vtkSmartPointer<vtkImageThreshold>::New();
 
+  vtkSmartPointer<vtkImageResample> resampler = vtkSmartPointer<vtkImageResample>::New();
+  resampler->SetAxisMagnificationFactor(0, 2.0);
+  resampler->SetAxisMagnificationFactor(1, 2.0);
+  resampler->SetAxisMagnificationFactor(2, 2.0);
   if ( ext )
   {
     vtkSmartPointer<vtkImageClip> clipper = vtkSmartPointer<vtkImageClip>::New();
-    clipper->SetInput( data_in );
+    if (bUpsample)
+    {
+      resampler->SetInput(data_in);
+      clipper->SetInputConnection(resampler->GetOutputPort());
+    }
+    else
+      clipper->SetInput( data_in );
     clipper->SetOutputWholeExtent( ext );
     threshold->SetInputConnection( clipper->GetOutputPort() );
   }
   else
   {
-    threshold->SetInput( data_in );
+    if (bUpsample)
+    {
+      resampler->SetInput(data_in);
+      threshold->SetInputConnection(resampler->GetOutputPort());
+    }
+    else
+      threshold->SetInput( data_in );
   }
   threshold->ThresholdByLower( dTh2 );
   threshold->ReplaceOutOn();
@@ -313,24 +337,12 @@ bool MyVTKUtils::BuildContourActor( vtkImageData* data_in,
   vtkSmartPointer<vtkContourFilter> contour = vtkSmartPointer<vtkContourFilter>::New();
   contour->SetInputConnection( threshold->GetOutputPort());
   contour->SetValue(0, dTh1);
-  /*
-  contour->Update();
-  vtkPolyData* polydata = contour->GetOutput();
-  polydata->Update();
-  bool ret = true;
-  if ( polydata->GetNumberOfPoints() < 1 ||
-      polydata->GetNumberOfCells() < 1 )
-  {
-    vtkPolyDataMapper* mapper = vtkPolyDataMapper::SafeDownCast( actor_out->GetMapper() );
-    mapper->SetInput( polydata );
-    ret = false;
-  }
-  else*/
+
   {
     vtkSmartPointer<vtkPolyDataConnectivityFilter> conn = vtkSmartPointer<vtkPolyDataConnectivityFilter>::New();
     conn->SetInputConnection( contour->GetOutputPort() );
     conn->SetExtractionModeToLargestRegion();
-    vtkSmartPointer<vtkSmoothPolyDataFilter> smoother = vtkSmartPointer<vtkSmoothPolyDataFilter>::New();
+    vtkSmartPointer<vtkWindowedSincPolyDataFilter> smoother = vtkSmartPointer<vtkWindowedSincPolyDataFilter>::New();
     if ( bAllRegions )
     {
       smoother->SetInputConnection( contour->GetOutputPort() );
@@ -340,16 +352,19 @@ bool MyVTKUtils::BuildContourActor( vtkImageData* data_in,
       smoother->SetInputConnection( conn->GetOutputPort() );
     }
     smoother->SetNumberOfIterations( nSmoothIterations );
+ //   smoother->SetRelaxationFactor(smoother->GetRelaxationFactor()*2);
  //   smoother->FeatureEdgeSmoothingOn();
  //   smoother->SetEdgeAngle( 90 );
     vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
     normals->SetInputConnection( smoother->GetOutputPort() );
 //    normals->SetInput( polydata );
     normals->SetFeatureAngle( 90 );
-    vtkSmartPointer<vtkStripper> stripper = vtkSmartPointer<vtkStripper>::New();
+    vtkSmartPointer<vtkTriangleFilter> stripper = vtkSmartPointer<vtkTriangleFilter>::New();
     stripper->SetInputConnection( normals->GetOutputPort() );
+    vtkSmartPointer<vtkCleanPolyData> cleaner = vtkSmartPointer<vtkCleanPolyData>::New();
+    cleaner->SetInputConnection(stripper->GetOutputPort());
     vtkPolyDataMapper* mapper = vtkPolyDataMapper::SafeDownCast( actor_out->GetMapper() );
-    mapper->SetInputConnection( stripper->GetOutputPort() );
+    mapper->SetInputConnection( cleaner->GetOutputPort() );
     mapper->ScalarVisibilityOn();
   }
 
@@ -511,5 +526,4 @@ void MyVTKUtils::GetLivewirePoints( vtkImageData* image_in,
                               p[1] + offset[1],
                               p[2] + offset[2] );
   }
-
 }

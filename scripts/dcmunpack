@@ -2,12 +2,13 @@
 # dcmunpack
 # 
 
-set VERSION = '$Id: dcmunpack,v 1.12.2.2 2011/04/06 18:22:32 greve Exp $';
+set VERSION = '$Id: dcmunpack,v 1.12.2.4 2012/10/16 19:24:47 greve Exp $';
 
 set SeriesInfo = ();
 
 set DoUnpack = 0;
 set TargetDir = ();
+set SrcInfo = ();
 set SrcDirList = ();
 set SrcPre = ();
 set SrcPat = ();
@@ -18,6 +19,9 @@ set DoConvert = 1;
 set DoCopy = 0;
 set OnePerDir = 0;
 set MGHDCM = 0;
+set Key = ();
+set DoBase = 0;
+set infofile = ();
 
 set RunNos = ();
 set SubDirs = ();
@@ -49,10 +53,8 @@ if($n != 0) then
   echo $VERSION
   exit 0;
 endif
-
 goto parse_args;
 parse_args_return:
-
 goto check_params;
 check_params_return:
 
@@ -70,12 +72,17 @@ if($#LF == 0) then
 endif
 
 # Start populating the log file
-echo $0 >> $LF
-ls -l $0 >> $LF
-echo "$inputargs" >> $LF
+echo ""| tee -a $LF
+echo "cd `pwd`" | tee -a $LF
+echo "$0 $inputargs"| tee -a $LF
+echo ""| tee -a $LF
 echo $VERSION >> $LF
+ls -l $0 | tee -a $LF
 uname -a >> $LF
 date >> $LF
+
+set StartTime = `date`;
+set tSecStart = `date '+%s'`;
 
 # Print out a summary
 echo "---------------------------------------" | tee -a $LF
@@ -120,7 +127,7 @@ if($#flist == 0) then
   echo "ERROR: did not find any files"| tee -a $LF
   exit 1;
 endif
-if($#flist > 100) then
+if($#flist > 100 && $#SrcInfo == 0) then
   echo "  Interrogating each and every one of them."
   echo "  Be patient." 
   echo "If you have collected the data in the Martinos center, this "
@@ -130,13 +137,18 @@ endif
 # Go through each file, create an info dump, extract params. 
 # This can be slow, esp for GE. In that case, try using the
 # -one-per-dir functionality with -ext, -pat, and/or -pre.
-if($#TargetDir) then
-  set infofile = $TargetDir/imagelist.dat
-else
-  set infofile = /tmp/dcmdir-all.$$
+if($#infofile == 0) then
+  if($#TargetDir) then
+    set infofile = $TargetDir/imagelist.dat
+  else
+    set infofile = /tmp/dcmdir-all.$$
+  endif
 endif
+rm -f $infofile
+if($#SrcInfo) cp $SrcInfo $infofile
+
 set dumpfile = /tmp/dcmunpack.dump.$$
-rm -f $dumpfile $infofile
+rm -f $dumpfile 
 @ nth = 0;
 foreach f ($flist)
   @ nth = $nth + 1;
@@ -185,10 +197,12 @@ foreach f ($flist)
   set PixFreq  = (`cat $dumpfile | awk '{if($1 == "PixelFrequency") print $2}'`)
   if($#PixFreq == 0) set PixFreq = 'unknown';
 
+  if($#SrcInfo) break;
   echo "$Patient $SeriesNo $Date $Time $EchoTime $TR $FlipAngle $PixSpace $PhaseEncDir $PixFreq $f" >> $infofile
 
 end
 rm -f $dumpfile
+
 
 set SeriesNos = (`cat $infofile | awk '{print $2}' | sort -n | uniq`)
 echo "Found $#SeriesNos unique series: $SeriesNos" | tee -a $LF
@@ -218,7 +232,9 @@ foreach series ($SeriesNos)
   set max = ();
   if($GetMax) set max = (`mri_probedicom --i $f --max`)
   set descr = (`mri_probedicom --i $f --t 8 103e | sed 's/ //g' | sed 's/\///g' | sed 's/(//g' | sed 's/)//g'`)
-  echo $r[2] $descr $r[5-11] $max | tee -a $SeriesInfo
+  set fname = $r[11];
+  if($DoBase) set fname = `basename $f`
+  echo $Key $r[2] "$descr" $r[5-10] $fname $max | tee -a $SeriesInfo
 end
 
 # If no runs have been specified, then just exit
@@ -324,6 +340,14 @@ foreach run ($RunNos)
 
 end
 
+set tSecEnd = `date '+%s'`;
+@ tSecRun = $tSecEnd - $tSecStart;
+set tRunMins = `echo $tSecRun/60|bc -l`
+set tRunMins = `printf %5.2f $tRunMins`
+echo "Started at $StartTime " |& tee -a $LF
+echo "Ended   at `date`" |& tee -a $LF
+echo "dcmunpack-Run-Time-Min $tRunMins" |& tee -a $LF
+
 echo "" | tee -a $LF
 echo "" | tee -a $LF
 date | tee -a $LF
@@ -348,6 +372,20 @@ while( $#argv != 0 )
       set DoUnpack = 1;
       breaksw
 
+    case "-index-in":
+      if($#argv < 1) goto arg1err;
+      set SrcInfo = "$argv[1]"; shift;
+      if(! -e $SrcInfo) then
+        echo "ERROR: cannot find $SrcInfo"
+        exit 1;
+      endif
+      breaksw
+
+    case "-index-out":
+      if($#argv < 1) goto arg1err;
+      set infofile = "$argv[1]"; shift;
+      breaksw
+
     case "-pre":
       if($#argv < 1) goto arg1err;
       set SrcPre = "$argv[1]"; shift;
@@ -361,6 +399,15 @@ while( $#argv != 0 )
     case "-ext":
       if($#argv < 1) goto arg1err;
       set SrcExt = "$argv[1]"; shift;
+      breaksw
+
+    case "-key":
+      if($#argv < 1) goto arg1err;
+      set Key = "$argv[1]"; shift;
+      breaksw
+
+    case "-base":
+      set DoBase = 1;
       breaksw
 
     case "-src":
@@ -651,6 +698,10 @@ usage_exit:
   echo "   -copy-only"
   echo "   -no-convert : do not convert to output format"
   echo "   -max : print out max in given dicom file"
+  echo "   -base : report filename without path"
+  echo "   -key keystring : put keystring before each run line (good for searching)"
+  echo "   -index-out index.out.dat : save index of files to index.out.dat (for re-use)"
+  echo "   -index-in  index.dat : read index of files (can make things much faster on 2nd run) "
   echo ""
   echo "   -fips project site birnid visit"
   echo "   -fips-run run paradigm <<nskip> ndrop>"
@@ -720,6 +771,11 @@ Assume that the DICOM file names have the form produced at the MGH
 Martinos Center when you "push something to bourget" from the scanner,
 namely that each series will have one file that ends in "1.dcm", eg
 397000-000007-000001.dcm.  This can speed things up considerably.
+Note: as of August, 2012, the naming convention that allows for fast
+unpacking does not exist. If you have to run this twice, it will be
+faster if you run it with --index-out index.dat when you are getting a
+list of runs, then run it again with --index-in index.dat when you go
+to unpack it.
 
 -no-infodump
 

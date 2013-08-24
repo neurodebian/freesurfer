@@ -209,7 +209,7 @@ int main(int argc, char **argv) {
     handle_version_option
     (argc, argv,
      "$Id: mri_volcluster.c,v 1.45.2.1 2011/03/28 15:32:36 greve Exp $",
-     "$Name: stable5 $");
+     "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
     exit (0);
   argc -= nargs;
