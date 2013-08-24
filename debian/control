@@ -1,4 +1,4 @@
-Source: freesurfer
+Source: freesurfer-5.3
 Section: science
 Priority: extra
 Maintainer: NeuroDebian Team <team@neuro.debian.net>
@@ -23,7 +23,8 @@ Build-Depends: debhelper (>= 7.0.50~), dh-autoreconf,
                libcv-dev (>=2.2), libhighgui-dev,
                libgts-dev, libboost-all-dev, libpetsc3.2-dev,
                libann-dev,
-               libfltk1.1-dev
+               libfltk1.1-dev,
+               libqt4-dev, libqt4-opengl-dev
 Build-Conflicts: libvtk5-dev (<< 5.6), tcl-dev (<< 8.5)
 Standards-Version: 3.9.2
 Homepage: http://surfer.nmr.mgh.harvard.edu/
@@ -32,36 +33,36 @@ Vcs-Git: git://git.debian.org/git/pkg-exppsy/freesurfer.git
 
 Package: freesurfer
 Architecture: all
-Depends: ${misc:Depends}, freesurfer-5.1
+Depends: ${misc:Depends}, freesurfer-5.3
 Description: Metapackage for the latest version of Freesurfer
  This package depends upon the latest version of freesurfer.
 
-Package: freesurfer-5.1
+Package: freesurfer-5.3
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
- freesurfer-common-5.1 (= ${source:Version}), ${python:Depends},
+ freesurfer-common-5.3 (= ${source:Version}), ${python:Depends},
  tcsh, python, minc-tools, n3-bin, mni-autoreg
-Description: Freesurfer 5.1 package
- This package contains the Freesurfer 5.1 software.
+Description: Freesurfer 5.3 package
+ This package contains the Freesurfer 5.3 software.
 
-Package: freesurfer-common-5.1
+Package: freesurfer-common-5.3
 Architecture: all
 Depends: ${misc:Depends}, tclsh, mni-autoreg-model
 Description: Common data files for Freesurfer
  This package contains architecture independent data files of the
- Freesurfer 5.1 software.
+ Freesurfer 5.3 software.
 
-Package: freesurfer-fsfast-5.1
+Package: freesurfer-fsfast-5.3
 Section: contrib/science
 Architecture: all
-Depends: ${misc:Depends}, matlab-freesurfer-5.1 (= ${source:Version}),
+Depends: ${misc:Depends}, matlab-freesurfer-5.3 (= ${source:Version}),
  tcsh, tclsh, python
 Description: Freesurfer's fMRI processing toolbox
- This package contains the FSFAST toolbox from Freesurfer 5.1.
+ This package contains the FSFAST toolbox from Freesurfer 5.3.
 
-Package: matlab-freesurfer-5.1
+Package: matlab-freesurfer-5.3
 Section: contrib/science
 Architecture: all
 Depends: ${misc:Depends}
 Description: Freesurfer's Matlab toolboxes
- This package contains all Matlab toolboxes shipped with Freesurfer 5.1.
+ This package contains all Matlab toolboxes shipped with Freesurfer 5.3.
