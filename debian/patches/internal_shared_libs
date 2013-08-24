@@ -14,536 +14,526 @@ Subject: [PATCH 2/2] Shared libs
  
 -libkvlAtlas3DCommon_a_SOURCES= \
 +libkvlAtlas3DCommon_la_SOURCES= \
- 		kvlAtlasMeshCollection.cxx \
- 		gzstream.cxx \
- 		kvlAtlasMeshCollectionValidator.cxx \
-@@ -55,13 +55,11 @@
-                 kvlAtlasMeshDeformationLevenbergMarquardtOptimizer.cxx \
- 		kvlAtlasMeshHamiltonianPositionSampler.cxx
+ 	kvlAtlasMeshCollection.cxx \
+ 	gzstream.cxx \
+ 	kvlAtlasMeshCollectionValidator.cxx \
+@@ -53,13 +53,12 @@
+ 	kvlAtlasMeshDeformationLevenbergMarquardt.cxx \
+ 	kvlAtlasMeshHamiltonianPositionSampler.cxx
  
 -am_libkvlAtlas3DCommon_a_OBJECTS=$(libkvlAtlas3DCommon_a_SOURCES:%.cxx=%.o)
 -libkvlAtlas3DCommon_a_LIBADD= \
--			 $(top_builddir)/itkio/libitkio.a \
--			 $(top_builddir)/itkutils/libitkutils.a	 \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a	 \
 +am_libkvlAtlas3DCommon_la_OBJECTS=$(libkvlAtlas3DCommon_la_SOURCES:%.cxx=%.lo)
 +libkvlAtlas3DCommon_la_LIBADD= \
- 			 $(LIBS_ITK) \
--			 $(top_builddir)/tetgen/libtetgen.a \
--			 $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+			 $(top_builddir)/tetgen/libtetgen.la \
-+			 $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
+ 	$(LIBS_ITK) \
+-	$(top_builddir)/tetgen/libtetgen.a \
+-	$(addprefix $(top_builddir)/, $(LIBS_MGH))
++	$(top_builddir)/itkutils/libitkutils.la \
++	$(top_builddir)/tetgen/libtetgen.la \
++	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  
  bin_PROGRAMS=\
- 			 kvlSmoothMesh \
-@@ -103,7 +101,6 @@
- 			 kvlBinaryThresholdImage \
- 			 kvlUpsample \
- 			 kvlRasterizeAtlasMesh \
--			 kvlAutoCrop \
- 			 kvlMaskImage \
- 			 kvlApplyTransform
- 
-@@ -165,82 +162,82 @@
+ 	kvlSmoothMesh \
+@@ -163,71 +162,71 @@
  
  kvlSmoothMesh_SOURCES=kvlSmoothMesh.cxx
  kvlSmoothMesh_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlSmoothMesh_LDFLAGS= $(OS_LDFLAGS)
  
  kvlCrop_SOURCES=kvlCrop.cxx
  kvlCrop_LDADD=$(LIBS_ITK) \
--			 $(top_builddir)/itkio/libitkio.a \
--			 $(top_builddir)/itkutils/libitkutils.a \
-+			 $(top_builddir)/itkio/libitkio.la \
-+			 $(top_builddir)/itkutils/libitkutils.la \
- 			 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- 			 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlCrop_LDFLAGS= $(OS_LDFLAGS)
  
  kvlChangeKOfMeshCollection_SOURCES=kvlChangeKOfMeshCollection.cxx
  kvlChangeKOfMeshCollection_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlChangeKOfMeshCollection_LDFLAGS= $(OS_LDFLAGS)
  
  kvlChangePointParametersOfMeshCollection_SOURCES=kvlChangePointParametersOfMeshCollection.cxx
  kvlChangePointParametersOfMeshCollection_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlChangePointParametersOfMeshCollection_LDFLAGS= $(OS_LDFLAGS)
  
  kvlMapDeformationField_SOURCES=kvlMapDeformationField.cxx
  kvlMapDeformationField_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlMapDeformationField_LDFLAGS= $(OS_LDFLAGS)
  
  kvlUpsampleMesh_SOURCES=kvlUpsampleMesh.cxx
  kvlUpsampleMesh_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlUpsampleMesh_LDFLAGS= $(OS_LDFLAGS)
  
  kvlSetReferencePosition_SOURCES=kvlSetReferencePosition.cxx
  kvlSetReferencePosition_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlSetReferencePosition_LDFLAGS= $(OS_LDFLAGS)
  
  kvlCompressImage_SOURCES=kvlCompressImage.cxx
  kvlCompressImage_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlCompressImage_LDFLAGS= $(OS_LDFLAGS)
- 
- kvlBuildAtlasMeshWithoutGUI_SOURCES=kvlBuildAtlasMeshWithoutGUI.cxx
- kvlBuildAtlasMeshWithoutGUI_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
--				 $(top_builddir)/tetgen/libtetgen.a \
-+				 $(top_builddir)/tetgen/libtetgen.la \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
- kvlBuildAtlasMeshWithoutGUI_LDFLAGS= $(OS_LDFLAGS)
- 
-@@ -264,123 +261,123 @@
+@@ -262,177 +261,177 @@
  
  kvlCropImage_SOURCES=kvlCropImage.cxx
  kvlCropImage_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlCropImage_LDFLAGS= $(OS_LDFLAGS)
  
  kvlCombineManualSegmentationProtocols_SOURCES=kvlCombineManualSegmentationProtocols.cxx
  kvlCombineManualSegmentationProtocols_LDADD=$(LIBS_ITK) \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlCombineManualSegmentationProtocols_LDFLAGS= $(OS_LDFLAGS)
  
  kvlReduceNumberOfIntensityLevels_SOURCES=kvlReduceNumberOfIntensityLevels.cxx
  kvlReduceNumberOfIntensityLevels_LDADD=$(LIBS_ITK) \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKStatistics -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKStatistics -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlReduceNumberOfIntensityLevels_LDFLAGS= $(OS_LDFLAGS)
  
  kvlAugmentManualSegmentationWithAutomatedSegmentation_SOURCES=kvlAugmentManualSegmentationWithAutomatedSegmentation.cxx
  kvlAugmentManualSegmentationWithAutomatedSegmentation_LDADD=$(LIBS_ITK) \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlAugmentManualSegmentationWithAutomatedSegmentation_LDFLAGS= $(OS_LDFLAGS)
  
  kvlScaleMeshCollection_SOURCES=kvlScaleMeshCollection.cxx
  kvlScaleMeshCollection_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlScaleMeshCollection_LDFLAGS= $(OS_LDFLAGS)
  
  kvlMapLabelsOfAtlasMesh_SOURCES=kvlMapLabelsOfAtlasMesh.cxx
  kvlMapLabelsOfAtlasMesh_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlMapLabelsOfAtlasMesh_LDFLAGS= $(OS_LDFLAGS)
  
  kvlSegmentWithoutGUI_SOURCES=kvlSegmentWithoutGUI.cxx
  kvlSegmentWithoutGUI_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlSegmentWithoutGUI_LDFLAGS= $(OS_LDFLAGS)
  
  kvlEvaluateQuantitatively_SOURCES=kvlEvaluateQuantitatively.cxx
  kvlEvaluateQuantitatively_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlEvaluateQuantitatively_LDFLAGS= $(OS_LDFLAGS)
  
  kvlEvaluateQuantitativelyWithHausdorffDistance_SOURCES=kvlEvaluateQuantitativelyWithHausdorffDistance.cxx
  kvlEvaluateQuantitativelyWithHausdorffDistance_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlEvaluateQuantitativelyWithHausdorffDistance_LDFLAGS= $(OS_LDFLAGS)
  
  kvlCorrectLeftSideLabelsToRightSideLabels_SOURCES=kvlCorrectLeftSideLabelsToRightSideLabels.cxx
  kvlCorrectLeftSideLabelsToRightSideLabels_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlCorrectLeftSideLabelsToRightSideLabels_LDFLAGS= $(OS_LDFLAGS)
  
  kvlOverwriteEmptySlices_SOURCES=kvlOverwriteEmptySlices.cxx
  kvlOverwriteEmptySlices_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlOverwriteEmptySlices_LDFLAGS= $(OS_LDFLAGS)
  
  kvlOptimizePositionsWithICM_SOURCES=kvlOptimizePositionsWithICM.cxx
  kvlOptimizePositionsWithICM_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlOptimizePositionsWithICM_LDFLAGS= $(OS_LDFLAGS)
  
  kvlCalculatePositionCost_SOURCES=kvlCalculatePositionCost.cxx
  kvlCalculatePositionCost_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlCalculatePositionCost_LDFLAGS= $(OS_LDFLAGS)
  
  kvlCalculateAtlasMeshCollectionTotalCost_SOURCES=kvlCalculateAtlasMeshCollectionTotalCost.cxx
  kvlCalculateAtlasMeshCollectionTotalCost_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlCalculateAtlasMeshCollectionTotalCost_LDFLAGS= $(OS_LDFLAGS)
-@@ -405,180 +402,180 @@
+ 
+ # kvlTestImageSmoother_SOURCES=kvlTestImageSmoother.cxx
+ # kvlTestImageSmoother_LDADD=$(LIBS_ITK) \
+-#					 libkvlAtlas3DCommon.a \
+-#					 $(top_builddir)/itkio/libitkio.a \
+-#					 $(top_builddir)/itkutils/libitkutils.a \
++#					 libkvlAtlas3DCommon.la \
++#					 $(top_builddir)/itkio/libitkio.la \
++#					 $(top_builddir)/itkutils/libitkutils.la \
+ #					 -lITKCommon -lITKIO -lITKznz \
+ #					 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+ # kvlTestImageSmoother_LDFLAGS= $(OS_LDFLAGS)
+ 
+ # kvlGenerateWeightedColorChannels_SOURCES=kvlGenerateWeightedColorChannels.cxx
+ # kvlGenerateWeightedColorChannels_LDADD=$(LIBS_ITK) \
+-#					 libkvlAtlas3DCommon.a \
+-#					 $(top_builddir)/itkio/libitkio.a \
+-#					 $(top_builddir)/itkutils/libitkutils.a \
++#					 libkvlAtlas3DCommon.la \
++#					 $(top_builddir)/itkio/libitkio.la \
++#					 $(top_builddir)/itkutils/libitkutils.la \
+ #					 -lITKCommon -lITKIO -lITKznz \
+ #					 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+ # kvlGenerateWeightedColorChannels_LDFLAGS= $(OS_LDFLAGS)
  
  kvlColorCodeProbabilityImages_SOURCES=kvlColorCodeProbabilityImages.cxx
  kvlColorCodeProbabilityImages_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlColorCodeProbabilityImages_LDFLAGS= $(OS_LDFLAGS)
  
  kvlSamplePositionsFromMeshCollection_SOURCES=kvlSamplePositionsFromMeshCollection.cxx
  kvlSamplePositionsFromMeshCollection_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlSamplePositionsFromMeshCollection_LDFLAGS= $(OS_LDFLAGS)
  
  kvlAddMeshToMeshCollection_SOURCES=kvlAddMeshToMeshCollection.cxx
  kvlAddMeshToMeshCollection_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlAddMeshToMeshCollection_LDFLAGS= $(OS_LDFLAGS)
  
  kvlMergeMeshCollections_SOURCES=kvlMergeMeshCollections.cxx
  kvlMergeMeshCollections_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlMergeMeshCollections_LDFLAGS= $(OS_LDFLAGS)
- 
- kvlAddCSFToBucknerData_SOURCES=kvlAddCSFToBucknerData.cxx
- kvlAddCSFToBucknerData_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
- kvlAddCSFToBucknerData_LDFLAGS= $(OS_LDFLAGS)
+@@ -448,135 +447,135 @@
  
  kvlAddBorder_SOURCES=kvlAddBorder.cxx
  kvlAddBorder_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlAddBorder_LDFLAGS= $(OS_LDFLAGS)
  
  kvlQuantifyPosteriorProbabilityImages_SOURCES=kvlQuantifyPosteriorProbabilityImages.cxx
  kvlQuantifyPosteriorProbabilityImages_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlQuantifyPosteriorProbabilityImages_LDFLAGS= $(OS_LDFLAGS)
  
  kvlEMSegment_SOURCES=kvlEMSegment.cxx
  kvlEMSegment_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlEMSegment_LDFLAGS= $(OS_LDFLAGS)
  
  kvlAddProbabilityImages_SOURCES=kvlAddProbabilityImages.cxx
  kvlAddProbabilityImages_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlAddProbabilityImages_LDFLAGS= $(OS_LDFLAGS)
  
  kvlMathematicalMorphology_SOURCES=kvlMathematicalMorphology.cxx
  kvlMathematicalMorphology_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlMathematicalMorphology_LDFLAGS= $(OS_LDFLAGS)
  
  kvlConvert_SOURCES=kvlConvert.cxx
  kvlConvert_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlConvert_LDFLAGS= $(OS_LDFLAGS)
  
  kvlRegister_SOURCES=kvlRegister.cxx
  kvlRegister_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlRegister_LDFLAGS= $(OS_LDFLAGS)
  
  kvlResample_SOURCES=kvlResample.cxx
  kvlResample_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlResample_LDFLAGS= $(OS_LDFLAGS)
  
  kvlBinaryThresholdImage_SOURCES=kvlBinaryThresholdImage.cxx
  kvlBinaryThresholdImage_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlBinaryThresholdImage_LDFLAGS= $(OS_LDFLAGS)
  
  kvlUpsample_SOURCES=kvlUpsample.cxx
  kvlUpsample_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlUpsample_LDFLAGS= $(OS_LDFLAGS)
  
  kvlRasterizeAtlasMesh_SOURCES=kvlRasterizeAtlasMesh.cxx
  kvlRasterizeAtlasMesh_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlRasterizeAtlasMesh_LDFLAGS= $(OS_LDFLAGS)
  
  kvlAutoCrop_SOURCES=kvlAutoCrop.cxx
  kvlAutoCrop_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlAutoCrop_LDFLAGS= $(OS_LDFLAGS)
  
  kvlMaskImage_SOURCES=kvlMaskImage.cxx
  kvlMaskImage_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlMaskImage_LDFLAGS= $(OS_LDFLAGS)
  
  kvlApplyTransform_SOURCES=kvlApplyTransform.cxx
  kvlApplyTransform_LDADD=$(LIBS_ITK) \
--				 libkvlAtlas3DCommon.a \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
-+				 libkvlAtlas3DCommon.la \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
- 				 -lITKCommon -lITKIO -lITKznz \
- 				 $(addprefix $(top_builddir)/, $(LIBS_MGH) )
+-	libkvlAtlas3DCommon.a \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
++	libkvlAtlas3DCommon.la \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
+ 	-lITKCommon -lITKIO -lITKznz \
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH) )
  kvlApplyTransform_LDFLAGS= $(OS_LDFLAGS)
  
  if HAVE_FLTK_LIBS
@@ -551,84 +541,123 @@ Subject: [PATCH 2/2] Shared libs
 -libkvlAtlas3DGUI_a_SOURCES = vtkFlRenderWindowInteractor.cxx \
 +lib_LTLIBRARIES+=libkvlAtlas3DGUI.la
 +libkvlAtlas3DGUI_la_SOURCES = vtkFlRenderWindowInteractor.cxx \
- 						kvlImageViewer.cxx
--libkvlAtlas3DGUI_a_LIBADD=$(LIBS_ITK) \
-+libkvlAtlas3DGUI_la_LIBADD=$(LIBS_ITK) \
- 			#-lITKCommon -lITKAlgorithms -lITKIO -lITKznz -lITKBasicFilters \
- 			$(VTK_LIBS) \
- 			#-lvtkCommon -lvtkImaging -lvtkIO -lvtkRendering \
-@@ -595,10 +592,10 @@
- 						 kvlEstimateAtlasParameters.cxx \
- 						 kvlAtlasParameterEstimationConsole.cxx
+ 	kvlImageViewer.cxx
+-libkvlAtlas3DGUI_a_LIBADD=$(LIBS_ITK) $(LIBS_VTK)
++libkvlAtlas3DGUI_la_LIBADD=$(LIBS_ITK) $(LIBS_VTK)
+ SUFFIXES: .fl .cxx .h
+ .fl.h .fl.cxx:
+ 	$(FLTK_DIR)/bin/fluid -c $<
+@@ -589,10 +588,10 @@
+ 	kvlEstimateAtlasParameters.cxx \
+ 	kvlAtlasParameterEstimationConsole.cxx
  kvlEstimateAtlasParameters_LDADD=$(LIBS_ITK) \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
--				 libkvlAtlas3DCommon.a \
--				 libkvlAtlas3DGUI.a \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
-+				 libkvlAtlas3DCommon.la \
-+				 libkvlAtlas3DGUI.la \
- 				 -lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
- 				$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
- 				$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
-@@ -607,7 +604,7 @@
- 				$(VTK_SQLITE_LIB) \
- 				-lvtkImaging -lvtkFiltering \
- 				-lvtkCommon -lvtksys \
--				-lvtkexoIIc -lvtkNetCDF \
-+				-lvtkexoIIc -lnetcdf \
- 				-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
- 				-lvtkWidgets -lvtkHybrid \
- 				-lvtkIO -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
-@@ -625,10 +622,10 @@
- 						kvlImageThresholdingConsole.h
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
+-	libkvlAtlas3DCommon.a \
+-	libkvlAtlas3DGUI.a \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
++	libkvlAtlas3DCommon.la \
++	libkvlAtlas3DGUI.la \
+ 	-lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
+ 	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
+@@ -620,10 +619,10 @@
+ 	kvlImageThresholdingConsole.h
  
  kvlThresholdImage_LDADD=$(LIBS_ITK) \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
--				 libkvlAtlas3DCommon.a \
--				 libkvlAtlas3DGUI.a \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
-+				 libkvlAtlas3DCommon.la \
-+				 libkvlAtlas3DGUI.la \
- 				 -lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
- 				$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
- 				$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
-@@ -637,7 +634,7 @@
- 				$(VTK_SQLITE_LIB) \
- 				-lvtkImaging -lvtkFiltering \
- 				-lvtkCommon -lvtksys \
--				-lvtkexoIIc -lvtkNetCDF \
-+				-lvtkexoIIc -lnetcdf \
- 				-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
- 				-lvtkWidgets -lvtkHybrid \
- 				-lvtkIO -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
-@@ -655,10 +652,10 @@
- 						kvlImageViewingConsole.h
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
+-	libkvlAtlas3DCommon.a \
+-	libkvlAtlas3DGUI.a \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
++	libkvlAtlas3DCommon.la \
++	libkvlAtlas3DGUI.la \
+ 	-lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
+ 	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
+@@ -632,7 +631,7 @@
+ 	$(VTK_SQLITE_LIB) \
+ 	-lvtkImaging -lvtkFiltering \
+ 	-lvtkCommon -lvtksys \
+-	-lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB) \
++	-lvtkexoIIc -lnetcdf $(VTK_NETCDFCXX_LIB) \
+ 	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
+ 	-lvtkWidgets -lvtkHybrid $(VTK_HDF5_LIB) \
+ 	-lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
+@@ -651,10 +650,10 @@
+ 	kvlImageViewingConsole.h
  
  kvlViewImage_LDADD=$(LIBS_ITK) \
--				 $(top_builddir)/itkio/libitkio.a \
--				 $(top_builddir)/itkutils/libitkutils.a \
--				 libkvlAtlas3DCommon.a \
--				 libkvlAtlas3DGUI.a \
-+				 $(top_builddir)/itkio/libitkio.la \
-+				 $(top_builddir)/itkutils/libitkutils.la \
-+				 libkvlAtlas3DCommon.la \
-+				 libkvlAtlas3DGUI.la \
- 				 -lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
- 				$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
- 				$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
-@@ -667,7 +664,7 @@
- 				$(VTK_SQLITE_LIB) \
- 				-lvtkImaging -lvtkFiltering \
- 				-lvtkCommon -lvtksys \
--				-lvtkexoIIc -lvtkNetCDF \
-+				-lvtkexoIIc -lnetcdf \
- 				-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
- 				-lvtkWidgets -lvtkHybrid \
- 				-lvtkIO -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
+-	libkvlAtlas3DCommon.a \
+-	libkvlAtlas3DGUI.a \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
++	libkvlAtlas3DCommon.la \
++	libkvlAtlas3DGUI.la \
+ 	-lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
+ 	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
+@@ -663,7 +662,7 @@
+ 	$(VTK_SQLITE_LIB) \
+ 	-lvtkImaging -lvtkFiltering \
+ 	-lvtkCommon -lvtksys \
+-	-lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB) \
++	-lvtkexoIIc -lnetcdf $(VTK_NETCDFCXX_LIB) \
+ 	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
+ 	-lvtkWidgets -lvtkHybrid $(VTK_HDF5_LIB) \
+ 	-lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
+@@ -680,10 +679,10 @@
+ 	kvlViewMeshCollectionWithGUI.cxx \
+ 	kvlAtlasMeshViewingConsole.cxx
+ kvlViewMeshCollectionWithGUI_LDADD=$(LIBS_ITK) \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
+-	libkvlAtlas3DCommon.a \
+-	libkvlAtlas3DGUI.a \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
++	libkvlAtlas3DCommon.la \
++	libkvlAtlas3DGUI.la \
+ 	-lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
+ 	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
+@@ -692,7 +691,7 @@
+ 	$(VTK_SQLITE_LIB) \
+ 	-lvtkImaging -lvtkFiltering \
+ 	-lvtkCommon -lvtksys \
+-	-lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB) \
++	-lvtkexoIIc -lnetcdf $(VTK_NETCDFCXX_LIB) \
+ 	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
+ 	-lvtkWidgets -lvtkHybrid $(VTK_HDF5_LIB) \
+ 	-lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
+@@ -737,10 +736,10 @@
+ 	kvlEvaluateSegmentation.cxx \
+ 	kvlSegmentationEvaluationConsole.cxx
+ kvlEvaluateSegmentation_LDADD=$(LIBS_ITK) \
+-	$(top_builddir)/itkio/libitkio.a \
+-	$(top_builddir)/itkutils/libitkutils.a \
+-	libkvlAtlas3DCommon.a \
+-	libkvlAtlas3DGUI.a \
++	$(top_builddir)/itkio/libitkio.la \
++	$(top_builddir)/itkutils/libitkutils.la \
++	libkvlAtlas3DCommon.la \
++	libkvlAtlas3DGUI.la \
+ 	-lITKCommon -lITKBasicFilters -lITKAlgorithms -lITKIO -lITKznz \
+ 	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
+ 	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
+@@ -749,7 +748,7 @@
+ 	$(VTK_SQLITE_LIB) \
+ 	-lvtkImaging -lvtkFiltering \
+ 	-lvtkCommon -lvtksys \
+-	-lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB) \
++	-lvtkexoIIc -lnetcdf $(VTK_NETCDFCXX_LIB) \
+ 	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
+ 	-lvtkWidgets -lvtkHybrid $(VTK_HDF5_LIB) \
+ 	-lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
 --- a/check_siemens_dir/Makefile.am
 +++ b/check_siemens_dir/Makefile.am
 @@ -7,7 +7,7 @@
@@ -642,7 +671,7 @@ Subject: [PATCH 2/2] Shared libs
  
 --- a/configure.in
 +++ b/configure.in
-@@ -332,43 +332,45 @@
+@@ -347,43 +347,45 @@
  fi
  AC_SUBST(LIB_G2C_A)
  
@@ -724,7 +753,7 @@ Subject: [PATCH 2/2] Shared libs
  AC_SUBST(LIB_LAPACK_A)
  
  
-@@ -1932,21 +1934,21 @@
+@@ -2007,21 +2009,21 @@
  fi
  
  # use static lib if found
@@ -761,7 +790,7 @@ Subject: [PATCH 2/2] Shared libs
  
  AM_CONDITIONAL(USE_LOCAL_JPEG, test "$ac_jpeg_libraries" = "NO")
  
-@@ -2144,7 +2146,7 @@
+@@ -2226,7 +2228,7 @@
  
  AC_ARG_WITH(vtk-include,
    [  --with-vtk-include=DIR      root of VTK include directory.],
@@ -770,7 +799,7 @@ Subject: [PATCH 2/2] Shared libs
       ac_vtk_includes="$vtk_i"
    ])
  
-@@ -2586,34 +2588,37 @@
+@@ -2684,34 +2686,37 @@
  
    # these are the minimum ITK libs necessary to support Nrrd IO,
    # notice they are all static (avoiding LD_LIBRARY_PATH usage)
@@ -832,7 +861,7 @@ Subject: [PATCH 2/2] Shared libs
    LIBS_ITK="$LIBS_ITK $LIB_UUID_A"
  else
    AC_MSG_RESULT([Not building ITK apps.])
-@@ -2654,7 +2659,7 @@
+@@ -2752,7 +2757,7 @@
  
  if test ! "$ac_gl_includes" = "NO"; then
    AC_MSG_RESULT(gl directory is $withval)
@@ -841,7 +870,7 @@ Subject: [PATCH 2/2] Shared libs
  else
    AC_MSG_RESULT(OpenGL directory is not supplied)
  fi
-@@ -2753,14 +2758,13 @@
+@@ -2851,14 +2856,13 @@
  
  # stupid circular dependency on iopen swapInt etc.
  LIBS_MGH="\
@@ -863,7 +892,7 @@ Subject: [PATCH 2/2] Shared libs
  
  # use local libjpeg if --with-jpeg-dir not used:
  if test "$ac_jpeg_libraries" = "NO"; then
-@@ -2782,6 +2786,7 @@
+@@ -2880,6 +2884,7 @@
  LIBS_CUDA_MGH=`echo ${LIBS_MGH} | sed 's/libutils/libutils_cuda/g'`
  
  AC_SUBST(LIBS_MGH)
@@ -871,7 +900,7 @@ Subject: [PATCH 2/2] Shared libs
  AC_SUBST(LIBS_CUDA_MGH)
  AC_SUBST(LIB_JPEG)
  AC_SUBST(LIB_TIFF)
-@@ -3131,6 +3136,9 @@
+@@ -3242,6 +3247,9 @@
  
    ##################### Tix
    LIBS="$X_LIBS $LIB_TK $LIB_TCL $LIBS"
@@ -881,7 +910,7 @@ Subject: [PATCH 2/2] Shared libs
    # check Tix8.4.2 first, as that is known to work best with tcl/tk 8.5
    AC_CHECK_LIB([Tix8.4.2], [Tix_Init],
    [LIB_TIX=-lTix8.4.2],
-@@ -3162,6 +3170,7 @@
+@@ -3273,6 +3281,7 @@
          ])
        ])
      ])
@@ -1321,7 +1350,7 @@ Subject: [PATCH 2/2] Shared libs
  # found and removed after 'make install' is run during the 'make
 --- a/fem_elastic/Makefile.am
 +++ b/fem_elastic/Makefile.am
-@@ -19,79 +19,92 @@
+@@ -19,80 +19,94 @@
  AM_LDFLAGS=$(OS_LDFLAGS) -z muldefs
  endif
  
@@ -1340,8 +1369,9 @@ Subject: [PATCH 2/2] Shared libs
 +	transformUtils.cpp transformUtils.h \
 +	surf_utils.cpp surf_utils.h \
 +	ZlibStringCompressor.cpp ZlibStringCompressor.h
++
  
- bin_PROGRAMS=createMorph applyMorph surf2vol exportGcam
+ bin_PROGRAMS=createMorph applyMorph exportGcam surf2vol
  
  createMorph_SOURCES=\
  	$(common3d_SOURCES) \
@@ -1360,7 +1390,7 @@ Subject: [PATCH 2/2] Shared libs
 -	$(top_builddir)/tetgen/libtetgen.a $(BOOST_PO_LIB)
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +	$(top_builddir)/tetgen/libtetgen.la $(BOOST_PO_LIB) \
-+	 libfem_elastic.la
++	libfem_elastic.la
  
  applyMorph_SOURCES=\
  	$(common3d_SOURCES) \
@@ -1377,15 +1407,28 @@ Subject: [PATCH 2/2] Shared libs
  applyMorph_LDADD=\
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 -	$(top_builddir)/tetgen/libtetgen.a $(BOOST_PO_LIB)
-+	$(addprefix $(top_builddir)/, $(LIBS_MGH))  $(DLIBS_MGH) \
++	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +	$(top_builddir)/tetgen/libtetgen.la $(BOOST_PO_LIB) \
-+	 libfem_elastic.la
++	libfem_elastic.la
+ 
+ exportGcam_SOURCES=\
+ 	$(common3d_SOURCES) \
+ 	exportGcam.cpp \
+-	ZlibStringCompressor.cpp ZlibStringCompressor.h
++	ZlibStringCompressor.h
 +
-+# Workaround for fem_elastic/Makefile.am: object `fcreateMorph.$(OBJEXT)' created both with libtool and without
-+# per http://www.gnu.org/software/hello/manual/automake/Objects-created-both-with-libtool-and-without.html
-+# And since it is not just the 'main()' so it should be safer to just allow those two objects to duplicate
-+createMorph_CPPFLAGS = $(AM_CFLAGS)
-+applyMorph_CPPFLAGS = $(AM_CFLAGS)
++# workaround for fem_elastic/makefile.am: object `fcreatemorph.$(objext)' created both with libtool and without
++# per http://www.gnu.org/software/hello/manual/automake/objects-created-both-with-libtool-and-without.html
++# and since it is not just the 'main()' so it should be safer to just allow those two objects to duplicate
++createmorph_cppflags = $(am_cflags)
++applymorph_cppflags = $(am_cflags)
+ 
+ exportGcam_LDADD=\
+-	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
+-	$(top_builddir)/tetgen/libtetgen.a $(BOOST_PO_LIB)
++	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
++	$(top_builddir)/tetgen/libtetgen.la $(BOOST_PO_LIB) \
++	libfem_elastic.la
  
  surf2vol_SOURCES=\
  	$(common3d_SOURCES) \
@@ -1405,11 +1448,10 @@ Subject: [PATCH 2/2] Shared libs
 -	$(top_builddir)/tetgen/libtetgen.a \
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +	$(top_builddir)/tetgen/libtetgen.la \
- 	$(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat \
- 	-lpetscvec -lpetsc -lpmpich -lmpich -llmpe -lmpe -lflapack -lfblas \
--	$(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A)
-+	$(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) \
-+	libfem_elastic.la
+   $(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat \
+-  -lpetscvec -lpetsc -lmpich -lpmpich
++  -lpetscvec -lpetsc -lmpich -lpmpich \
++  libfem_elastic.la
  else
  surf2vol_LDADD=\
 -    $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
@@ -1417,89 +1459,77 @@ Subject: [PATCH 2/2] Shared libs
 +    $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +    $(top_builddir)/tetgen/libtetgen.la \
      $(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat \
--    -lpetscvec -lpetsc -lmpich  $(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
-+    -lpetscvec -lpetsc -lmpich  $(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN) \
-+    libfem_elastic.la
+     -lpetscvec -lpetsc -lmpich \
+-		$(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
++		$(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN) \
++		libfem_elastic.la
  endif
  
- exportGcam_SOURCES=\
- 	$(common3d_SOURCES) \
- 	exportGcam.cpp \
--	ZlibStringCompressor.cpp ZlibStringCompressor.h
-+	ZlibStringCompressor.h
- 
- exportGcam_LDADD=\
--	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
--	$(top_builddir)/tetgen/libtetgen.a $(BOOST_PO_LIB)
-+	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
-+	$(top_builddir)/tetgen/libtetgen.la $(BOOST_PO_LIB) \
-+	libfem_elastic.la
  
  # build library...
 -noinst_LIBRARIES= libfem_elastic.a
 -libfem_elastic_a_SOURCES = $(createMorph_SOURCES) $(applyMorph_SOURCES)
-+lib_LTLIBRARIES = libfem_elastic.la
++lib_LTLIBRARIES= libfem_elastic.a
 +libfem_elastic_la_SOURCES = $(dlibcommon3d_SOURCES) $(createMorph_SOURCES) $(applyMorph_SOURCES)
  
  endif
  endif
 --- a/freeview/Makefile.am
 +++ b/freeview/Makefile.am
-@@ -392,9 +392,9 @@
- freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS) \
- 	-framework Cocoa -framework IOKit
- freeview_LDADD		= $(QT_LIBS)	\
--	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
--	$(top_builddir)/vtkfsio/libvtkfsio.a \
--	$(top_builddir)/vtkutils/libvtkutils.a \
-+	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
-+	$(top_builddir)/vtkfsio/libvtkfsio.la \
-+	$(top_builddir)/vtkutils/libvtkutils.la \
- 	$(VTK_COCOA_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
- 	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
- 	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) \
-@@ -402,7 +402,7 @@
- 	$(VTK_SQLITE_LIB) \
- 	-lvtkImaging -lvtkFiltering \
- 	-lvtkCommon -lvtksys -lvtkGenericFiltering \
--	-lvtkexoIIc -lvtkNetCDF \
-+	-lvtkexoIIc -lnetcdf \
- 	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
- 	-lvtkWidgets -lvtkHybrid \
- 	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB)
-@@ -455,12 +455,12 @@
- 	$(VXL_CFLAGS)
+@@ -471,14 +471,14 @@
+ 	-I$(top_srcdir)/lineprof
  
  freeview_CXXFLAGS = $(QT_CXXFLAGS) $(AM_CXXFLAGS)
 -freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS)
 +freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS) -I/usr/include/qt4 -I/usr/include/qt4/QtCore -I/usr/include/qt4/QtGui
- freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS)
- freeview_LDADD		= $(QT_LIBS)	\
+ freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS) \
+ 	-framework Cocoa -framework IOKit -framework Accelerate
+ freeview_LDADD		= $(QT_LIBS) \
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 -	$(top_builddir)/vtkfsio/libvtkfsio.a \
 -	$(top_builddir)/vtkutils/libvtkutils.a \
+-	$(top_builddir)/lineprof/liblineprof.a \
 +	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +	$(top_builddir)/vtkfsio/libvtkfsio.la \
 +	$(top_builddir)/vtkutils/libvtkutils.la \
- 	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
++	$(top_builddir)/lineprof/liblineprof.la \
+ 	$(VTK_COCOA_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
  	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
  	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) \
-@@ -468,10 +468,10 @@
+@@ -486,10 +486,10 @@
  	$(VTK_SQLITE_LIB) \
  	-lvtkImaging -lvtkFiltering \
  	-lvtkCommon -lvtksys -lvtkGenericFiltering \
--	-lvtkexoIIc -lvtkNetCDF \
-+	-lvtkexoIIc -lnetcdf \
+-	-lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB) \
++	-lvtkexoIIc -lnetcdf $(VTK_NETCDFCXX_LIB) \
  	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
- 	-lvtkWidgets -lvtkHybrid \
--	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB)
-+	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) $(X_LIBS)
+ 	-lvtkWidgets -lvtkHybrid $(VTK_HDF5_LIB) \
+-	-lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
++	-lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) $(X_LIBS) \
+ 	$(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat \
+ 	-lpetscvec -lpetsc -lmpich -lpmpich
  
- # put a wrapper around the bin, used to setup tcltktixblt,vtk enviro vars
- # and if the OS is MACOSX have a different install-hook to create a bundle
+@@ -550,7 +550,7 @@
+ freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS)
+ freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS)
+ freeview_LDADD		= $(QT_LIBS)	\
+-	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
++	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
+ 	$(top_builddir)/vtkfsio/libvtkfsio.a \
+   $(top_builddir)/vtkutils/libvtkutils.a \
+   $(top_builddir)/lineprof/liblineprof.a \
+@@ -561,7 +561,7 @@
+ 	$(VTK_SQLITE_LIB) \
+ 	-lvtkImaging -lvtkFiltering \
+ 	-lvtkCommon -lvtksys -lvtkGenericFiltering \
+-	-lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB) \
++	-lvtkexoIIc -lnetcdf $(VTK_NETCDFCXX_LIB) \
+ 	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
+ 	-lvtkWidgets -lvtkHybrid $(VTK_HDF5_LIB) \
+   -lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
 --- a/freeview/freeview.pro
 +++ b/freeview/freeview.pro
-@@ -269,7 +269,7 @@
+@@ -325,7 +325,7 @@
  LIBS += \
      -lvtkverdict -lvtkGraphics -lvtkmetaio -lvtkpng -lvtkzlib \
      -lvtksqlite -lvtkImaging -lvtkFiltering -lvtkCommon -lvtksys \
@@ -1507,10 +1537,10 @@ Subject: [PATCH 2/2] Shared libs
 +    -lvtkGenericFiltering -lvtkexoIIc -lnetcdf -lvtkVolumeRendering \
      -lvtkRendering -lvtkftgl -lvtkWidgets -lvtkHybrid -lvtkIO -lvtkDICOMParser
  
- QMAKE_CXXFLAGS += -Wno-deprecated -DUNICODE -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES \
-@@ -349,7 +349,7 @@
+ #LIBS += \
+@@ -437,7 +437,7 @@
  LIBS -= \
-     -lvtkverdict -lvtkGraphics -lvtkmetaio -lvtkpng -lvtkzlib \
+     -lvtkverdict -lvtkGraphics -lvtkmetaio -lvtkpng \ #-lvtkzlib \
      -lvtksqlite -lvtkImaging -lvtkFiltering -lvtkCommon -lvtksys \
 -    -lvtkGenericFiltering -lvtkexoIIc -lvtkNetCDF -lvtkVolumeRendering \
 +    -lvtkGenericFiltering -lvtkexoIIc -lnetcdf -lvtkVolumeRendering \
@@ -2298,10 +2328,10 @@ Subject: [PATCH 2/2] Shared libs
  foodir=$(prefix)/docs/xml
 --- a/mri_em_register/Makefile.am
 +++ b/mri_em_register/Makefile.am
-@@ -12,7 +12,7 @@
- 
- bin_PROGRAMS = mri_em_register
- mri_em_register_SOURCES=mri_em_register.c
+@@ -14,7 +14,7 @@
+ mri_em_register_SOURCES=mri_em_register.c\
+                         findtranslation.cpp findtranslation.h\
+                         emregisterutils.cpp emregisterutils.h
 -mri_em_register_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
 +mri_em_register_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
  mri_em_register_LDFLAGS=$(OS_LDFLAGS)
@@ -2878,17 +2908,6 @@ Subject: [PATCH 2/2] Shared libs
  mri_mcsim_LDFLAGS=$(OS_LDFLAGS)
  
  EXCLUDE_FILES=
---- a/mri_mi_nl_align/Makefile.am
-+++ b/mri_mi_nl_align/Makefile.am
-@@ -7,7 +7,7 @@
- 
- bin_PROGRAMS = mri_mi_nl_align
- mri_mi_nl_align_SOURCES=mri_mi_nl_align.c gcam_mi.cpp
--mri_mi_nl_align_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+mri_mi_nl_align_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
- mri_mi_nl_align_LDFLAGS=$(OS_LDFLAGS)
- 
- EXTRA_DIST=gcam_mi.h
 --- a/mri_modify/Makefile.am
 +++ b/mri_modify/Makefile.am
 @@ -8,11 +8,11 @@
@@ -3193,14 +3212,14 @@ Subject: [PATCH 2/2] Shared libs
 +++ b/mri_robust_register/Makefile.am
 @@ -27,31 +27,31 @@
  	CostFunctions.cpp MyMatrix.cpp MyMRI.cpp \
- 	Quaternion.cpp Registration.cpp RegPowell.cpp \
+ 	Quaternion.cpp Registration.cpp RegRobust.cpp RegPowell.cpp \
  	mri_robust_register.cpp mri_robust_register.help.xml.h
 -mri_robust_register_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 +mri_robust_register_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
    $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
  mri_robust_register_LDFLAGS=$(OS_LDFLAGS) $(OTHERLDFLAGS)
  
- mri_robust_template_SOURCES= Registration.cpp \
+ mri_robust_template_SOURCES= Registration.cpp  RegRobust.cpp \
  	CostFunctions.cpp MyMatrix.cpp MyMRI.cpp Quaternion.cpp \
  	MultiRegistration.cpp mri_robust_template.cpp mri_robust_template.help.xml.h
 -mri_robust_template_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
@@ -3216,7 +3235,7 @@ Subject: [PATCH 2/2] Shared libs
  lta_diff_LDFLAGS=$(OS_LDFLAGS) $(OTHERLDFLAGS)
  
  mri_create_tests_SOURCES=mri_create_tests.cpp Quaternion.cpp \
- 	MyMatrix.cpp MyMRI.cpp
+ 	MyMatrix.cpp MyMRI.cpp CostFunctions.cpp
 -mri_create_tests_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 +mri_create_tests_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
    $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
@@ -3523,7 +3542,7 @@ Subject: [PATCH 2/2] Shared libs
  
 --- a/mri_vol2vol/Makefile.am
 +++ b/mri_vol2vol/Makefile.am
-@@ -7,7 +7,7 @@
+@@ -6,7 +6,7 @@
  
  bin_PROGRAMS = mri_vol2vol
  mri_vol2vol_SOURCES=mri_vol2vol.c
@@ -3887,11 +3906,11 @@ Subject: [PATCH 2/2] Shared libs
              $(VTK_TIFF_LIB) $(VTK_JPEG_LIB) \
              $(VTK_METAIO_LIB) $(VTK_PNG_LIB) $(VTK_Z_LIB) \
              $(VTK_SQLITE_LIB) \
--            -lvtkexoIIc -lvtkNetCDF \
-+            -lvtkexoIIc -lnetcdf \
+-            -lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB) \
++            -lvtkexoIIc -lnetcdf $(VTK_NETCDFCXX_LIB) \
              -lvtkVolumeRendering -lvtkRendering -lvtkftgl \
-             -lvtkHybrid -lvtkWidgets \
-             -lvtkGraphics \
+             -lvtkHybrid $(VTK_HDF5_LIB) \
+ 						-lvtkWidgets \
 --- a/mris_deform/Makefile.am
 +++ b/mris_deform/Makefile.am
 @@ -7,12 +7,12 @@
@@ -4825,10 +4844,10 @@ Subject: [PATCH 2/2] Shared libs
  $(VTK_LIBS) \
 @@ -25,18 +25,18 @@
  -lvtkImaging -lvtkftgl \
- -lvtkIO -lvtkFiltering -lvtkCommon -lvtkDICOMParser \
+ -lvtkIO	$(VTK_LSDYNA_LIB) -lvtkFiltering -lvtkCommon -lvtkDICOMParser \
  -lvtksys \
--$(VTK_MPEG2ENCODE_LIB) -lvtkexoIIc -lvtkNetCDF
-+$(VTK_MPEG2ENCODE_LIB) -lvtkexoIIc -lnetcdf
+-$(VTK_MPEG2ENCODE_LIB) -lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB)
++$(VTK_MPEG2ENCODE_LIB) -lvtkexoIIc -lnetcdf $(VTK_NETCDFCXX_LIB)
  endif
  
  mris_volmask_novtk_SOURCES=mris_volmask_old.cpp cmd_line_interface.cpp
@@ -4899,7 +4918,7 @@ Subject: [PATCH 2/2] Shared libs
  foodir=$(prefix)/docs/xml
 --- a/nmovie/Makefile.am
 +++ b/nmovie/Makefile.am
-@@ -20,11 +20,11 @@
+@@ -22,11 +22,11 @@
  bin_PROGRAMS = nmovie
  nmovie_SOURCES=nmovie.c
  if ENABLE_XAWPLUS_APPS
@@ -4926,7 +4945,7 @@ Subject: [PATCH 2/2] Shared libs
  # trick to get test data into the build directory
 --- a/orient_mri/Makefile.am
 +++ b/orient_mri/Makefile.am
-@@ -22,13 +22,13 @@
+@@ -22,14 +22,14 @@
  	vtkOrientMRIInteractorStyleView2D.h \
  	OrientMRILibInit.cxx
  orient_mri_LDADD= \
@@ -4935,12 +4954,13 @@ Subject: [PATCH 2/2] Shared libs
 -	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(LIBS_TCL_OPENGL) \
 +	$(top_builddir)/vtkfsio/libvtkfsio.la \
 +	$(top_builddir)/vtkutils/libvtkutils.la \
-+	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) $(LIBS_TCL_OPENGL) \
++	$(addprefix $(top_builddir)/, $(LIBS_MGH) $(DLIBS_MGH) $(LIBS_TCL_OPENGL) \
  	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkWidgets -lvtkGraphics \
  	-lvtkImaging -lvtkFiltering \
  	-lvtkCommon -lvtksys \
--	-lvtkHybrid -lvtkexoIIc -lvtkNetCDF \
-+	-lvtkHybrid -lvtkexoIIc -lnetcdf \
+ 	-lvtkHybrid $(VTK_HDF5_LIB) \
+-	-lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB) \
++	-lvtkexoIIc -lnetcdf $(VTK_NETCDFCXX_LIB) \
  	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
  	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) $(VTK_SQLITE_LIB) \
@@ -4967,11 +4987,11 @@ Subject: [PATCH 2/2] Shared libs
  	$(VTK_SQLITE_LIB) \
  	-lvtkImaging -lvtkFiltering \
  	-lvtkCommon -lvtksys \
--	-lvtkexoIIc -lvtkNetCDF \
-+	-lvtkexoIIc -lnetcdf \
+-	-lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB) \
++	-lvtkexoIIc -lnetcdf $(VTK_NETCDFCXX_LIB) \
  	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
- 	-lvtkWidgets -lvtkHybrid \
- 	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
+ 	-lvtkWidgets -lvtkHybrid $(VTK_HDF5_LIB) \
+ 	-lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
 --- a/qdec_glmfit/Makefile.am
 +++ b/qdec_glmfit/Makefile.am
 @@ -4,8 +4,8 @@
@@ -5327,8 +5347,8 @@ Subject: [PATCH 2/2] Shared libs
  if HAVE_MAC_OSX
 --- a/trc/Makefile.am
 +++ b/trc/Makefile.am
-@@ -21,35 +21,35 @@
-                dmri_paths dmri_pathstats dmri_mergepaths
+@@ -21,48 +21,48 @@
+                dmri_train dmri_paths dmri_pathstats dmri_mergepaths
  
  dmri_spline_SOURCES=dmri_spline.cxx spline.cxx spline.h
 -dmri_spline_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
@@ -5341,30 +5361,50 @@ Subject: [PATCH 2/2] Shared libs
 -                  $(top_builddir)/tetgen/libtetgen.a 
 +dmri_trk2trk_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +                  $(top_builddir)/fem_elastic/libfem_elastic.la \
-+                  $(top_builddir)/tetgen/libtetgen.la -lmpi_cxx
++                  $(top_builddir)/tetgen/libtetgen.la 
  dmri_trk2trk_LDFLAGS=$(OS_LDFLAGS)
  
+ dmri_vox2vox_SOURCES=dmri_vox2vox.cxx vial.cxx vial.h
+-dmri_vox2vox_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
+-                  $(top_builddir)/fem_elastic/libfem_elastic.a \
+-                  $(top_builddir)/tetgen/libtetgen.a 
++dmri_vox2vox_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
++                  $(top_builddir)/fem_elastic/libfem_elastic.la \
++                  $(top_builddir)/tetgen/libtetgen.la 
+ dmri_vox2vox_LDFLAGS=$(OS_LDFLAGS)
+ 
  dmri_train_SOURCES=dmri_train.cxx blood.cxx blood.h spline.cxx spline.h \
+                    vial.cxx vial.h \
                     TrackIO.cxx TrackIO.h ByteSwap.h ErrorCode.h
--dmri_train_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+dmri_train_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
+-dmri_train_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
+-                  $(top_builddir)/fem_elastic/libfem_elastic.a \
+-                  $(top_builddir)/tetgen/libtetgen.a 
++dmri_train_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
++                  $(top_builddir)/fem_elastic/libfem_elastic.la \
++                  $(top_builddir)/tetgen/libtetgen.la 
  dmri_train_LDFLAGS=$(OS_LDFLAGS)
  
  dmri_paths_SOURCES=dmri_paths.cxx coffin.cxx coffin.h \
-                    bite.cxx bite.h spline.cxx spline.h vial.cxx vial.h
+                    bite.cxx bite.h spline.cxx spline.h vial.cxx vial.h \
+                    TrackIO.cxx TrackIO.h ByteSwap.h ErrorCode.h
 -dmri_paths_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 -                  $(top_builddir)/fem_elastic/libfem_elastic.a \
 -                  $(top_builddir)/tetgen/libtetgen.a 
 +dmri_paths_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
 +                  $(top_builddir)/fem_elastic/libfem_elastic.la \
-+                  $(top_builddir)/tetgen/libtetgen.la -lmpi_cxx
++                  $(top_builddir)/tetgen/libtetgen.la 
  dmri_paths_LDFLAGS=$(OS_LDFLAGS)
  
  dmri_pathstats_SOURCES=dmri_pathstats.cxx spline.cxx spline.h \
                         blood.cxx blood.h \
+                        vial.cxx vial.h \
                         TrackIO.cxx TrackIO.h ByteSwap.h ErrorCode.h
--dmri_pathstats_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH))
-+dmri_pathstats_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH)
+-dmri_pathstats_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
+-                      $(top_builddir)/fem_elastic/libfem_elastic.a \
+-                      $(top_builddir)/tetgen/libtetgen.a 
++dmri_pathstats_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
++                      $(top_builddir)/fem_elastic/libfem_elastic.la \
++                      $(top_builddir)/tetgen/libtetgen.la 
  dmri_pathstats_LDFLAGS=$(OS_LDFLAGS)
  
  dmri_mergepaths_SOURCES=dmri_mergepaths.cxx
@@ -5388,7 +5428,7 @@ Subject: [PATCH 2/2] Shared libs
  libutils_main_SOURCES=\
  	afni.c \
  	annotation.c \
-@@ -298,7 +300,7 @@
+@@ -301,7 +303,7 @@
  	$(srcdir)/$(NrrdIO_dir)/write.c \
  	$(srcdir)/$(NrrdIO_dir)/formatNRRD.c
  
@@ -5397,7 +5437,7 @@ Subject: [PATCH 2/2] Shared libs
  	$(libutils_main_SOURCES) \
  	$(libutils_cephes_SOURCES) \
  	$(libutils_nrrdio_SOURCES)
-@@ -342,7 +344,7 @@
+@@ -345,7 +347,7 @@
  		-DFS_CUDA -DCUDA_FORCE_SYNC -DCUDA_SHOW_TIMINGS \
                  --compiler-options -O3
  
@@ -5406,7 +5446,7 @@ Subject: [PATCH 2/2] Shared libs
  
  libutils_cuda_a_SOURCES=\
  	$(libutils_main_SOURCES) \
-@@ -421,11 +423,11 @@
+@@ -424,11 +426,11 @@
  
  fsPrintHelp_SOURCES=fsPrintHelp.c
  fsPrintHelp_CFLAGS=-DBUILD_MAIN
@@ -5540,7 +5580,7 @@ Subject: [PATCH 2/2] Shared libs
  	vtkKWProgressDialog.cxx \
  	vtkKWRGBATransferFunctionEditor.cxx \
  	vtkKWRGBATransferFunctionEditorTcl.cxx \
-@@ -83,17 +83,18 @@
+@@ -87,17 +87,18 @@
  TESTS=
  endif
  
@@ -5563,7 +5603,7 @@ Subject: [PATCH 2/2] Shared libs
  	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  	-lexpat $(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
  	-ltiff $(VTK_TIFF_LIB) -ljpeg $(VTK_JPEG_LIB) \
-@@ -120,16 +121,16 @@
+@@ -124,16 +125,16 @@
  	RgbatransferfunctioneditortesterLibInit.cxx
  
  vtkKWRGBATransferFunctionEditorTester_LDADD=\
@@ -5583,7 +5623,7 @@ Subject: [PATCH 2/2] Shared libs
  	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
  	-lexpat $(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
  	-ltiff $(VTK_TIFF_LIB) -ljpeg $(VTK_JPEG_LIB) \
-@@ -150,7 +151,7 @@
+@@ -154,7 +155,7 @@
  	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkWidgets -lvtkGraphics \
  	-lvtkImaging -lvtkFiltering \
  	-lvtkCommon -lvtksys \

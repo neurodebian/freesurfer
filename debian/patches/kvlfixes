@@ -371,8 +371,8 @@
  } 
 --- a/GEMS/kvlAtlasMeshBuilder.cxx
 +++ b/GEMS/kvlAtlasMeshBuilder.cxx
-@@ -39,8 +39,8 @@
- #include "kvlAtlasMeshCollectionValidator.h"
+@@ -678,8 +678,8 @@
+   }
  #endif
  
 -
@@ -381,7 +381,7 @@
 +#include <unistd.h>
  
  
- namespace kvl
+ #if 0
 --- a/GEMS/kvlQuantifyPosteriorProbabilityImages.cxx
 +++ b/GEMS/kvlQuantifyPosteriorProbabilityImages.cxx
 @@ -99,12 +99,12 @@

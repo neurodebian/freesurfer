@@ -1,25 +1,25 @@
 --- a/fem_elastic/Makefile.am
 +++ b/fem_elastic/Makefile.am
-@@ -64,8 +64,8 @@
- # Workaround for fem_elastic/Makefile.am: object `fcreateMorph.$(OBJEXT)' created both with libtool and without
- # per http://www.gnu.org/software/hello/manual/automake/Objects-created-both-with-libtool-and-without.html
- # And since it is not just the 'main()' so it should be safer to just allow those two objects to duplicate
--createMorph_CPPFLAGS = $(AM_CFLAGS)
--applyMorph_CPPFLAGS = $(AM_CFLAGS)
+@@ -70,8 +70,8 @@
+ # workaround for fem_elastic/makefile.am: object `fcreatemorph.$(objext)' created both with libtool and without
+ # per http://www.gnu.org/software/hello/manual/automake/objects-created-both-with-libtool-and-without.html
+ # and since it is not just the 'main()' so it should be safer to just allow those two objects to duplicate
+-createmorph_cppflags = $(am_cflags)
+-applymorph_cppflags = $(am_cflags)
 +createMorph_CPPFLAGS = $(AM_CPPFLAGS) -DMAINPROGRAM
 +applyMorph_CPPFLAGS = $(AM_CPPFLAGS) -DMAINPROGRAM
  
- surf2vol_SOURCES=\
- 	$(common3d_SOURCES) \
-@@ -88,7 +88,7 @@
+ exportGcam_LDADD=\
+ 	$(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
+@@ -98,7 +98,7 @@
      $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
      $(top_builddir)/tetgen/libtetgen.la \
      $(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat \
--    -lpetscvec -lpetsc -lmpich  $(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN) \
-+    -lpetscvec -lpetsc -lmpi  $(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN) \
-     libfem_elastic.la
+-    -lpetscvec -lpetsc -lmpich \
++    -lpetscvec -lpetsc -lmpi \
+ 		$(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN) \
+ 		libfem_elastic.la
  endif
- 
 --- a/fem_elastic/fapplyMorph.cpp
 +++ b/fem_elastic/fapplyMorph.cpp
 @@ -25,8 +25,10 @@

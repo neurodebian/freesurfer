@@ -1,6 +1,6 @@
 --- a/scripts/mri_motion_correct
 +++ b/scripts/mri_motion_correct
-@@ -195,26 +195,26 @@ check_size()
+@@ -195,26 +195,26 @@
  # ---------------------------------------------------------------------
  # definitions
  
@@ -45,7 +45,7 @@
  have_which=
 --- a/scripts/talairach
 +++ b/scripts/talairach
-@@ -89,7 +89,7 @@ endif
+@@ -89,7 +89,7 @@
  
  echo "--------------------------------------------"
  set cmd = (mritotal -verbose -debug -clobber \
@@ -56,7 +56,7 @@
  echo $cmd |& tee -a
 --- a/scripts/talairach2
 +++ b/scripts/talairach2
-@@ -91,7 +91,7 @@ endif
+@@ -91,7 +91,7 @@
  
  echo "--------------------------------------------"
  set cmd = (mritotal -verbose -debug -clobber \

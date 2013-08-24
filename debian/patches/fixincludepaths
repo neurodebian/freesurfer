@@ -1,6 +1,6 @@
 --- a/configure.in
 +++ b/configure.in
-@@ -2428,15 +2428,7 @@
+@@ -2526,15 +2526,7 @@
    # except wx-config isn't so handy in including some header paths on Linux:
    if test -d /usr/include/gtk-2.0 ; then
    WXWIDGETS_GTK_CFLAGS="-D__WXGTK20__"

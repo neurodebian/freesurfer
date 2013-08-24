@@ -1,7 +1,5 @@
-Index: freesurfer/utils/gcamorphtestutils.cpp
-===================================================================
---- freesurfer.orig/utils/gcamorphtestutils.cpp	2012-06-28 12:36:17.000000000 +0100
-+++ freesurfer/utils/gcamorphtestutils.cpp	2012-06-28 12:36:36.000000000 +0100
+--- a/utils/gcamorphtestutils.cpp
++++ b/utils/gcamorphtestutils.cpp
 @@ -45,12 +45,12 @@
  GCAMorphUtils::GCAMorphUtils( void ) : varTypeMap(),
  				       scalarTypeMap() {
