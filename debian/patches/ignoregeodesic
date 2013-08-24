@@ -1,0 +1,10 @@
+--- a/matlab/Makefile.am
++++ b/matlab/Makefile.am
+@@ -166,7 +166,6 @@
+ lmegeofiles_DATA=\
+ 	lme/geodesic/geodesic_license.txt \
+ 	lme/geodesic/geodesic_readme.txt \
+-	lme/geodesic/geodesic_src.tar.gz \
+ 	lme/geodesic/geodesic_matlab_api.h \
+ 	lme/geodesic/create_flat_triangular_mesh.m \
+ 	lme/geodesic/create_hedgehog_mesh.m \

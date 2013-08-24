@@ -36,3 +36,5 @@ dont_inline_functions
 addbackunwarpgrad
 addbacklut
 fixtclinclude
+ignoregeodesic
+fixscuba2tcllink
