@@ -1469,7 +1469,7 @@ Subject: [PATCH 2/2] Shared libs
  # build library...
 -noinst_LIBRARIES= libfem_elastic.a
 -libfem_elastic_a_SOURCES = $(createMorph_SOURCES) $(applyMorph_SOURCES)
-+lib_LTLIBRARIES= libfem_elastic.a
++lib_LTLIBRARIES= libfem_elastic.la
 +libfem_elastic_la_SOURCES = $(dlibcommon3d_SOURCES) $(createMorph_SOURCES) $(applyMorph_SOURCES)
  
  endif
