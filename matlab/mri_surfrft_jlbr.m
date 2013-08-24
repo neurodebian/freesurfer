@@ -12,7 +12,7 @@ function r = mri_surfrft_jlbr(yfile,glmdir,vwthresh,sgn,subject,hemi)
 % yfile -- input data. This is the file passed to mri_glmfit with
 %   the --y option.
 % glmdir -- GLM directory (argument to the --glmdir option). 
-% vwthresh -- voxel-wise threshold (ie, the cluster-forming threshold)
+% vwthresh -- voxel-wise p-value threshold (ie, the cluster-forming threshold)
 % sgn -- sign of the contrast (+1 or -1, default is +1)
 % subject - subject whose surface the analysis is done on. This
 %   will be read from the GLMDIR by default.
@@ -27,16 +27,14 @@ function r = mri_surfrft_jlbr(yfile,glmdir,vwthresh,sgn,subject,hemi)
 % Limitations: does not work with per-voxel regressors, weighted-least
 % squares, fixed effects, or multi-variate contrasts.
 %
-% $Id: mri_surfrft_jlbr.m,v 1.2 2011/02/24 21:13:31 greve Exp $
+% $Id: mri_surfrft_jlbr.m,v 1.2.2.1 2013/01/22 20:59:09 nicks Exp $
 
-%
-% MRIread.m
 %
 % Original Author: Jorge Louis Bernal-Rusiel and Douglas Greve
 % CVS Revision Info:
-%    $Author: greve $
-%    $Date: 2011/02/24 21:13:31 $
-%    $Revision: 1.2 $
+%    $Author: nicks $
+%    $Date: 2013/01/22 20:59:09 $
+%    $Revision: 1.2.2.1 $
 %
 % Copyright (C) 2002-2007,
 % The General Hospital Corporation (Boston, MA). 
@@ -69,14 +67,18 @@ if(sgn == -1) sgnstring = 'neg'; end
 if(~exist('subject','var'))
   % Get subject and hemi from 'surface' file. New with FS 5.1
   fname = sprintf('%s/surface',glmdir);
-  [subject hemi] = textread(fname,'%s %s');
-  subject = char(subject);
-  hemi = char(hemi);
+  fp = fopen(fname,'r');
+  subject = fscanf(fp,'%s',1);
+  hemi = fscanf(fp,'%s',1);
+  fclose(fp);
+  %[subject hemi] = textread(fname,'%s %s');
+  %subject = char(subject);
+  %hemi = char(hemi);
 end
 
 % Load the surface
 spath = sprintf('%s/%s/surf/%s.%s',SUBJECTS_DIR,subject,hemi,surfname);
-surf = SurfStatReadSurf(spath,'b');
+surf = SurfStatReadSurf(spath,'b',2);
 
 % Load raw data
 ymri = MRIread(yfile);
@@ -94,8 +96,22 @@ X = load(Xfile);
 
 % Solve the linear model
 tX = term(X,'X');
-slm = SurfStatLinMod(y, tX, surf);
+slm = SurfStatLinMod(y, tX, surf,1,.01,0.1);
 slm.k = 1;
+
+% pairs of connected vtxnos (does not excl mask so nans are
+% present)
+if(0)
+edg=SurfStatEdg(surf); 
+ntp = size(X,1);
+nX  = size(X,2);
+R = eye(ntp) - X*inv(X'*X)*X';
+yr = R*y;
+ysse = sum(yr.^2); % residual
+yrn = yr./repmat(sqrt(ysse),[ntp 1]); % voxel-norm resid
+d = yrn(:,edg(:,1))-yrn(:,edg(:,2)); % norm resid diff bet pairs
+resl = sum(d.^2); % resel size
+end
 
 % Get a list of contrasts
 flist = dir(glmdir);
@@ -110,16 +126,33 @@ end
 % Get p-values for each contrast, save output
 ncon = size(conlist,1);
 for nthcon = 1:ncon
-  cdat = sprintf('%s/%s/C.dat',glmdir,deblank(conlist(nthcon,:)));  
+  conname = deblank(conlist(nthcon,:));
+  cdat = sprintf('%s/%s/C.dat',glmdir,conname);  
   C = sgn*load(cdat);
   slmC = SurfStatT(slm, C);
+
   [pval peak clus] = SurfStatP(slmC, mask, vwthresh);
+
   mri.vol = fast_mat2vol(-log10(pval.C)*sgn,mri.volsize);
-  fname = sprintf('%s/%s/sig.cw.%s.mgh',glmdir,deblank(conlist(nthcon,:)),sgnstring);  
+  fname = sprintf('%s/%s/sig.cw.%s.mgh',glmdir,conname,sgnstring);  
   MRIwrite(mri,fname);
   mri.vol = fast_mat2vol(-log10(pval.P)*sgn,mri.volsize);
-  fname = sprintf('%s/%s/sig.vw.%s.mgh',glmdir,deblank(conlist(nthcon,:)),sgnstring);  
+  fname = sprintf('%s/%s/sig.vw.%s.mgh',glmdir,conname,sgnstring);  
   MRIwrite(mri,fname);
+
+  fname = sprintf('%s/%s/sig.cw.%s.dat',glmdir,conname,sgnstring);
+  fp = fopen(fname,'w');
+  fprintf(fp,'# vwthresh %g\n',vwthresh);
+  nclusters = length(clus.P);
+  for nthcluster = 1:nclusters
+    fprintf(fp,'%2d %7.6f %5d\n',nthcluster,clus.P(nthcluster),clus.nverts(nthcluster));
+  end
+  fclose(fp);
+  
+  % This gives same t as KJW
+  %[beta rvar] = fast_glmfit(y,X);
+  %[F, Fsig, ces, cesvar] = fast_fratio(beta,X,rvar,C);
+  %t = sqrt(F).*sign(ces);
 end
 
 

@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/05/13 15:04:32 $
- *    $Revision: 1.40.2.2 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:33 $
+ *    $Revision: 1.40.2.8 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -28,6 +28,7 @@
 
 #include "LayerEditable.h"
 #include "vtkSmartPointer.h"
+#include <QList>
 
 class vtkImageReslice;
 class vtkImageMapToColors;
@@ -47,6 +48,8 @@ class LayerMRI;
 class SurfaceOverlay;
 class SurfaceAnnotation;
 class SurfaceLabel;
+class SurfaceROI;
+class SurfaceSpline;
 
 class LayerSurface : public LayerEditable
 {
@@ -58,11 +61,12 @@ public:
   bool LoadSurfaceFromFile();
   bool LoadVectorFromFile();
   bool LoadCurvatureFromFile( const QString& filename );
-  bool LoadOverlayFromFile( const QString& filename, bool bCorrelation );
-  bool LoadGenericOverlayFromFile( const QString& filename );
+  bool LoadOverlayFromFile( const QString& filename, const QString& fn_reg, bool bCorrelation, bool bSecondHalfData = false );
+  bool LoadGenericOverlayFromFile( const QString& filename, const QString& fn_reg, bool bSecondHalfData = false );
   bool LoadCorrelationFromFile( const QString& filename );
   bool LoadAnnotationFromFile( const QString& filename );
   bool LoadLabelFromFile( const QString& filename );
+  bool LoadSplineFromFile(const QString& filename);
 
   void Append2DProps( vtkRenderer* renderer, int nPlane );
   void Append3DProps( vtkRenderer* renderer, bool* bSliceVisibility = NULL );
@@ -149,6 +153,8 @@ public:
 
   void SetActiveOverlay( const QString& name );
 
+  SurfaceOverlay* GetCorrelationOverlay();
+
   void CopyCorrelationOverlay(LayerSurface* surf);
 
   // annotation functions
@@ -190,10 +196,18 @@ public:
     return m_volumeRef;
   }
 
+  SurfaceSpline* GetSpline()
+  {
+    return m_spline;
+  }
+
   int GetHemisphere();
 
-  void RepositionSurface( LayerMRI* mri, int nVertex, double value, int size, double sigma );
-  void RepositionSurface( LayerMRI* mri, int nVertex, double* pos, int size, double sigma );
+  void RepositionSurface( LayerMRI* mri, int nVertex, double value, int size, double sigma, int flags = 0 );
+  void RepositionSurface( LayerMRI* mri, int nVertex, double* pos, int size, double sigma, int flags = 0 );
+  void RepositionVertex( int nVertex, double* pos);
+  bool SmoothSurface(int nMethod, int niters, double lambda, double k_cutoff);
+  void RemoveIntersections();
 
   void Undo();
   bool HasUndo();
@@ -205,6 +219,11 @@ public:
 
   int GetNumberOfVertices();
 
+  SurfaceROI* GetSurfaceROI()
+  {
+    return m_roi;
+  }
+
 public slots:
   void SetActiveSurface( int nSurfaceType );
   void UpdateOverlay( bool bAskRedraw = true );
@@ -212,7 +231,13 @@ public slots:
   {
     m_bLoadAll = bLoadAll;
   }
+
   void SetActiveLabelColor(const QColor& c);
+  void SetActiveLabelOutline(bool bOutline);
+
+  void SetActiveAnnotationOutline(bool bOutline);
+
+  void ResetVolumeRef();
 
 Q_SIGNALS:
   void SurfaceAnnotationAdded( SurfaceAnnotation* );
@@ -235,6 +260,7 @@ protected slots:
   void UpdateVertexRender();
   void UpdateMeshRender();
   void UpdateActorPositions();
+  void UpdateROIPosition(double dx, double dy, double dz);
   void UpdateVectorActor2D();
 
 protected:
@@ -259,24 +285,28 @@ protected:
   QString   m_sVectorFilename;
   QString   m_sTargetFilename;
 
-  vtkActor*   m_sliceActor2D[3];
-  vtkActor*   m_sliceActor3D[3];
-  vtkActor*   m_vectorActor2D[3];
+  vtkSmartPointer<vtkActor>   m_sliceActor2D[3];
+  vtkSmartPointer<vtkActor>   m_sliceActor3D[3];
+  vtkSmartPointer<vtkActor>   m_vectorActor2D[3];
 
   // vtkLODActor*  m_mainActor;
   vtkSmartPointer<vtkActor>   m_mainActor;
   vtkSmartPointer<vtkActor>   m_vectorActor;
   vtkSmartPointer<vtkActor>   m_vertexActor;
+  vtkSmartPointer<vtkActor>   m_vertexActor2D[3];
   vtkSmartPointer<vtkActor>   m_wireframeActor;
 
-  std::vector<SurfaceOverlay*>    m_overlays;
+  QList<SurfaceOverlay*>    m_overlays;
   int         m_nActiveOverlay;
 
-  std::vector<SurfaceAnnotation*> m_annotations;
+  QList<SurfaceAnnotation*> m_annotations;
   int         m_nActiveAnnotation;
 
-  std::vector<SurfaceLabel*>      m_labels;
+  QList<SurfaceLabel*>      m_labels;
   int         m_nActiveLabel;
+
+  SurfaceROI*           m_roi;
+  SurfaceSpline*        m_spline;
 
   bool        m_bUndoable;
   bool        m_bVector2DPendingUpdate;

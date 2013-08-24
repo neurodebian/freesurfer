@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>326</width>
-    <height>1398</height>
+    <height>1499</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,9 +26,9 @@
    <property name="geometry">
     <rect>
      <x>0</x>
-     <y>-47</y>
-     <width>308</width>
-     <height>1482</height>
+     <y>-156</y>
+     <width>311</width>
+     <height>1655</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -84,6 +84,9 @@
         </property>
         <property name="editTriggers">
          <set>QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked</set>
+        </property>
+        <property name="selectionMode">
+         <enum>QAbstractItemView::SingleSelection</enum>
         </property>
         <property name="rootIsDecorated">
          <bool>false</bool>
@@ -163,28 +166,28 @@
         </item>
        </layout>
       </item>
-      <item row="2" column="1">
+      <item row="3" column="1">
        <widget class="QCheckBox" name="checkBoxDisplayVector">
         <property name="text">
          <string>Display as vectors</string>
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
+      <item row="4" column="1">
        <widget class="QCheckBox" name="checkBoxDisplayTensor">
         <property name="text">
          <string>Display as tensors</string>
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
+      <item row="5" column="0">
        <widget class="QLabel" name="labelRenderObject">
         <property name="text">
          <string>Render</string>
         </property>
        </widget>
       </item>
-      <item row="4" column="1">
+      <item row="5" column="1">
        <widget class="QComboBox" name="comboBoxRenderObject">
         <item>
          <property name="text">
@@ -198,14 +201,14 @@
         </item>
        </widget>
       </item>
-      <item row="5" column="0">
+      <item row="6" column="0">
        <widget class="QLabel" name="labelInversion">
         <property name="text">
          <string>Inversion</string>
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
+      <item row="6" column="1">
        <widget class="QComboBox" name="comboBoxInversion">
         <item>
          <property name="text">
@@ -229,14 +232,14 @@
         </item>
        </widget>
       </item>
-      <item row="6" column="0">
+      <item row="7" column="0">
        <widget class="QLabel" name="labelMask">
         <property name="text">
          <string>Mask</string>
         </property>
        </widget>
       </item>
-      <item row="6" column="1">
+      <item row="7" column="1">
        <widget class="QComboBox" name="comboBoxMask">
         <item>
          <property name="text">
@@ -245,14 +248,14 @@
         </item>
        </widget>
       </item>
-      <item row="7" column="0">
+      <item row="8" column="0">
        <widget class="QLabel" name="labelOpacity">
         <property name="text">
          <string>Opacity</string>
         </property>
        </widget>
       </item>
-      <item row="7" column="1">
+      <item row="8" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
          <widget class="QSlider" name="sliderOpacity">
@@ -282,28 +285,28 @@
         </item>
        </layout>
       </item>
-      <item row="8" column="1">
+      <item row="9" column="1">
        <widget class="QCheckBox" name="checkBoxSmooth">
         <property name="text">
          <string>Smooth display</string>
         </property>
        </widget>
       </item>
-      <item row="9" column="1">
+      <item row="10" column="1">
        <widget class="QCheckBox" name="checkBoxUpsample">
         <property name="text">
          <string>Upsample display</string>
         </property>
        </widget>
       </item>
-      <item row="10" column="0">
+      <item row="11" column="0">
        <widget class="QLabel" name="labelColorMap">
         <property name="text">
          <string>Color map</string>
         </property>
        </widget>
       </item>
-      <item row="10" column="1">
+      <item row="11" column="1">
        <widget class="QComboBox" name="comboBoxColorMap">
         <item>
          <property name="text">
@@ -337,24 +340,24 @@
         </item>
        </widget>
       </item>
-      <item row="11" column="0">
+      <item row="12" column="0">
        <widget class="QLabel" name="labelLookUpTable">
         <property name="text">
          <string>Lookup table</string>
         </property>
        </widget>
       </item>
-      <item row="11" column="1">
+      <item row="12" column="1">
        <widget class="QComboBox" name="comboBoxLookUpTable"/>
       </item>
-      <item row="12" column="0">
+      <item row="13" column="0">
        <widget class="QLabel" name="labelDirectionCode">
         <property name="text">
-         <string>Direction code</string>
+         <string>Color code</string>
         </property>
        </widget>
       </item>
-      <item row="12" column="1">
+      <item row="13" column="1">
        <widget class="QComboBox" name="comboBoxDirectionCode">
         <item>
          <property name="text">
@@ -388,14 +391,14 @@
         </item>
        </widget>
       </item>
-      <item row="13" column="0">
+      <item row="14" column="0">
        <widget class="QLabel" name="labelWindow">
         <property name="text">
          <string>Window</string>
         </property>
        </widget>
       </item>
-      <item row="13" column="1">
+      <item row="14" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_6">
         <item>
          <widget class="QSlider" name="sliderWindow">
@@ -425,14 +428,14 @@
         </item>
        </layout>
       </item>
-      <item row="14" column="0">
+      <item row="15" column="0">
        <widget class="QLabel" name="labelLevel">
         <property name="text">
          <string>Level</string>
         </property>
        </widget>
       </item>
-      <item row="14" column="1">
+      <item row="15" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_10">
         <item>
          <widget class="QSlider" name="sliderLevel">
@@ -462,14 +465,14 @@
         </item>
        </layout>
       </item>
-      <item row="15" column="0">
+      <item row="16" column="0">
        <widget class="QLabel" name="labelMin">
         <property name="text">
          <string>Min</string>
         </property>
        </widget>
       </item>
-      <item row="15" column="1">
+      <item row="16" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_9">
         <item>
          <widget class="QSlider" name="sliderMin">
@@ -499,14 +502,14 @@
         </item>
        </layout>
       </item>
-      <item row="16" column="0">
+      <item row="17" column="0">
        <widget class="QLabel" name="labelMid">
         <property name="text">
          <string>Mid</string>
         </property>
        </widget>
       </item>
-      <item row="16" column="1">
+      <item row="17" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_7">
         <item>
          <widget class="QSlider" name="sliderMid">
@@ -536,7 +539,7 @@
         </item>
        </layout>
       </item>
-      <item row="17" column="1">
+      <item row="18" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_11">
         <item>
          <widget class="QSlider" name="sliderMax">
@@ -566,14 +569,14 @@
         </item>
        </layout>
       </item>
-      <item row="18" column="0">
+      <item row="19" column="0">
        <widget class="QLabel" name="labelOffset">
         <property name="text">
          <string>Offset</string>
         </property>
        </widget>
       </item>
-      <item row="18" column="1">
+      <item row="19" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_14">
         <item>
          <widget class="QSlider" name="sliderOffset">
@@ -603,7 +606,7 @@
         </item>
        </layout>
       </item>
-      <item row="19" column="1">
+      <item row="20" column="1">
        <layout class="QGridLayout" name="gridLayout">
         <item row="0" column="0">
          <widget class="QCheckBox" name="checkBoxTruncate">
@@ -648,14 +651,14 @@
         </item>
        </layout>
       </item>
-      <item row="20" column="0">
+      <item row="21" column="0">
        <widget class="QLabel" name="labelBrushValue">
         <property name="text">
          <string>Brush value</string>
         </property>
        </widget>
       </item>
-      <item row="20" column="1">
+      <item row="21" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_17">
         <item>
          <widget class="QLineEdit" name="lineEditBrushValue">
@@ -704,14 +707,54 @@
         </item>
        </layout>
       </item>
-      <item row="17" column="0">
+      <item row="18" column="0">
        <widget class="QLabel" name="labelMax">
         <property name="text">
          <string>Max</string>
         </property>
        </widget>
       </item>
+      <item row="2" column="1">
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QCheckBox" name="checkBoxRememberFrame">
+          <property name="text">
+           <string>Remember each frame's</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelRememberFrame">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>1</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>threshold settings</string>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+          <property name="indent">
+           <number>21</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
      </layout>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="checkBoxShowExistingLabels">
+      <property name="text">
+       <string>Show existing labels only</string>
+      </property>
+     </widget>
     </item>
     <item>
      <widget class="QTreeWidget" name="treeWidgetColorTable">
@@ -809,21 +852,24 @@
     </item>
     <item>
      <layout class="QGridLayout" name="gridLayoutContour" columnstretch="0,0">
-      <item row="0" column="0">
+      <item row="2" column="0">
        <widget class="QLabel" name="labelContourThresholdLow">
         <property name="text">
          <string>Low threshold</string>
         </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
        </widget>
       </item>
-      <item row="2" column="1">
+      <item row="6" column="1">
        <widget class="QCheckBox" name="checkBoxContourExtractAll">
         <property name="text">
          <string>Extract all regions</string>
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
+      <item row="8" column="0">
        <widget class="QLabel" name="labelContourColor">
         <property name="text">
          <string>Surface color</string>
@@ -833,24 +879,27 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="1">
+      <item row="8" column="1">
        <widget class="QtColorPicker" name="colorPickerContour" native="true"/>
       </item>
-      <item row="5" column="1">
+      <item row="9" column="1">
        <widget class="QCheckBox" name="checkBoxUseColorMap">
         <property name="text">
          <string>Use color map</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
+      <item row="3" column="0">
        <widget class="QLabel" name="labelContourThresholdHigh">
         <property name="text">
          <string>High threshold</string>
         </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="3" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_13">
         <item>
          <widget class="QSlider" name="sliderContourThresholdHigh">
@@ -880,19 +929,25 @@
         </item>
        </layout>
       </item>
-      <item row="3" column="0">
+      <item row="7" column="0">
        <widget class="QLabel" name="labelSmoothIteration">
         <property name="text">
          <string>Smooth iterations</string>
         </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
        </widget>
       </item>
-      <item row="3" column="1">
+      <item row="7" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_15">
         <item>
          <widget class="QSlider" name="sliderContourSmoothIteration">
           <property name="maximum">
            <number>20</number>
+          </property>
+          <property name="pageStep">
+           <number>5</number>
           </property>
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -917,7 +972,7 @@
         </item>
        </layout>
       </item>
-      <item row="6" column="1">
+      <item row="10" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_16">
         <item>
          <widget class="QPushButton" name="pushButtonContourSave">
@@ -941,7 +996,7 @@
         </item>
        </layout>
       </item>
-      <item row="0" column="1">
+      <item row="2" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_12">
         <item>
          <widget class="QSlider" name="sliderContourThresholdLow">
@@ -971,7 +1026,87 @@
         </item>
        </layout>
       </item>
+      <item row="1" column="1">
+       <widget class="QCheckBox" name="checkBoxShowLabelContour">
+        <property name="text">
+         <string>Label volume</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="labelContourLabelRange">
+        <property name="text">
+         <string>Range</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <widget class="QLineEdit" name="lineEditContourLabelRangeLow">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>16777215</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="lineEditContourLabelRangeHigh">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>16777215</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_4">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item row="5" column="1">
+       <widget class="QCheckBox" name="checkBoxUpsampleContour">
+        <property name="text">
+         <string>Upsample volume</string>
+        </property>
+       </widget>
+      </item>
      </layout>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="checkBoxProjectionMap">
+      <property name="text">
+       <string>Show intensity projection map</string>
+      </property>
+     </widget>
     </item>
     <item>
      <widget class="QCheckBox" name="checkBoxShowInfo">
@@ -1108,8 +1243,8 @@
    <slot>OnCheckShowContour(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>168</x>
-     <y>1163</y>
+     <x>163</x>
+     <y>1111</y>
     </hint>
     <hint type="destinationlabel">
      <x>325</x>
@@ -1124,8 +1259,8 @@
    <slot>OnComboColorMap(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>301</x>
-     <y>527</y>
+     <x>304</x>
+     <y>440</y>
     </hint>
     <hint type="destinationlabel">
      <x>44</x>
@@ -1141,7 +1276,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>271</x>
-     <y>994</y>
+     <y>1022</y>
     </hint>
     <hint type="destinationlabel">
      <x>323</x>
@@ -1156,8 +1291,8 @@
    <slot>OnLineEditBrushValue(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>165</x>
-     <y>923</y>
+     <x>150</x>
+     <y>815</y>
     </hint>
     <hint type="destinationlabel">
      <x>37</x>
@@ -1172,8 +1307,8 @@
    <slot>OnSliderOpacity(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>239</x>
-     <y>434</y>
+     <x>243</x>
+     <y>349</y>
     </hint>
     <hint type="destinationlabel">
      <x>39</x>
@@ -1188,8 +1323,8 @@
    <slot>OnSliderWindow(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>219</x>
-     <y>624</y>
+     <x>222</x>
+     <y>529</y>
     </hint>
     <hint type="destinationlabel">
      <x>101</x>
@@ -1204,8 +1339,8 @@
    <slot>OnSliderLevel(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>219</x>
-     <y>659</y>
+     <x>222</x>
+     <y>562</y>
     </hint>
     <hint type="destinationlabel">
      <x>91</x>
@@ -1220,8 +1355,8 @@
    <slot>OnSliderMin(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>219</x>
-     <y>694</y>
+     <x>222</x>
+     <y>595</y>
     </hint>
     <hint type="destinationlabel">
      <x>94</x>
@@ -1236,8 +1371,8 @@
    <slot>OnSliderMid(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>219</x>
-     <y>729</y>
+     <x>222</x>
+     <y>628</y>
     </hint>
     <hint type="destinationlabel">
      <x>64</x>
@@ -1252,8 +1387,8 @@
    <slot>OnSliderMax(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>219</x>
-     <y>764</y>
+     <x>222</x>
+     <y>661</y>
     </hint>
     <hint type="destinationlabel">
      <x>97</x>
@@ -1268,8 +1403,8 @@
    <slot>OnSliderOffset(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>219</x>
-     <y>799</y>
+     <x>222</x>
+     <y>694</y>
     </hint>
     <hint type="destinationlabel">
      <x>74</x>
@@ -1284,8 +1419,8 @@
    <slot>OnLineEditWindow(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>300</x>
-     <y>627</y>
+     <x>303</x>
+     <y>534</y>
     </hint>
     <hint type="destinationlabel">
      <x>324</x>
@@ -1300,8 +1435,8 @@
    <slot>OnLineEditLevel(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>300</x>
-     <y>662</y>
+     <x>303</x>
+     <y>567</y>
     </hint>
     <hint type="destinationlabel">
      <x>323</x>
@@ -1316,8 +1451,8 @@
    <slot>OnLineEditMin(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>300</x>
-     <y>697</y>
+     <x>303</x>
+     <y>600</y>
     </hint>
     <hint type="destinationlabel">
      <x>325</x>
@@ -1332,8 +1467,8 @@
    <slot>OnLineEditMid(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>300</x>
-     <y>732</y>
+     <x>303</x>
+     <y>633</y>
     </hint>
     <hint type="destinationlabel">
      <x>325</x>
@@ -1348,11 +1483,11 @@
    <slot>OnLineEditMax(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>300</x>
-     <y>767</y>
+     <x>303</x>
+     <y>666</y>
     </hint>
     <hint type="destinationlabel">
-     <x>326</x>
+     <x>325</x>
      <y>747</y>
     </hint>
    </hints>
@@ -1364,8 +1499,8 @@
    <slot>OnLineEditOffset(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>300</x>
-     <y>802</y>
+     <x>303</x>
+     <y>699</y>
     </hint>
     <hint type="destinationlabel">
      <x>309</x>
@@ -1380,8 +1515,8 @@
    <slot>OnComboLookupTable(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>301</x>
-     <y>560</y>
+     <x>304</x>
+     <y>471</y>
     </hint>
     <hint type="destinationlabel">
      <x>52</x>
@@ -1396,11 +1531,11 @@
    <slot>OnSliderContourMin(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>234</x>
-     <y>1196</y>
+     <x>237</x>
+     <y>1172</y>
     </hint>
     <hint type="destinationlabel">
-     <x>410</x>
+     <x>325</x>
      <y>1216</y>
     </hint>
    </hints>
@@ -1412,11 +1547,11 @@
    <slot>OnSliderContourMax(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>234</x>
-     <y>1231</y>
+     <x>237</x>
+     <y>1205</y>
     </hint>
     <hint type="destinationlabel">
-     <x>371</x>
+     <x>325</x>
      <y>1228</y>
     </hint>
    </hints>
@@ -1428,11 +1563,11 @@
    <slot>OnSliderContourSmooth(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>234</x>
-     <y>1304</y>
+     <x>237</x>
+     <y>1339</y>
     </hint>
     <hint type="destinationlabel">
-     <x>421</x>
+     <x>325</x>
      <y>1303</y>
     </hint>
    </hints>
@@ -1444,11 +1579,11 @@
    <slot>OnContourValueChanged()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>234</x>
-     <y>1196</y>
+     <x>237</x>
+     <y>1172</y>
     </hint>
     <hint type="destinationlabel">
-     <x>446</x>
+     <x>325</x>
      <y>1321</y>
     </hint>
    </hints>
@@ -1460,11 +1595,11 @@
    <slot>OnContourValueChanged()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>234</x>
-     <y>1231</y>
+     <x>237</x>
+     <y>1205</y>
     </hint>
     <hint type="destinationlabel">
-     <x>518</x>
+     <x>325</x>
      <y>1277</y>
     </hint>
    </hints>
@@ -1476,11 +1611,11 @@
    <slot>OnContourValueChanged()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>234</x>
-     <y>1304</y>
+     <x>237</x>
+     <y>1339</y>
     </hint>
     <hint type="destinationlabel">
-     <x>435</x>
+     <x>325</x>
      <y>1338</y>
     </hint>
    </hints>
@@ -1492,11 +1627,11 @@
    <slot>OnContourValueChanged()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>300</x>
-     <y>1193</y>
+     <x>303</x>
+     <y>1167</y>
     </hint>
     <hint type="destinationlabel">
-     <x>384</x>
+     <x>325</x>
      <y>1165</y>
     </hint>
    </hints>
@@ -1508,8 +1643,8 @@
    <slot>OnContourValueChanged()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>300</x>
-     <y>1230</y>
+     <x>303</x>
+     <y>1200</y>
     </hint>
     <hint type="destinationlabel">
      <x>288</x>
@@ -1524,8 +1659,8 @@
    <slot>OnContourValueChanged()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>300</x>
-     <y>1307</y>
+     <x>303</x>
+     <y>1344</y>
     </hint>
     <hint type="destinationlabel">
      <x>68</x>
@@ -1540,11 +1675,11 @@
    <slot>OnContourSave()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>208</x>
-     <y>1393</y>
+     <x>198</x>
+     <y>1426</y>
     </hint>
     <hint type="destinationlabel">
-     <x>395</x>
+     <x>325</x>
      <y>1351</y>
     </hint>
    </hints>
@@ -1604,11 +1739,11 @@
    <slot>OnSliderTrackVolumeMin(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>137</x>
-     <y>1100</y>
+     <x>237</x>
+     <y>1056</y>
     </hint>
     <hint type="destinationlabel">
-     <x>355</x>
+     <x>325</x>
      <y>1125</y>
     </hint>
    </hints>
@@ -1620,11 +1755,11 @@
    <slot>OnTrackVolumeThresholdChanged()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>288</x>
-     <y>1103</y>
+     <x>303</x>
+     <y>1051</y>
     </hint>
     <hint type="destinationlabel">
-     <x>389</x>
+     <x>325</x>
      <y>1113</y>
     </hint>
    </hints>
@@ -1636,11 +1771,11 @@
    <slot>OnTrackVolumeThresholdChanged()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>184</x>
-     <y>1095</y>
+     <x>237</x>
+     <y>1056</y>
     </hint>
     <hint type="destinationlabel">
-     <x>363</x>
+     <x>325</x>
      <y>1102</y>
     </hint>
    </hints>
@@ -1653,11 +1788,139 @@
    <hints>
     <hint type="sourcelabel">
      <x>80</x>
-     <y>995</y>
+     <y>1023</y>
     </hint>
     <hint type="destinationlabel">
-     <x>406</x>
+     <x>325</x>
      <y>1026</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBoxProjectionMap</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>checkBoxShowOutline</receiver>
+   <slot>setHidden(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>55</x>
+     <y>1435</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>54</x>
+     <y>1084</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBoxProjectionMap</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>checkBoxShowContour</receiver>
+   <slot>setHidden(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>101</x>
+     <y>1435</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>99</x>
+     <y>1111</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBoxShowContour</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>checkBoxProjectionMap</receiver>
+   <slot>setDisabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>77</x>
+     <y>1111</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>79</x>
+     <y>1435</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBoxShowExistingLabels</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>PanelVolume</receiver>
+   <slot>OnShowExistingLabelsOnly(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>175</x>
+     <y>824</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>325</x>
+     <y>1145</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBoxShowLabelContour</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>PanelVolume</receiver>
+   <slot>OnCheckShowLabelContour(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>304</x>
+     <y>1139</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-122</x>
+     <y>1195</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEditContourLabelRangeLow</sender>
+   <signal>returnPressed()</signal>
+   <receiver>PanelVolume</receiver>
+   <slot>OnContourValueChanged()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>178</x>
+     <y>1233</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-88</x>
+     <y>1290</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEditContourLabelRangeHigh</sender>
+   <signal>returnPressed()</signal>
+   <receiver>PanelVolume</receiver>
+   <slot>OnContourValueChanged()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>244</x>
+     <y>1233</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-51</x>
+     <y>1299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>comboBoxMask</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>PanelVolume</receiver>
+   <slot>OnComboMask(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>161</x>
+     <y>308</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>396</x>
+     <y>306</y>
     </hint>
    </hints>
   </connection>
@@ -1692,5 +1955,8 @@
   <slot>OnTrackVolumeThresholdChanged()</slot>
   <slot>OnSliderTrackVolumeMin(int)</slot>
   <slot>UpdateTrackVolumeThreshold()</slot>
+  <slot>OnShowExistingLabelsOnly(bool)</slot>
+  <slot>OnCheckShowLabelContour(bool)</slot>
+  <slot>OnComboMask(int)</slot>
  </slots>
 </ui>

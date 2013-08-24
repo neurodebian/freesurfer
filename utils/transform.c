@@ -6,11 +6,11 @@
 /*
  * Original Author: Bruce Fischl
  * CVS Revision Info:
- *    $Author: fischl $
- *    $Date: 2011/03/16 17:31:44 $
- *    $Revision: 1.153 $
+ *    $Author: nicks $
+ *    $Date: 2013/01/08 22:03:09 $
+ *    $Revision: 1.153.2.3 $
  *
- * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+ * Copyright © 2011-2013 The General Hospital Corporation (Boston, MA) "MGH"
  *
  * Terms and conditions for use, reproduction, distribution and contribution
  * are found in the 'FreeSurfer Software License Agreement' contained
@@ -46,6 +46,7 @@
 #include "mri_circulars.h"
 #include "resample.h"
 #include "registerio.h"
+#include "talairachex.h"
 
 extern const char* Progname;
 
@@ -114,6 +115,11 @@ void initVolGeom(VOL_GEOM *vg)
 
 void getVolGeom(const MRI *src, VOL_GEOM *dst)
 {
+  if (!src)
+    ErrorExit(ERROR_BADPARM, "must have a valid MRI (src)");
+  if (!dst)
+    ErrorExit(ERROR_BADPARM, "must have a valid VOL_GEOM (dst)");
+
   dst->valid = 1;
   dst->width = src->width;
   dst->height = src->height;
@@ -138,8 +144,10 @@ void getVolGeom(const MRI *src, VOL_GEOM *dst)
 
 void useVolGeomToMRI(const VOL_GEOM *src, MRI *dst)
 {
+  if (!src)
+    ErrorExit(ERROR_BADPARM, "must have a valid VOL_GEOM (src)");
   if (!dst)
-    ErrorExit(ERROR_BADPARM, "must have a valid MRI");
+    ErrorExit(ERROR_BADPARM, "must have a valid MRI (dst)");
 
   dst->ras_good_flag = 1;
   dst->width = src->width;
@@ -765,9 +773,14 @@ LTAtransformInterp(MRI *mri_src, MRI *mri_dst, LTA *lta, int interp)
   MATRIX *r2i = 0;
   MATRIX *i2r = 0;
   MATRIX *tmp = 0;
-  MATRIX *v2v = 0;
+  //MATRIX *v2v = 0;
   MRI *resMRI = 0;
 
+  if (lta->type == REGISTER_DAT)
+  {
+    printf("warning: changing input transform type from REGISTER_DAT to VOX_TO_VOX\n");
+    LTAchangeType(lta, LINEAR_VOX_TO_VOX) ;
+  }
   if (lta->num_xforms == 1)
   {
     /////////////////////////////////////////////////////////////////////////
@@ -801,6 +814,10 @@ LTAtransformInterp(MRI *mri_src, MRI *mri_dst, LTA *lta, int interp)
     //  However, using v2v, you need the information from dst
     //  since
     //          src->dst'  = r2i(dst')* i2r(dst) * v2v
+    //
+    //  Similarly src geometry can be different, therefore we convert
+    //  any passed v2v lta into r2r first and apply it on possible different
+    //  image geometries src and dst.  
     //
     ////////////////////////////////////////////////////////////////////////
 
@@ -872,7 +889,47 @@ LTAtransformInterp(MRI *mri_src, MRI *mri_dst, LTA *lta, int interp)
     }
     else if (lta->type == LINEAR_VOX_TO_VOX)// vox-to-vox
     {
+      // convert to ras_to_ras using xforms from lta if available
+      // this strips geometry information and allows to use the 
+      // lta on volumes with different geometries
+      // if lta geomery information is missing (should not happen)
+      // we use the geometry from the passed source and target image
       if (lta->xforms[0].dst.valid)
+      {
+        i2r = vg_i_to_r(&lta->xforms[0].dst); // allocated
+      }
+      else
+      {
+        fprintf(stderr, "INFO: LTA dst geometry information missing!\n"
+                "      We assume that the dst volume passed is the\n"
+                "      same as the dst for the transform.\n");
+        i2r = extract_i_to_r(mri_dst);
+      }
+      tmp = MatrixMultiply(i2r,lta->xforms[0].m_L, NULL);
+      if (lta->xforms[0].src.valid)
+      {
+        r2i = vg_r_to_i(&lta->xforms[0].src); // allocated
+      }
+      else
+      {
+        fprintf(stderr, "INFO: LTA src geometry information missing!\n"
+                "      We assume that the src volume passed is the\n"
+                "      same as the src for the transform.\n");
+        r2i = extract_r_to_i(mri_src);
+      }
+      tmp = MatrixMultiply(tmp,r2i,tmp);
+      
+      resMRI = MRIapplyRASlinearTransformInterp(mri_src,
+                                                mri_dst,
+                                                tmp,
+                                                interp);
+      MatrixFree(&i2r);
+      MatrixFree(&r2i);
+      MatrixFree(&tmp);
+      return resMRI;
+      
+      // old code only treated different dst not different src geometries
+      /*if (lta->xforms[0].dst.valid)
       {
         i2r = vg_i_to_r(&lta->xforms[0].dst); // allocated
         r2i = extract_r_to_i(mri_dst);
@@ -895,7 +952,7 @@ LTAtransformInterp(MRI *mri_src, MRI *mri_dst, LTA *lta, int interp)
                 "given is the same as the dst for the transform\n");
         return(MRIlinearTransformInterp(mri_src, mri_dst,
                                         lta->xforms[0].m_L, interp)) ;
-      }
+      }*/
     }
     else if (lta->type == LINEAR_PHYSVOX_TO_PHYSVOX)
     {
@@ -996,7 +1053,7 @@ LTAinverseTransformInterp(MRI *mri_src, MRI *mri_dst, LTA *lta, int interp)
   MATRIX *r2i = 0;
   MATRIX *i2r = 0;
   MATRIX *tmp = 0;
-  MATRIX *v2v = 0;
+  //MATRIX *v2v = 0;
   MRI *resMRI = 0;
 
   if (lta->num_xforms == 1)
@@ -1086,7 +1143,48 @@ LTAinverseTransformInterp(MRI *mri_src, MRI *mri_dst, LTA *lta, int interp)
     }
     else if (lta->type == LINEAR_VOX_TO_VOX)// vox-to-vox
     {
-      if (lta->xforms[0].dst.valid)
+      // convert to ras_to_ras using xforms from lta if available
+      // this strips geometry information and allows to use the 
+      // lta on volumes with different geometries
+      // if lta geomery information is missing (should not happen)
+      // we use the geometry from the passed source and target image
+      // WARNING: adoped from above, not tested here (using inv)
+      if (lta->inv_xforms[0].dst.valid)
+      {
+        i2r = vg_i_to_r(&lta->inv_xforms[0].dst); // allocated
+      }
+      else
+      {
+        fprintf(stderr, "INFO: LTA inv dst geometry information missing!\n"
+                "      We assume that the dst volume passed is the\n"
+                "      same as the dst for the transform.\n");
+        i2r = extract_i_to_r(mri_dst);
+      }
+      tmp = MatrixMultiply(i2r,lta->inv_xforms[0].m_L, NULL);
+      if (lta->inv_xforms[0].src.valid)
+      {
+        r2i = vg_r_to_i(&lta->inv_xforms[0].src); // allocated
+      }
+      else
+      {
+        fprintf(stderr, "INFO: LTA inv src geometry information missing!\n"
+                "      We assume that the src volume passed is the\n"
+                "      same as the src for the transform.\n");
+        r2i = extract_r_to_i(mri_src);
+      }
+      tmp = MatrixMultiply(tmp,r2i,tmp);
+      
+      resMRI = MRIapplyRASlinearTransformInterp(mri_src,
+                                                mri_dst,
+                                                tmp,
+                                                interp);
+      MatrixFree(&i2r);
+      MatrixFree(&r2i);
+      MatrixFree(&tmp);
+      return resMRI;
+      
+      // old code only treated different dst not different src geometries
+      /*if (lta->xforms[0].dst.valid)
       {
         i2r = vg_i_to_r(&lta->inv_xforms[0].dst); // allocated
         r2i = extract_r_to_i(mri_dst);
@@ -1109,7 +1207,7 @@ LTAinverseTransformInterp(MRI *mri_src, MRI *mri_dst, LTA *lta, int interp)
                 "given is the same as the dst for the transform\n");
         return(MRIlinearTransformInterp(mri_src, mri_dst,
                                         lta->inv_xforms[0].m_L, interp)) ;
-      }
+      }*/
     }
     else if (lta->type == LINEAR_PHYSVOX_TO_PHYSVOX)
     {
@@ -2003,7 +2101,6 @@ TransformRead(const char *fname)
   FileNameOnly(fname, fname_no_path) ;
   if (0 == strcmp(fname_no_path, "identity.nofile"))
   {
-    trans->type = LINEAR_VOX_TO_VOX;
     trans->type = LINEAR_RAS_TO_RAS;
     LTA* lta = LTAalloc(1, NULL);
     lta->xforms[0].m_L = MatrixIdentity(4, NULL);
@@ -2092,6 +2189,7 @@ TransformSample(TRANSFORM *transform,
   LTA             *lta ;
   GCA_MORPH       *gcam ;
   int errCode = NO_ERROR, xi, yi, zi;
+  double          xd, yd, zd ;
 
   *px = *py = *pz = 0 ;
   if (transform->type == MORPH_3D_TYPE)
@@ -2117,14 +2215,27 @@ TransformSample(TRANSFORM *transform,
     if (zv >= gcam->mri_zind->depth)
       zv = gcam->mri_zind->depth-1 ;
 
-    xi = nint(xv) ;
-    yi = nint(yv) ;
-    zi = nint(zv) ;
+    xi = nint(xv) ; yi = nint(yv) ; zi = nint(zv) ;
+    if (xi < 0)
+      xi = 0 ;
+    else if (xi >= gcam->mri_xind->width)
+      xi = gcam->mri_xind->width-1 ;
+    if (yi < 0)
+      yi = 0 ;
+    else if (yi >= gcam->mri_yind->height)
+      yi = gcam->mri_yind->height-1 ;
+    if (zi < 0)
+      zi = 0 ;
+    else if (zi >= gcam->mri_zind->depth)
+      zi = gcam->mri_zind->depth-1 ;
 
-    xt = nint(MRIgetVoxVal(gcam->mri_xind, xi, yi, zi, 0))*gcam->spacing ;
-    yt = nint(MRIgetVoxVal(gcam->mri_yind, xi, yi, zi, 0))*gcam->spacing ;
-    zt = nint(MRIgetVoxVal(gcam->mri_zind, xi, yi, zi, 0))*gcam->spacing ;
-
+    xt = nint(MRIgetVoxVal(gcam->mri_xind, xi, yi, zi, 0)*gcam->spacing) ;
+    yt = nint(MRIgetVoxVal(gcam->mri_yind, xi, yi, zi, 0)*gcam->spacing) ;
+    zt = nint(MRIgetVoxVal(gcam->mri_zind, xi, yi, zi, 0)*gcam->spacing) ;
+    MRIsampleVolume(gcam->mri_xind, xv, yv, zv, &xd) ;
+    MRIsampleVolume(gcam->mri_yind, xv, yv, zv, &yd) ;
+    MRIsampleVolume(gcam->mri_zind, xv, yv, zv, &zd) ;
+    xt = (float)xd*gcam->spacing ; yt = (float)yd*gcam->spacing ; zt = (float)zd*gcam->spacing ;
   }
   else
   {
@@ -2257,6 +2368,106 @@ TransformSampleReal(TRANSFORM *transform,
 
   return errCode ;
 }
+
+// with interpolation
+int
+TransformSampleReal2(TRANSFORM *transform,
+                    float xv, float yv, float zv,
+                    float *px, float *py, float *pz)
+{
+  static VECTOR   *v_input, *v_canon = NULL ;
+  // float           xt, yt, zt ;
+  double           xt, yt, zt ;
+  LTA             *lta ;
+  GCA_MORPH       *gcam ;
+  int errCode = NO_ERROR; //, xi, yi, zi;
+
+  *px = *py = *pz = 0 ;
+  if (transform->type == MORPH_3D_TYPE)
+  {
+    gcam = (GCA_MORPH *)transform->xform ;
+    if (!gcam->mri_xind)
+      ErrorReturn(ERROR_UNSUPPORTED,
+                  (ERROR_UNSUPPORTED,
+                   "TransformSample: gcam has not been inverted!")) ;
+
+    // the following should not happen /////////////////
+    if (xv < 0)
+      xv = 0 ;
+    if (xv >= gcam->mri_xind->width)
+      xv = gcam->mri_xind->width-1 ;
+    if (yv < 0)
+      yv = 0 ;
+    if (yv >= gcam->mri_yind->height)
+      yv = gcam->mri_yind->height-1 ;
+    if (zv < 0)
+      zv = 0 ;
+    if (zv >= gcam->mri_zind->depth)
+      zv = gcam->mri_zind->depth-1 ;
+
+    /*xi = nint(xv) ;
+    yi = nint(yv) ;
+    zi = nint(zv) ;
+
+    xt = MRIgetVoxVal(gcam->mri_xind, xi, yi, zi, 0)*gcam->spacing ;
+    yt = MRIgetVoxVal(gcam->mri_yind, xi, yi, zi, 0)*gcam->spacing ;
+    zt = MRIgetVoxVal(gcam->mri_zind, xi, yi, zi, 0)*gcam->spacing ;*/
+
+    MRIsampleVolume(gcam->mri_xind, xv, yv, zv, &xt);
+    MRIsampleVolume(gcam->mri_yind, xv, yv, zv, &yt);
+    MRIsampleVolume(gcam->mri_zind, xv, yv, zv, &zt);
+    xt *= gcam->spacing;
+    yt *= gcam->spacing;
+    zt *= gcam->spacing;
+
+  }
+  else
+  {
+    lta = (LTA *)transform->xform ;
+    if (lta->type != LINEAR_VOXEL_TO_VOXEL)
+    {
+      int i;
+      printf("Converting to LTA type LINEAR_VOXEL_TO_VOXEL...\n");
+      lta = LTAchangeType(lta, LINEAR_VOXEL_TO_VOXEL);
+      printf("After conversion:\n");
+      for (i = 0 ; i < lta->num_xforms ; i++)
+      {
+        LINEAR_TRANSFORM *lt = &lta->xforms[i] ;
+        MatrixAsciiWriteInto(stdout, lt->m_L) ;
+      }
+    }
+    if (!v_canon)
+    {
+      v_input = VectorAlloc(4, MATRIX_REAL) ;
+      v_canon = VectorAlloc(4, MATRIX_REAL) ;
+      *MATRIX_RELT(v_input, 4, 1) = 1.0 ;
+      *MATRIX_RELT(v_canon, 4, 1) = 1.0 ;
+    }
+    V3_X(v_input) = xv;
+    V3_Y(v_input) = yv;
+    V3_Z(v_input) = zv;
+    MatrixMultiply(lta->xforms[0].m_L, v_input, v_canon) ;
+    xt = V3_X(v_canon) ;
+    yt = V3_Y(v_canon) ;
+    zt = V3_Z(v_canon) ;
+
+    if (xt < 0) xt = 0;
+    if (yt < 0) yt = 0;
+    if (zt < 0) zt = 0;
+
+    if (!v_canon)
+    {
+      VectorFree(&v_input);
+      VectorFree(&v_canon);
+    }
+  }
+  *px = (float)xt ;
+  *py = (float)yt ;
+  *pz = (float)zt ;
+  
+  return errCode ;
+}
+
 /*
   take a voxel in gca/gcamorph space and find the MRI voxel to which
   it maps
@@ -2288,6 +2499,12 @@ TransformSampleInverse(TRANSFORM *transform,
       yn = gcam->height-1 ;
     if (zn >= gcam->depth)
       zn = gcam->depth-1 ;
+    if (xn < 0)
+      xn = 0 ; 
+    if (yn < 0)
+      yn = 0 ;
+    if (zn < 0)
+      zn = 0 ;
 
     gcamn = &gcam->nodes[xn][yn][zn] ;
     xt = gcamn->x ;
@@ -2347,6 +2564,100 @@ TransformSampleInverse(TRANSFORM *transform,
   return errCode ;
 }
 
+int
+TransformSampleInverseFloat(TRANSFORM *transform,
+			    float xv, float yv, float zv,
+			    float *px, float *py, float *pz)
+{
+  static VECTOR  *v_input, *v_canon = NULL ;
+  static MATRIX  *m_L_inv ;
+  float          xt, yt, zt ;
+  int            xn, yn, zn ;
+  LTA            *lta ;
+  GCA_MORPH      *gcam ;
+  GCA_MORPH_NODE *gcamn ;
+  int errCode = NO_ERROR;
+
+  if (transform->type == MORPH_3D_TYPE)
+  {
+    gcam = (GCA_MORPH *)transform->xform ;
+    if (GCAMsampleMorph(gcam, xv, yv, zv, px, py, pz) == NO_ERROR)
+      return(NO_ERROR) ;
+
+    xn = nint(xv/gcam->spacing) ;
+    yn = nint(yv/gcam->spacing) ;
+    zn = nint(zv/gcam->spacing) ;
+    
+    if (xn >= gcam->width)
+      xn = gcam->width-1 ;
+    if (yn >= gcam->height)
+      yn = gcam->height-1 ;
+    if (zn >= gcam->depth)
+      zn = gcam->depth-1 ;
+    if (xn < 0)
+      xn = 0 ; 
+    if (yn < 0)
+      yn = 0 ;
+    if (zn < 0)
+      zn = 0 ;
+    
+    gcamn = &gcam->nodes[xn][yn][zn] ;
+    xt = gcamn->x ;
+    yt = gcamn->y ;
+    zt = gcamn->z ;
+    // if marked invalid, then return error
+    if (gcamn->invalid)
+      errCode=ERROR_BADPARM;
+  }
+  else
+  {
+    lta = (LTA *)transform->xform ;
+    if (lta->type != LINEAR_VOXEL_TO_VOXEL)
+    {
+      int i;
+      printf("Converting to LTA type LINEAR_VOXEL_TO_VOXEL...\n");
+      lta = LTAchangeType(lta, LINEAR_VOXEL_TO_VOXEL);
+      printf("After conversion:\n");
+      for (i = 0 ; i < lta->num_xforms ; i++)
+      {
+        LINEAR_TRANSFORM *lt = &lta->xforms[i] ;
+        MatrixAsciiWriteInto(stdout, lt->m_L) ;
+      }
+    }
+    if (!v_canon)
+    {
+      v_input = VectorAlloc(4, MATRIX_REAL) ;
+      v_canon = VectorAlloc(4, MATRIX_REAL) ;
+      *MATRIX_RELT(v_input, 4, 1) = 1.0 ;
+      *MATRIX_RELT(v_canon, 4, 1) = 1.0 ;
+      m_L_inv = MatrixAlloc(4, 4, MATRIX_REAL) ;
+    }
+
+    V3_X(v_canon) =
+      (float)xv;
+    V3_Y(v_canon) =
+      (float)yv;
+    V3_Z(v_canon) =
+      (float)zv;
+#if 0
+    MatrixInverse(lta->xforms[0].m_L, m_L_inv) ;
+    MatrixMultiply(m_L_inv, v_canon, v_input) ;
+#else
+    MatrixMultiply(lta->inv_xforms[0].m_L, v_canon, v_input) ;
+#endif
+    xt = V3_X(v_input) ;
+    yt = V3_Y(v_input) ;
+    zt = V3_Z(v_input) ;
+    // here I cannot get access to width, height, depth values
+    // thus I cannot judge the point is good or bad
+    // errCode remains to be valid
+  }
+  *px = xt ;
+  *py = yt ;
+  *pz = zt ;
+
+  return errCode ;
+}
 int
 TransformSampleInverseVoxel(TRANSFORM *transform,
                             int width, int height, int depth,
@@ -3044,7 +3355,6 @@ LTAreadEx(const char *fname)
   if (0 == strcmp(fname_no_path, "identity.nofile"))
   {
     LTA* lta = LTAalloc(1, NULL);
-    lta->type = LINEAR_VOX_TO_VOX;
     lta->type = LINEAR_RAS_TO_RAS;
     lta->xforms[0].m_L = MatrixIdentity(4, NULL);
     lta->xforms[0].type = lta->type;
@@ -4482,3 +4792,32 @@ TransformCompose(TRANSFORM *t_src, MATRIX *m_left, MATRIX *m_right, TRANSFORM *t
   return(t_dst) ;
 }
 
+int
+TransformSourceVoxelToAtlas( TRANSFORM *transform, MRI *mri, 
+			     int xv, int yv, int zv,
+			     double *px, double *py, double *pz )
+{
+  float   xt, yt, zt ;
+  LTA *lta;
+
+  if (transform->type != MORPH_3D_TYPE)
+  {
+    if (transform->type == LINEAR_VOX_TO_VOX)
+    {
+      lta = (LTA *) transform->xform;
+      // transform point to talairach volume point
+      TransformWithMatrix(lta->xforms[0].m_L,
+                          xv, yv, zv, px, py, pz);
+      // TransformSample(transform, xv, yv, zv, &xt, &yt, &zt) ;
+    }
+    else
+      ErrorExit(ERROR_BADPARM,
+                "RFAsourceVoxelToNode: needs vox-to-vox transform") ;
+  }
+  else // morph 3d type can go directly from source to template
+  {
+    TransformSample(transform, xv, yv, zv, &xt, &yt, &zt);
+    *px = (double)xt ; *py = (double)yt ; *pz = (double)zt ;
+  }
+  return (NO_ERROR) ;
+}

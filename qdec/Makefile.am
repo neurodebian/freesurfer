@@ -13,7 +13,7 @@ AM_CXXFLAGS=-Wno-deprecated -I$(top_srcdir)/include \
 
 dist_bin_SCRIPTS=run_mris_preproc
 
-if ENABLE_KWWIDGETS_APPS
+if ENABLE_TCLTK_APPS
 bin_PROGRAMS = qdec
 qdec_SOURCES= \
 	QdecMain.cxx \
@@ -35,10 +35,10 @@ qdec_LDADD=  \
 	$(VTK_SQLITE_LIB) \
 	-lvtkImaging -lvtkFiltering \
 	-lvtkCommon -lvtksys \
-	-lvtkexoIIc -lvtkNetCDF \
+	-lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB) \
 	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
-	-lvtkWidgets -lvtkHybrid \
-	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
+	-lvtkWidgets -lvtkHybrid $(VTK_HDF5_LIB) \
+	-lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
 	-lvtkImagingTCL -lvtkVolumeRenderingTCL -lvtkRenderingTCL \
 	-lvtkFilteringTCL -lvtkWidgetsTCL \
 	-lvtkHybridTCL -lvtkGraphicsTCL -lvtkImagingTCL -lvtkIOTCL \
@@ -114,6 +114,36 @@ vtkKWQdecAppTcl.cxx:
 vtkKWQdecWindowTcl.cxx:
 vtkKWQdecViewTcl.cxx:
 QdecLibInit.cxx:
+endif
+
+# Copy over precompiled 32-bit versions until we get 64-bit builds working.
+if INSTALL_MAC32_GUIS
+
+qdecdir=$(prefix)/lib/resource
+qdec_DATA=QdecIcons.txt
+
+install-exec-hook:
+	cp $(top_builddir)/distribution/Mac_32b/qdec_Mac32.bin $(DESTDIR)$(bindir)/qdec.bin
+	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/qdec
+	echo "source \$$FREESURFER_HOME/bin/tcl_setup" \
+		>> $(DESTDIR)$(bindir)/qdec
+	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+		>> $(DESTDIR)$(bindir)/qdec
+	echo "source \$$FREESURFER_HOME/bin/kww_setup" \
+		>> $(DESTDIR)$(bindir)/qdec
+	echo "if (-e /bin/pwd) then" >> $(DESTDIR)$(bindir)/qdec
+	echo "  setenv HOME \`cd \$$HOME; /bin/pwd\`" \
+		>> $(DESTDIR)$(bindir)/qdec
+	echo "  setenv SUBJECTS_DIR \`cd \$$SUBJECTS_DIR; /bin/pwd\`" \
+		>> $(DESTDIR)$(bindir)/qdec
+	echo "endif" >> $(DESTDIR)$(bindir)/qdec
+	echo "qdec.bin \$$argv" >> $(DESTDIR)$(bindir)/qdec
+	chmod a+x $(DESTDIR)$(bindir)/qdec
+	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
+	/usr/pubsw/bin/chrpath -d $(DESTDIR)$(bindir)/qdec.bin; fi
+
+uninstall-hook:
+	rm -f $(DESTDIR)$(bindir)/qdec.bin
 endif
 
 EXTRA_DIST=QdecIcons.txt $(foo_DATA) \

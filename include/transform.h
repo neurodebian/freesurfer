@@ -7,8 +7,8 @@
  * Original Author: Bruce Fischl
  * CVS Revision Info:
  *    $Author: nicks $
- *    $Date: 2011/03/02 00:04:10 $
- *    $Revision: 1.68 $
+ *    $Date: 2013/01/08 19:37:41 $
+ *    $Revision: 1.68.2.2 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -178,6 +178,8 @@ int       TransformSample(TRANSFORM *transform,
                           float *px, float *py, float *pz) ;
 int       TransformSampleInverse(TRANSFORM *transform, int xv, int yv, int zv,
                                  float *px, float *py, float *pz) ;
+int       TransformSampleInverseFloat(TRANSFORM *transform, float xv, float yv, float zv,
+				      float *px, float *py, float *pz) ;
 int       TransformSampleInverseVoxel(TRANSFORM *transform,
                                       int width, int height, int depth,
                                       int xv, int yv, int zv,
@@ -236,6 +238,9 @@ MRI   *MRITransformedCentered(MRI *src, MRI *orig_dst, LTA *lta) ;
 int TransformSampleReal(TRANSFORM *transform,
                         float xv, float yv, float zv,
                         float *px, float *py, float *pz) ;
+int TransformSampleReal2(TRANSFORM *transform,
+                        float xv, float yv, float zv,
+                        float *px, float *py, float *pz) ;
 
 const char *LTAtransformTypeName(int ltatype);
 int LTAdump(FILE *fp, LTA *lta);
@@ -250,6 +255,9 @@ int TransformSampleDirection(TRANSFORM *transform, float x0, float y0, float z0,
 
 int TransformRas2Vox(TRANSFORM *transform, MRI *mri_src, MRI *mri_dst);
 int TransformVox2Ras(TRANSFORM *transform, MRI *mri_src, MRI *mri_dst);
+int TransformSourceVoxelToAtlas( TRANSFORM *transform, MRI *mri, 
+				 int xv, int yv, int zv,
+				 double *px, double *py, double *pz ) ;
 
 MATRIX *MRIangles2RotMat(double *angles);
 double *SegRegCost(MRI *regseg, MRI *f, double *costs);

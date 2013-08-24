@@ -217,7 +217,7 @@ int main(int argc, char **argv) {
   nargs = handle_version_option 
     (argc, argv, 
      "$Id: mri_vol2surf.c,v 1.63 2011/03/05 01:11:14 jonp Exp $", 
-     "$Name: stable5 $");
+     "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
     exit (0);
   argc -= nargs;

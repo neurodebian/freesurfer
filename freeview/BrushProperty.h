@@ -8,9 +8,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/14 23:44:46 $
- *    $Revision: 1.12 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:27 $
+ *    $Revision: 1.12.2.6 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -61,7 +61,29 @@ public:
 
   bool GetDrawConnectedOnly();
 
+  bool GetFill3D()
+  {
+    return m_bFill3D;
+  }
+
+  double GetFillValue()
+  {
+    return m_dFillValue;
+  }
+
+  double GetEraseValue()
+  {
+    return m_dEraseValue;
+  }
+
+signals:
+  void FillValueChanged(double);
+  void EraseValueChanged(double);
+  void BrushSizeChanged(int);
+
 public slots:
+  void SetFillValue(double val);
+  void SetEraseValue(double val);
   void SetBrushSize( int nSize );
   void SetBrushTolerance( int nTolerance );
   void SetReferenceLayer( LayerVolumeBase* layer );
@@ -69,6 +91,10 @@ public slots:
   void SetExcludeRangeEnabled( bool bEnable );
   void SetDrawConnectedOnly( bool bEnable );
   void OnLayerRemoved(Layer* layer);
+  void SetFill3D(bool bVal)
+  {
+    m_bFill3D = bVal;
+  }
 
 protected:
   int  m_nBrushSize;
@@ -78,6 +104,10 @@ protected:
   double m_dExcludeRange[2];
   bool m_bEnableExcludeRange;
   bool m_bDrawConnectedOnly;
+  bool  m_bFill3D;
+
+  double m_dFillValue;
+  double m_dEraseValue;
 
   LayerVolumeBase* m_layerRef;
 };

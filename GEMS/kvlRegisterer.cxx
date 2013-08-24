@@ -1,27 +1,3 @@
-/**
- * @file  kvlRegisterer.cxx
- * @brief REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
- *
- * REPLACE_WITH_LONG_DESCRIPTION_OR_REFERENCE
- */
-/*
- * Original Author: Koen Van Leemput
- * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/09/28 21:04:06 $
- *    $Revision: 1.1.2.4 $
- *
- * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
- *
- * Terms and conditions for use, reproduction, distribution and contribution
- * are found in the 'FreeSurfer Software License Agreement' contained
- * in the file 'LICENSE' found in the FreeSurfer distribution, and here:
- *
- * https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
- *
- * Reporting: freesurfer@nmr.mgh.harvard.edu
- *
- */
 #include "kvlRegisterer.h"
 
 #include "itkAffineTransform.h"
@@ -51,7 +27,7 @@ Registerer
   m_FixedImagePyramid = ImagePyramidType::New();
   m_MovingImagePyramid = ImagePyramidType::New();
 
-  m_Optimizer  = itk::PowellOptimizer::New();
+  m_Optimizer  = ParameterOrderPowellOptimizer::New();
 
   m_Registration = RegistrationType::New();
 
@@ -60,14 +36,14 @@ Registerer
   m_NumberOfBins = 20;
   m_NumberOfSamples = 20000;
   m_DegreesOfFreedom = 6;
-  m_AcceptNewDirections = false;
+  //m_AcceptNewDirections = false;
   m_MaximumNumberOfIterations = 10;
   m_InitialBracketStepSize = 5.0f;
-  m_InitialBracketStepSizeShrinkFactor = 2.0f;
-  m_MaximumBracketStep = 30.0f;
+  //m_InitialBracketStepSizeShrinkFactor = 2.0f;
+  //m_MaximumBracketStep = 30.0f;
   m_AbsolutePrecisionBrent = 0.1;
   m_MaximumNumberOfIterationsBrent = 50;
-  m_AbsolutePrecision = 0.1;
+  //m_AbsolutePrecision = 0.1;
 
 }
 
@@ -146,7 +122,7 @@ Registerer
 
 
   // Set up m_Optimizer
-  itk::Optimizer::ScalesType scales( 12 );
+  ParameterOrderPowellOptimizer::ScalesType scales( 12 );
   scales[0] = 1.0 / 0.0175;
   scales[1] = 1.0 / 0.0175;
   scales[2] = 1.0 / 0.0175;
@@ -166,17 +142,23 @@ Registerer
 
   m_Optimizer->SetScales( scales );
   m_Optimizer->SetParameterOrder( parameterOrder );
-  m_Optimizer->SetAcceptNewDirections( m_AcceptNewDirections );
-  m_Optimizer->SetMaximumNumberOfIterations( m_MaximumNumberOfIterations );
-  m_Optimizer->SetInitialBracketStepSize( m_InitialBracketStepSize );
-  m_Optimizer->SetInitialBracketStepSizeShrinkFactor( m_InitialBracketStepSizeShrinkFactor );
-  m_Optimizer->SetMaximumBracketStep( m_MaximumBracketStep );
-  m_Optimizer->SetFractionalPrecisionBrent( 0.0 ); // Make sure this is never satisfied
-  m_Optimizer->SetAbsolutePrecisionBrent( m_AbsolutePrecisionBrent );
-  m_Optimizer->SetMaximumNumberOfIterationsBrent( m_MaximumNumberOfIterationsBrent );
-  m_Optimizer->SetFractionalPrecision( 0.0 ); // Make sure this is never satisfied
-  m_Optimizer->SetAbsolutePrecision( m_AbsolutePrecision );
-  m_Optimizer->MinimizeOn();
+  //m_Optimizer->SetAcceptNewDirections( m_AcceptNewDirections );
+  //m_Optimizer->SetMaximumNumberOfIterations( m_MaximumNumberOfIterations );
+  m_Optimizer->SetMaximumIteration( m_MaximumNumberOfIterations );
+  //m_Optimizer->SetInitialBracketStepSize( m_InitialBracketStepSize );
+  m_Optimizer->SetStepLength( m_InitialBracketStepSize );
+  //m_Optimizer->SetInitialBracketStepSizeShrinkFactor( m_InitialBracketStepSizeShrinkFactor );
+  //m_Optimizer->SetMaximumBracketStep( m_MaximumBracketStep );
+  //m_Optimizer->SetFractionalPrecisionBrent( 0.0 ); // Make sure this is never satisfied
+  //m_Optimizer->SetAbsolutePrecisionBrent( m_AbsolutePrecisionBrent );
+  m_Optimizer->SetStepTolerance( m_AbsolutePrecisionBrent );
+  //m_Optimizer->SetMaximumNumberOfIterationsBrent( m_MaximumNumberOfIterationsBrent );
+  m_Optimizer->SetMaximumLineIteration( m_MaximumNumberOfIterationsBrent );
+  //m_Optimizer->SetFractionalPrecision( 0.0 ); // Make sure this is never satisfied
+  m_Optimizer->SetValueTolerance( 0.0 ); // Make sure this is never satisfied
+  //m_Optimizer->SetAbsolutePrecision( m_AbsolutePrecision );
+  //m_Optimizer->MinimizeOn();
+  m_Optimizer->MaximizeOff();
 
 
 

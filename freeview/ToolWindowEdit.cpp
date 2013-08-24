@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/03/16 22:07:51 $
- *    $Revision: 1.30 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:37 $
+ *    $Revision: 1.30.2.6 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -49,6 +49,7 @@ ToolWindowEdit::ToolWindowEdit(QWidget *parent) :
   ag->addAction( ui->actionLiveWire );
   ag->addAction( ui->actionPolyLine );
   ag->addAction( ui->actionColorPicker );
+  ag->addAction( ui->actionClone );
   ag->setExclusive( true );
   ui->actionContour->setData( Interactor2DVoxelEdit::EM_Contour );
   ui->actionColorPicker->setData( Interactor2DVoxelEdit::EM_ColorPicker );
@@ -56,6 +57,7 @@ ToolWindowEdit::ToolWindowEdit(QWidget *parent) :
   ui->actionFreeHand->setData( Interactor2DVoxelEdit::EM_Freehand );
   ui->actionLiveWire->setData( Interactor2DVoxelEdit::EM_Livewire );
   ui->actionPolyLine->setData( Interactor2DVoxelEdit::EM_Polyline );
+  ui->actionClone->setData( Interactor2DVoxelEdit::EM_Clone );
   connect( ag, SIGNAL(triggered(QAction*)), this, SLOT(OnEditMode(QAction*)) );
   MainWindow* mainwnd = MainWindow::GetMainWindow();
   BrushProperty* bp = mainwnd->GetBrushProperty();
@@ -65,8 +67,11 @@ ToolWindowEdit::ToolWindowEdit(QWidget *parent) :
   connect(ui->checkBoxConstrain, SIGNAL(toggled(bool)), bp, SLOT(SetDrawConnectedOnly(bool)));
   connect(ui->checkBoxDrawRange, SIGNAL(toggled(bool)), bp, SLOT(SetDrawRangeEnabled(bool)));
   connect(ui->checkBoxExcludeRange, SIGNAL(toggled(bool)), bp, SLOT(SetExcludeRangeEnabled(bool)));
+  connect(ui->checkBoxFill3D, SIGNAL(toggled(bool)), bp, SLOT(SetFill3D(bool)));
   connect(mainwnd->GetLayerCollection("MRI"), SIGNAL(LayerAdded(Layer*)), this, SLOT(UpdateWidgets()));
   connect(mainwnd->GetLayerCollection("MRI"), SIGNAL(LayerRemoved(Layer*)), this, SLOT(UpdateWidgets()));
+  connect(bp, SIGNAL(FillValueChanged(double)), this, SLOT(UpdateWidgets()));
+  connect(bp, SIGNAL(EraseValueChanged(double)), this, SLOT(UpdateWidgets()));
   for (int i = 0; i < 3; i++)
   {
     RenderView2D* view = (RenderView2D*)mainwnd->GetRenderView(i);
@@ -163,6 +168,7 @@ void ToolWindowEdit::OnIdle()
   ui->actionLiveWire->setChecked( view->GetAction() == Interactor2DVoxelEdit::EM_Livewire );
   ui->actionFreeHand->setChecked( view->GetAction() == Interactor2DVoxelEdit::EM_Freehand );
   ui->actionPolyLine->setChecked( view->GetAction() == Interactor2DVoxelEdit::EM_Polyline );
+  ui->actionClone->setChecked( view->GetAction() == Interactor2DVoxelEdit::EM_Clone );
 
   ui->spinBoxBrushSize->setEnabled( view->GetAction() != Interactor2DVoxelEdit::EM_Fill );
   ui->spinBoxTolerance->setEnabled( view->GetAction() == Interactor2DVoxelEdit::EM_Fill );
@@ -181,13 +187,14 @@ void ToolWindowEdit::OnIdle()
     {
       nSel = i+1;
     }
-
     ui->comboBoxReference->addItem( mri->GetName(),  QVariant::fromValue((QObject*)mri) );
   }
   ui->comboBoxReference->setCurrentIndex( nSel );
 
   ChangeSpinBoxValue( ui->spinBoxBrushSize, bp->GetBrushSize() );
   ChangeSpinBoxValue( ui->spinBoxTolerance, bp->GetBrushTolerance() );
+  ChangeLineEditNumber(ui->lineEditBrushValue, bp->GetFillValue());
+  ChangeLineEditNumber(ui->lineEditEraseValue, bp->GetEraseValue());
 
   double* range = bp->GetDrawRange();
   ChangeLineEditNumber( ui->lineEditDrawRangeLow, range[0]);
@@ -276,6 +283,26 @@ void ToolWindowEdit::OnLineEditSmoothSD(const QString& strg)
   }
 }
 
+void ToolWindowEdit::OnLineEditFillValue(const QString &strg)
+{
+  bool bOK;
+  double value = strg.toDouble(&bOK);
+  if ( bOK )
+  {
+    MainWindow::GetMainWindow()->GetBrushProperty()->SetFillValue(value);
+  }
+}
+
+void ToolWindowEdit::OnLineEditEraseValue(const QString &strg)
+{
+  bool bOK;
+  double value = strg.toDouble(&bOK);
+  if ( bOK )
+  {
+    MainWindow::GetMainWindow()->GetBrushProperty()->SetEraseValue(value);
+  }
+}
+
 void ToolWindowEdit::OnDrawRangeChanged(const QString& strg)
 {
   bool bOK;
@@ -335,4 +362,30 @@ void ToolWindowEdit::OnReplaceLabel()
     if (mri)
       mri->ReplaceVoxelValue(dlg.GetOriginalValue(), dlg.GetNewValue(), nPlane);
   }
+}
+
+void ToolWindowEdit::OnCheckReconEditing(bool bRecon)
+{
+    BrushProperty* bp = MainWindow::GetMainWindow()->GetBrushProperty();
+    if (bRecon)
+    {
+      /*
+        QList<Layer*> layers = MainWindow::GetMainWindow()->GetLayers("MRI");
+        foreach (Layer* layer, layers)
+        {
+            LayerMRI* mri = qobject_cast<LayerMRI*>(layer);
+            if (mri)
+            {
+                mri->SetFillValue(255);
+                mri->SetBlankValue(1.0);
+            }
+        }
+        */
+       bp->SetFillValue(255);
+       bp->SetEraseValue(1);
+    }
+    else
+    {
+      bp->SetEraseValue(0);
+    }
 }

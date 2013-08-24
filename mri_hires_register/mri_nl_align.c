@@ -8,8 +8,8 @@
  * Original Author: Bruce Fischl
  * CVS Revision Info:
  *    $Author: nicks $
- *    $Date: 2011/03/02 00:04:18 $
- *    $Revision: 1.25 $
+ *    $Date: 2012/10/23 21:29:39 $
+ *    $Revision: 1.25.2.1 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -32,8 +32,8 @@
 // 
 // Warning: Do not edit the following four lines.  CVS maintains them.
 // Revision Author: $Author: nicks $
-// Revision Date  : $Date: 2011/03/02 00:04:18 $
-// Revision       : $Revision: 1.25 $
+// Revision Date  : $Date: 2012/10/23 21:29:39 $
+// Revision       : $Revision: 1.25.2.1 $
 //
 ////////////////////////////////////////////////////////////////////
 
@@ -41,6 +41,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef HAVE_OPENMP
+#include <omp.h>
+#endif
+
 #include "gcamorph.h"
 #include "mri.h"
 #include "matrix.h"
@@ -111,7 +115,7 @@ main(int argc, char *argv[])
   GCA_MORPH    *gcam ;
   MATRIX       *m_L/*, *m_I*/ ;
   LTA          *lta ;
-
+  int          n_omp_threads;
 
   /* initialize the morph params */
   memset(&mp, 0, sizeof(GCA_MORPH_PARMS));
@@ -138,7 +142,18 @@ main(int argc, char *argv[])
   mp.regrid = regrid? True : False ;
   mp.tol = 0.1 ;
   mp.niterations = 1000 ;
-	
+
+#ifdef HAVE_OPENMP
+  #pragma omp parallel
+  {
+    n_omp_threads = omp_get_num_threads();
+  }
+  printf("\n\n ======= NUMBER OF OPENMP THREADS = %d ======= \n",
+         n_omp_threads);
+#else
+  n_omp_threads = 1;
+#endif
+
   TimerStart(&start) ;
   setRandomSeed(-1L) ;
   DiagInit(NULL, NULL, NULL) ;

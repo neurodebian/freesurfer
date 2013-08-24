@@ -103,7 +103,6 @@ MRISUBDIRS=\
 	mri_mcsim \
 	mri_mc \
 	mri_matrix_multiply \
-	mri_mi_nl_align \
 	mri_modify \
 	mri_multispectral_segment \
 	mri_nlfilter \
@@ -179,6 +178,7 @@ MRISSUBDIRS=\
 	label2flat \
 	spherical_stats \
 	tridec \
+	mris_apply_reg \
 	mris_register_to_volume \
 	mris_parcellate_connectivity \
 	mris_map_cuts \
@@ -321,6 +321,7 @@ SUBDIRS=\
 	itkio \
 	itkutils \
 	tetgen \
+  lineprof \
 	$(FSGDF) \
 	connectgraph \
 	qdecproject \
@@ -369,8 +370,11 @@ install-data-hook:
 		fi; \
 	fi;
 	if test ! "x$(AFNIDIR)" = "x" ; then \
-		if test -e $(AFNIDIR) ; then \
+		if test -e $(AFNIDIR)/bin/3dvolreg ; then \
 			cp -f $(AFNIDIR)/bin/3dvolreg $(DESTDIR)$(bindir)/3dvolreg.afni ; \
+		fi; \
+		if test -e $(AFNIDIR)/3dvolreg ; then \
+			cp -f $(AFNIDIR)/3dvolreg $(DESTDIR)$(bindir)/3dvolreg.afni ; \
 		fi; \
 	fi;
 	if test ! "x$(TCL_DIR)" = "x" ; then \

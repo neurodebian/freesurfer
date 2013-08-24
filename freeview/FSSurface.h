@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/05/13 15:04:31 $
- *    $Revision: 1.32.2.2 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:29 $
+ *    $Revision: 1.32.2.8 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -80,6 +80,9 @@ public:
   void ConvertRASToSurface ( float const iRAS[3], float oSurf[3] ) const;
   void ConvertRASToSurface ( double const iRAS[3], double oSurf[3] ) const;
 
+  void ConvertTargetToRAS( double const iTarget[3], double oRAS[3]) const;
+  void ConvertRASToTarget( double const iRAS[3], double oTarget[3]) const;
+
   // Description:
   // Get the vertex number from a RAS or surface RAS point. This uses
   // the hash table and finds only the closest vertex point. If
@@ -101,7 +104,8 @@ public:
 
   bool LoadSurface    ( const QString& filename, int nSet );
   bool LoadCurvature  ( const QString& filename = NULL );
-  bool LoadOverlay    ( const QString& filename );
+  bool LoadOverlay    ( const QString& filename, const QString& fn_reg,
+                        float** data_out, int* nvertices_out, int* nframes_out, bool bUseSecondHalfData = false );
 
   bool IsSurfaceLoaded( int nSet )
   {
@@ -183,15 +187,26 @@ public:
   void UpdateVector2D( int nPlane, double slice_pos,
                        vtkPolyData* contour_polydata = NULL );
 
-  void Reposition( FSVolume* volume, int target_vnos, double target_val, int nsize, double sigma );
+  void Reposition( FSVolume* volume, int target_vnos, double target_val, int nsize, double sigma, int flags = 0 );
 
-  void Reposition( FSVolume* volume, int target_vnos, double* coord, int nsize, double sigma );
+  void Reposition( FSVolume* volume, int target_vnos, double* coord, int nsize, double sigma, int flags = 0 );
+
+  void RepositionVertex( int vno, double* coord );
+
+  bool Smooth(int nMethod, int niters, double lambda, double k_cutoff);
+
+  void RemoveIntersections();
 
   void UndoReposition();
 
   bool HasValidVolumeGeometry()
   {
     return m_bValidVolumeGeometry;
+  }
+
+  void ResetVolumeRef()
+  {
+    m_volumeRef = NULL;
   }
 
 protected:
@@ -220,11 +235,16 @@ protected:
                              vtkCellArray* contour_lines,
                              double* pt_out );
 
+  void PostEditProcess();
+
   MRIS*   m_MRIS;
   MRIS*   m_MRISTarget;
 
   double  m_SurfaceToRASMatrix[16];
   vtkSmartPointer<vtkTransform> m_SurfaceToRASTransform;
+
+  double  m_targetToRasMatrix[16];
+  vtkSmartPointer<vtkTransform> m_targetToRasTransform;
 
   // RAS bounds.
   bool    m_bBoundsCacheDirty;
@@ -236,6 +256,7 @@ protected:
   vtkSmartPointer<vtkPolyData> m_polydataVertices;
   vtkSmartPointer<vtkPolyData> m_polydataWireframes;
   vtkSmartPointer<vtkPolyData> m_polydataVector2D[3];
+  vtkSmartPointer<vtkPolyData> m_polydataVertex2D[3];
   vtkSmartPointer<vtkPolyData> m_polydataTarget;
 
   // Hash table so we can look up vertices. Uses v->x,y,z.

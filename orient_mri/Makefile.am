@@ -5,7 +5,7 @@ AM_CXXFLAGS=-Wno-deprecated -I$(top_srcdir)/include \
 	-I$(top_srcdir)/vtkutils \
 	$(VTK_CXXFLAGS) $(KWWIDGETS_CXXFLAGS) $(TCL_CFLAGS)
 
-if ENABLE_KWWIDGETS_APPS
+if ENABLE_TCLTK_APPS
 bin_PROGRAMS = orient_mri
 orient_mri_SOURCES= \
 	OrientMRIMain.cxx \
@@ -28,12 +28,13 @@ orient_mri_LDADD= \
 	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkWidgets -lvtkGraphics \
 	-lvtkImaging -lvtkFiltering \
 	-lvtkCommon -lvtksys \
-	-lvtkHybrid -lvtkexoIIc -lvtkNetCDF \
+	-lvtkHybrid $(VTK_HDF5_LIB) \
+	-lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB) \
 	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
 	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
 	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) $(VTK_SQLITE_LIB) \
 	$(VTK_PNG_LIB) $(VTK_Z_LIB) $(VTK_METAIO_LIB) \
-	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
+	-lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
 	-lvtkImagingTCL -lvtkVolumeRenderingTCL -lvtkRenderingTCL \
 	-lvtkFilteringTCL -lvtkWidgetsTCL \
 	-lvtkHybridTCL -lvtkGraphicsTCL -lvtkImagingTCL -lvtkIOTCL \

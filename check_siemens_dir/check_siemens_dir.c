@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   nargs = handle_version_option 
     (argc, argv, 
      "$Id: check_siemens_dir.c,v 1.10 2011/03/02 00:04:01 nicks Exp $", 
-     "$Name: stable5 $");
+     "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
     exit (0);
   argc -= nargs;

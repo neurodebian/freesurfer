@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/05/13 15:04:33 $
- *    $Revision: 1.4.2.1 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:38 $
+ *    $Revision: 1.4.2.7 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -44,10 +44,13 @@ WindowConfigureOverlay::WindowConfigureOverlay(QWidget *parent) :
   ui->checkBoxClearHigher->hide();
   ui->pushButtonFlip->hide();
   ui->widgetColorPicker->setCurrentColor(Qt::green);
+  ui->buttonBox->button(QDialogButtonBox::Apply)->setAutoDefault(true);
   connect(ui->widgetHistogram, SIGNAL(MarkerChanged()), this, SLOT(OnHistogramMarkerChanged()));
   m_layerSurface = NULL;
   QSettings settings;
   QVariant v = settings.value("WindowConfigureOverlay/Geometry");
+  ui->checkBoxAutoApply->setChecked(settings.value("WindowConfigureOverlay/AutoApply").toBool());
+  ui->checkBoxAutoFrame->setChecked(settings.value("WindowConfigureOverlay/AutoFrame").toBool());
   if (v.isValid())
   {
     this->restoreGeometry(v.toByteArray());
@@ -62,6 +65,9 @@ WindowConfigureOverlay::~WindowConfigureOverlay()
 
   QSettings settings;
   settings.setValue("WindowConfigureOverlay/Geometry", this->saveGeometry());
+  settings.setValue("WindowConfigureOverlay/AutoApply", ui->checkBoxAutoApply->isChecked());
+  settings.setValue("WindowConfigureOverlay/AutoFrame", ui->checkBoxAutoFrame->isChecked());
+
   delete ui;
 }
 
@@ -99,9 +105,16 @@ void WindowConfigureOverlay::UpdateUI()
     {
       allwidgets[i]->blockSignals( true );
     }
-    SurfaceOverlayProperty* p = m_layerSurface->GetActiveOverlay()->GetProperty();
+    SurfaceOverlay* overlay = m_layerSurface->GetActiveOverlay();
+    SurfaceOverlayProperty* p = overlay->GetProperty();
     ui->sliderOpacity->setValue( (int)( p->GetOpacity() * 100 ) );
     ChangeDoubleSpinBoxValue( ui->doubleSpinBoxOpacity, p->GetOpacity() );
+
+    ui->sliderFrame->setRange(0, overlay->GetNumberOfFrames()-1);
+    ui->sliderFrame->setValue(overlay->GetActiveFrame());
+    ui->spinBoxFrame->setRange(0, overlay->GetNumberOfFrames()-1);
+    ui->spinBoxFrame->setValue(overlay->GetActiveFrame());
+    ui->groupBoxFrame->setVisible(overlay->GetNumberOfFrames() > 1);
 
 //   ui->radioButtonGreenRed ->setChecked( p->GetColorScale() == SurfaceOverlayProperty::CS_GreenRed );
     //   ui->radioButtonBlueRed    ->setChecked( p->GetColorScale() == SurfaceOverlayProperty::CS_BlueRed );
@@ -162,7 +175,12 @@ void WindowConfigureOverlay::OnClicked( QAbstractButton* btn )
       delete[] m_fDataCache;
     m_fDataCache = 0;
     */
+    OnApply();
+  }
+}
 
+void WindowConfigureOverlay::OnApply()
+{
     if ( !m_layerSurface || !m_layerSurface->GetActiveOverlay() )
     {
       return;
@@ -178,7 +196,6 @@ void WindowConfigureOverlay::OnClicked( QAbstractButton* btn )
       else
         p->EmitColorMapChanged();
     }
-  }
 }
 
 bool WindowConfigureOverlay::UpdateOverlayProperty( SurfaceOverlayProperty* p )
@@ -336,6 +353,8 @@ void WindowConfigureOverlay::UpdateGraph()
       ui->widgetHistogram->SetMarkers( markers );
       delete p;
     }
+    if (ui->checkBoxAutoApply->isChecked())
+      OnApply();
   }
 }
 
@@ -495,4 +514,42 @@ void WindowConfigureOverlay::OnTextThresholdChanged(const QString &strg)
   }
   ui->widgetHistogram->SetMarkers(markers);
   UpdateGraph();
+}
+
+void WindowConfigureOverlay::OnFrameChanged(int nFrame)
+{
+  if (sender() != ui->spinBoxFrame)
+  {
+    ui->spinBoxFrame->blockSignals(true);
+    ui->spinBoxFrame->setValue(nFrame);
+    ui->spinBoxFrame->blockSignals(false);
+  }
+  if (sender() != ui->sliderFrame)
+  {
+    ui->sliderFrame->blockSignals(true);
+    ui->sliderFrame->setValue(nFrame);
+    ui->sliderFrame->blockSignals(false);
+  }
+  if ( m_layerSurface && m_layerSurface->GetActiveOverlay() )
+  {
+    SurfaceOverlay* overlay = m_layerSurface->GetActiveOverlay();
+    overlay->SetActiveFrame(nFrame);
+    UpdateGraph();
+    emit ActiveFrameChanged();
+  }
+}
+
+void WindowConfigureOverlay::OnCurrentVertexChanged()
+{
+  if ( m_layerSurface && m_layerSurface->GetActiveOverlay() )
+  {
+    int nVertex = m_layerSurface->GetVertexIndexAtTarget( m_layerSurface->GetSlicePosition(), NULL );
+    if (nVertex >= 0 && ui->checkBoxAutoFrame->isChecked()
+        && nVertex < m_layerSurface->GetActiveOverlay()->GetNumberOfFrames())
+      OnFrameChanged(nVertex);
+
+    // even if not auto apply, still call apply
+    if (!ui->checkBoxAutoApply->isChecked())
+      OnApply();
+  }
 }

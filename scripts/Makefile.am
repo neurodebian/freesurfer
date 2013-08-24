@@ -15,7 +15,7 @@ beta2sxa \
 bblabel \
 bbregister \
 biasfield \
-bedpostx_seychelles \
+bedpostx_mgh \
 browse-minc-header.tcl \
 bugr \
 build_desikan_killiany_gcs.csh \
@@ -33,6 +33,7 @@ deface_subject \
 defect-seg \
 dicom-rename \
 dmrirc.example \
+dmrirc.long.example \
 dsh \
 dt_recon \
 epidewarp.fsl\
@@ -54,7 +55,7 @@ fname2stem \
 fscalc \
 fscalc.fsl \
 fsgd_parser.py \
-fsl_sub_seychelles \
+fsl_sub_mgh \
 fsutils.py \
 stem2fname \
 freesurfer \
@@ -89,6 +90,7 @@ labels_intersect \
 labels_disjoint \
 long_mris_slopes \
 long_stats_slopes \
+long_stats_combine \
 long_stats_tps \
 long_submit_jobs \
 long_submit_postproc \
@@ -100,6 +102,9 @@ make_average_volume \
 make_average_subject \
 make_average_subcort \
 make_cortex_label \
+make_upright \
+make_symmetric \
+make_hemi_mask \
 make-segvol-table \
 map_all_labels \
 map_all_labels-lh \
@@ -170,6 +175,7 @@ renormalize_subject \
 renormalize_subject_keep_editting \
 renormalize_T1_subject \
 reregister_subject_mixed \
+rtview \
 run-qdec-glm \
 segment_monkey \
 segment_subject \
@@ -190,6 +196,7 @@ spm_t_to_b \
 spmregister \
 sratio \
 subject_info.py \
+surfreg \
 pctsurfcon\
 talairach \
 talairach2 \
@@ -200,6 +207,7 @@ tcl_setup \
 test_recon-all.csh \
 test_fs_tutorial.csh \
 thickdiffmap \
+tkmeditfv \
 trac-all \
 trac-paths \
 trac-preproc \

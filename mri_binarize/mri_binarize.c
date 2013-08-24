@@ -230,7 +230,7 @@ int main(int argc, char *argv[]) {
   double val,maskval,mergeval,gmean,gstd,gmax,voxvol;
   FILE *fp;
 
-  nargs = handle_version_option (argc, argv, vcid, "$Name: stable5 $");
+  nargs = handle_version_option (argc, argv, vcid, "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1) exit (0);
   argc -= nargs;
   cmdline = argv2cmdline(argc,argv);

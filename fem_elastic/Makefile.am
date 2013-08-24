@@ -14,7 +14,7 @@ AM_CPPFLAGS=\
 	$(BOOST_CFLAGS)
 
 if HAVE_MAC_OSX
-AM_LDFLAGS=$(OS_LDFLAGS)
+AM_LDFLAGS=$(OS_LDFLAGS) -framework Accelerate
 else
 AM_LDFLAGS=$(OS_LDFLAGS) -z muldefs
 endif
@@ -27,7 +27,7 @@ common3d_SOURCES=\
 	morph.cpp morph.h \
 	morph_utils.cpp morph_utils.h
 
-bin_PROGRAMS=createMorph applyMorph surf2vol exportGcam
+bin_PROGRAMS=createMorph applyMorph exportGcam surf2vol
 
 createMorph_SOURCES=\
 	$(common3d_SOURCES) \
@@ -53,6 +53,15 @@ applyMorph_LDADD=\
 	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 	$(top_builddir)/tetgen/libtetgen.a $(BOOST_PO_LIB)
 
+exportGcam_SOURCES=\
+	$(common3d_SOURCES) \
+	exportGcam.cpp \
+	ZlibStringCompressor.cpp ZlibStringCompressor.h
+
+exportGcam_LDADD=\
+	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
+	$(top_builddir)/tetgen/libtetgen.a $(BOOST_PO_LIB)
+
 surf2vol_SOURCES=\
 	$(common3d_SOURCES) \
 	fsurf2vol.cpp cstats.h surf_types.h \
@@ -69,25 +78,17 @@ if HAVE_MAC_OSX
 surf2vol_LDADD=\
 	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 	$(top_builddir)/tetgen/libtetgen.a \
-	$(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat \
-	-lpetscvec -lpetsc -lpmpich -lmpich -llmpe -lmpe -lflapack -lfblas \
-	$(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A)
+  $(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat \
+  -lpetscvec -lpetsc -lmpich -lpmpich
 else
 surf2vol_LDADD=\
     $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
     $(top_builddir)/tetgen/libtetgen.a \
     $(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat \
-    -lpetscvec -lpetsc -lmpich  $(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
+    -lpetscvec -lpetsc -lmpich \
+		$(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
 endif
 
-exportGcam_SOURCES=\
-	$(common3d_SOURCES) \
-	exportGcam.cpp \
-	ZlibStringCompressor.cpp ZlibStringCompressor.h
-
-exportGcam_LDADD=\
-	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
-	$(top_builddir)/tetgen/libtetgen.a $(BOOST_PO_LIB)
 
 # build library...
 noinst_LIBRARIES= libfem_elastic.a

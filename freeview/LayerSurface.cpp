@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/05/13 15:04:32 $
- *    $Revision: 1.56.2.2 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:33 $
+ *    $Revision: 1.56.2.8 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -24,6 +24,7 @@
  */
 
 #include <QSharedPointer>
+#include "MainWindow.h"
 #include "LayerSurface.h"
 #include "vtkRenderer.h"
 #include "vtkImageActor.h"
@@ -51,12 +52,15 @@
 #include "SurfaceAnnotation.h"
 #include "SurfaceLabel.h"
 #include "LayerPropertySurface.h"
+#include "SurfaceROI.h"
 #include <QFileInfo>
 #include <QDir>
 #include <QDebug>
 #include "SurfaceOverlayProperty.h"
 #include "MyUtils.h"
 #include "SurfaceOverlay.h"
+#include "SurfaceSpline.h"
+#include "vtkMaskPoints.h"
 
 LayerSurface::LayerSurface( LayerMRI* ref, QObject* parent ) : LayerEditable( parent ),
   m_surfaceSource( NULL ),
@@ -67,7 +71,8 @@ LayerSurface::LayerSurface( LayerMRI* ref, QObject* parent ) : LayerEditable( pa
   m_nActiveLabel( -1 ),
   m_bUndoable( false ),
   m_bVector2DPendingUpdate( true ),
-  m_bLoadAll(false)
+  m_bLoadAll(false),
+  m_spline(NULL)
 {
   m_strTypeNames.push_back( "Surface" );
 
@@ -77,9 +82,12 @@ LayerSurface::LayerSurface( LayerMRI* ref, QObject* parent ) : LayerEditable( pa
   for ( int i = 0; i < 3; i++ )
   {
     // m_nSliceNumber[i] = 0;
-    m_sliceActor2D[i] = vtkActor::New();
-    m_sliceActor3D[i] = vtkActor::New();
-    m_vectorActor2D[i] = vtkActor::New();
+    m_sliceActor2D[i] = vtkSmartPointer<vtkActor>::New();
+    m_sliceActor3D[i] = vtkSmartPointer<vtkActor>::New();
+    m_vectorActor2D[i] = vtkSmartPointer<vtkActor>::New();
+    m_vertexActor2D[i] = vtkSmartPointer<vtkActor>::New();
+    m_vertexActor2D[i]->GetProperty()->SetRepresentationToPoints();
+    m_vertexActor2D[i]->VisibilityOff();
   }
 
 // m_mainActor = vtkLODActor::New();
@@ -109,26 +117,29 @@ LayerSurface::LayerSurface( LayerMRI* ref, QObject* parent ) : LayerEditable( pa
   m_wireframeActor = vtkSmartPointer<vtkActor>::New();
   m_wireframeActor->VisibilityOff();
 
+  m_roi = new SurfaceROI(this);
+
+  m_spline = new SurfaceSpline(this);
+  connect(m_spline, SIGNAL(SplineChanged()), this, SIGNAL(ActorChanged()));
+
   LayerPropertySurface* p = GetProperty();
   connect( p, SIGNAL(ColorMapChanged()), this, SLOT(UpdateColorMap()) ),
-           connect( p, SIGNAL(OpacityChanged(double)), this, SLOT(UpdateOpacity()) );
+  connect( p, SIGNAL(OpacityChanged(double)), this, SLOT(UpdateOpacity()) );
   connect( p, SIGNAL(EdgeThicknessChanged(int)), this, SLOT(UpdateEdgeThickness()) );
   connect( p, SIGNAL(VectorPointSizeChanged(int)), this, SLOT(UpdateVectorPointSize()) );
   connect( p, SIGNAL(RenderModeChanged(int)), this, SLOT(UpdateRenderMode()) );
   connect( p, SIGNAL(VertexRenderChanged()), this, SLOT(UpdateVertexRender()) );
   connect( p, SIGNAL(MeshRenderChanged()), this, SLOT(UpdateMeshRender()) );
   connect( p, SIGNAL(PositionChanged()), this, SLOT(UpdateActorPositions()) );
+  connect( p, SIGNAL(PositionChanged(double, double, double)),
+           this, SLOT(UpdateROIPosition(double, double, double)));
+
+  if (m_volumeRef)
+    connect( m_volumeRef, SIGNAL(destroyed()), this, SLOT(ResetVolumeRef()));
 }
 
 LayerSurface::~LayerSurface()
 {
-  for ( int i = 0; i < 3; i++ )
-  {
-    m_sliceActor2D[i]->Delete();
-    m_sliceActor3D[i]->Delete();
-    m_vectorActor2D[i]->Delete();
-  }
-
   if ( m_surfaceSource )
   {
     delete m_surfaceSource;
@@ -168,6 +179,7 @@ bool LayerSurface::LoadSurfaceFromFile()
     return false;
   }
 
+  ParseSubjectName(m_sFilename);
   InitializeSurface();
   InitializeActors();
 
@@ -256,7 +268,7 @@ bool LayerSurface::LoadCurvatureFromFile( const QString& filename )
   return true;
 }
 
-bool LayerSurface::LoadOverlayFromFile(const QString &filename, bool bCorrelation)
+bool LayerSurface::LoadOverlayFromFile(const QString &filename, const QString& fn_reg, bool bCorrelation, bool bSeconfHalfData)
 {
   QString fn = filename;
   fn.replace("~", QDir::homePath());
@@ -272,21 +284,31 @@ bool LayerSurface::LoadOverlayFromFile(const QString &filename, bool bCorrelatio
   }
   else
   {
-    return LoadGenericOverlayFromFile(fn);
+    QString fullpath = fn_reg;
+    if (!fn_reg.isEmpty())
+    {
+      fullpath.replace("~", QDir::homePath());
+      fullpath = QFileInfo(fullpath).absoluteFilePath();
+    }
+    return LoadGenericOverlayFromFile(fn, fullpath, bSeconfHalfData);
   }
 }
 
-bool LayerSurface::LoadGenericOverlayFromFile( const QString& filename )
+bool LayerSurface::LoadGenericOverlayFromFile( const QString& filename, const QString& fn_reg, bool bSecondHalfData )
 {
-  if ( !m_surfaceSource->LoadOverlay( filename ) )
+  float* data = NULL;
+  int nframes, nvertices;
+  if ( !m_surfaceSource->LoadOverlay( filename, fn_reg, &data, &nvertices, &nframes, bSecondHalfData ) )
   {
     return false;
   }
 
   // create overlay
   SurfaceOverlay* overlay = new SurfaceOverlay( this );
+  overlay->InitializeData(data, nvertices, nframes);
   overlay->SetName( QFileInfo(filename).fileName() );
   overlay->SetFileName( filename );
+
   m_overlays.push_back( overlay );
   SetActiveOverlay( m_overlays.size() - 1 );
 
@@ -317,16 +339,19 @@ bool LayerSurface::LoadCorrelationFromFile( const QString& filename )
 
 void LayerSurface::CopyCorrelationOverlay(LayerSurface *surf)
 {
-  SurfaceOverlay* src = surf->GetActiveOverlay();
-  SurfaceOverlay* overlay = new SurfaceOverlay( this );
-  overlay->SetName(src->GetName());
-  overlay->CopyCorrelationData(src);
-  m_overlays.push_back( overlay );
-  SetActiveOverlay( m_overlays.size() - 1 );
+  SurfaceOverlay* src = surf->GetCorrelationOverlay();
+  if (src)
+  {
+    SurfaceOverlay* overlay = new SurfaceOverlay( this );
+    overlay->SetName(src->GetName());
+    overlay->CopyCorrelationData(src);
+    m_overlays.push_back( overlay );
+    SetActiveOverlay( m_overlays.size() - 1 );
 
-  emit Modified();
-  emit SurfaceOverlayAdded( overlay );
-  connect(overlay, SIGNAL(DataUpdated()), this, SIGNAL(SurfaceOverlyDataUpdated()), Qt::UniqueConnection);
+    emit Modified();
+    emit SurfaceOverlayAdded( overlay );
+    connect(overlay, SIGNAL(DataUpdated()), this, SIGNAL(SurfaceOverlyDataUpdated()), Qt::UniqueConnection);
+  }
 }
 
 bool LayerSurface::LoadAnnotationFromFile( const QString& filename )
@@ -341,24 +366,38 @@ bool LayerSurface::LoadAnnotationFromFile( const QString& filename )
   }
 
   QFileInfo fi(filename);
+  QString name;
   if ( fi.suffix() == ".annot" )
   {
-    annot->SetName( fi.completeBaseName() );
+    name = fi.completeBaseName();
   }
   else
   {
-    annot->SetName( fi.fileName() );
+    name = fi.fileName();
   }
 
+  QStringList names;
+  for (int i = 0; i < m_annotations.size(); i++)
+    names << m_annotations[i]->GetName();
+
+  QString basename = name;
+  int n = 0;
+  while (names.contains(name))
+  {
+    n++;
+    name = QString("%1_%2").arg(basename).arg(n);
+  }
+
+  annot->SetName(name);
   m_annotations.push_back( annot );
 
   SetActiveAnnotation( m_annotations.size() - 1 );
 
   emit Modified();
   emit SurfaceAnnotationAdded( annot );
+  emit ActorUpdated();
   return true;
 }
-
 
 bool LayerSurface::LoadLabelFromFile( const QString& filename )
 {
@@ -389,9 +428,19 @@ bool LayerSurface::LoadLabelFromFile( const QString& filename )
 
   emit Modified();
   emit SurfaceLabelAdded( label );
+  emit ActorChanged();
   return true;
 }
 
+bool LayerSurface::LoadSplineFromFile(const QString &filename)
+{
+  if (!m_spline->Load(filename))
+  {
+    return false;
+  }
+
+  return true;
+}
 
 void LayerSurface::InitializeSurface()
 {
@@ -412,7 +461,6 @@ void LayerSurface::InitializeSurface()
   m_dWorldSize[1] = RASBounds[3] - RASBounds[2];
   m_dWorldSize[2] = RASBounds[5] - RASBounds[4];
 }
-
 
 void LayerSurface::InitializeActors()
 {
@@ -492,7 +540,19 @@ void LayerSurface::InitializeActors()
 //  m_sliceActor3D[i]->GetBackfaceProperty()->BackfaceCullingOff();
     m_sliceActor3D[i]->SetProperty( m_sliceActor3D[i]->MakeProperty() );
     m_sliceActor3D[i]->GetProperty()->SetLineWidth( GetProperty()->GetEdgeThickness() );
-    m_sliceActor2D[i]->GetProperty()->SetInterpolationToFlat();
+//    m_sliceActor3D[i]->GetProperty()->SetInterpolationToFlat();
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper3 = vtkSmartPointer<vtkPolyDataMapper>::New();
+    vtkSmartPointer<vtkMaskPoints> pts = vtkSmartPointer<vtkMaskPoints>::New();
+    pts->GenerateVerticesOn();
+    pts->SetOnRatio(1);
+    pts->SetInputConnection(cutter->GetOutputPort());
+    mapper3->SetInputConnection( pts->GetOutputPort() );
+    mapper3->ScalarVisibilityOff();
+    m_vertexActor2D[i]->SetMapper(mapper3);
+    m_vertexActor2D[i]->SetProperty( m_vertexActor2D[i]->MakeProperty() );
+    m_vertexActor2D[i]->GetProperty()->SetPointSize(3);
+    m_vertexActor2D[i]->GetProperty()->SetInterpolationToFlat();
 
     // Set ourselves up.
     this->OnSlicePositionChanged( i );
@@ -606,6 +666,9 @@ void LayerSurface::Append2DProps( vtkRenderer* renderer, int nPlane )
 {
   renderer->AddViewProp( m_sliceActor2D[nPlane] );
   renderer->AddViewProp( m_vectorActor2D[nPlane] );
+  renderer->AddViewProp( m_vertexActor2D[nPlane]);
+  if (m_spline)
+    m_spline->AppendProp2D(renderer, nPlane);
 }
 
 void LayerSurface::Append3DProps( vtkRenderer* renderer, bool* bSliceVisibility )
@@ -622,6 +685,14 @@ void LayerSurface::Append3DProps( vtkRenderer* renderer, bool* bSliceVisibility 
   renderer->AddViewProp( m_vectorActor );
   renderer->AddViewProp( m_vertexActor );
   renderer->AddViewProp( m_wireframeActor );
+
+  if (m_spline)
+    m_spline->AppendProp3D(renderer);
+
+  for (int i = 0; i < m_labels.size(); i++)
+    renderer->AddViewProp(m_labels[i]->GetOutlineActor());
+
+  m_roi->AppendProps(renderer);
 }
 
 /*
@@ -669,16 +740,19 @@ void LayerSurface::OnSlicePositionChanged( int nPlane )
   case 0:
     mReslicePlane[0]->SetOrigin( m_dSlicePosition[0]-pos[0], 0, 0  );
     m_sliceActor2D[0]->SetPosition( 0.1, pos[1], pos[2] );
+    m_vertexActor2D[0]->SetPosition( 0.1, pos[1], pos[2] );
     m_vectorActor2D[0]->SetPosition( 1.0, pos[1], pos[2] );
     break;
   case 1:
     mReslicePlane[1]->SetOrigin( 0, m_dSlicePosition[1]-pos[1], 0 );
     m_sliceActor2D[1]->SetPosition( pos[0], 0.1, pos[2] );
+    m_vertexActor2D[1]->SetPosition( pos[0], 0.1, pos[2] );
     m_vectorActor2D[1]->SetPosition( pos[0], 1.0, pos[2] );
     break;
   case 2:
     mReslicePlane[2]->SetOrigin( 0, 0, m_dSlicePosition[2]-pos[2]  );
     m_sliceActor2D[2]->SetPosition( pos[0], pos[1], -0.1 );
+    m_vertexActor2D[2]->SetPosition( pos[0], pos[1], -0.1 );
     m_vectorActor2D[2]->SetPosition( pos[0], pos[1], -1.0 );
     break;
   }
@@ -697,6 +771,12 @@ void LayerSurface::OnSlicePositionChanged( int nPlane )
   {
     m_bVector2DPendingUpdate = true;
   }
+
+  if (m_spline && MainWindow::GetMainWindow()->GetSplinePicking())
+  {
+    int nVertex = this->GetVertexIndexAtTarget(m_dSlicePosition, NULL);
+    m_spline->SetActiveVertex(nVertex);
+  }
 }
 
 void LayerSurface::SetVisible( bool bVisible )
@@ -706,6 +786,7 @@ void LayerSurface::SetVisible( bool bVisible )
   {
     m_sliceActor2D[i] ->SetVisibility( nSliceVisibility );
     m_sliceActor3D[i] ->SetVisibility( nSliceVisibility );
+    m_vertexActor2D[i]->SetVisibility( bVisible && GetProperty()->GetShowVertices() );
   }
 
   m_mainActor->SetVisibility( bVisible && GetProperty()->GetSurfaceRenderMode() != LayerPropertySurface::SM_Wireframe );
@@ -723,6 +804,16 @@ void LayerSurface::SetVisible( bool bVisible )
   {
     m_vectorActor2D[i]->SetVisibility( nVectorVisibility );
   }
+
+  for (int i = 0; i < m_labels.size(); i++)
+  {
+    m_labels[i]->GetOutlineActor()->VisibilityOff();
+  }
+
+  if (bVisible && m_nActiveLabel >= 0 && m_labels[m_nActiveLabel]->GetShowOutline())
+    m_labels[m_nActiveLabel]->GetOutlineActor()->VisibilityOn();
+
+  m_spline->SetVisible(bVisible);
 
   LayerEditable::SetVisible(bVisible);
 }
@@ -743,7 +834,7 @@ bool LayerSurface::HasProp( vtkProp* prop )
 {
   for ( int i = 0; i < 3; i++ )
   {
-    if ( m_sliceActor2D[i] == prop || m_sliceActor3D[i] == prop )
+    if ( m_sliceActor2D[i].GetPointer() == prop || m_sliceActor3D[i].GetPointer() == prop )
     {
       return true;
     }
@@ -774,6 +865,7 @@ int LayerSurface::GetVertexIndexAtTarget( double* pos, double* distance )
   {
     pos_o[i] = pos[i] - offset[i];
   }
+  /*
   if ( m_volumeRef )
   {
     double realRas[3];
@@ -784,6 +876,10 @@ int LayerSurface::GetVertexIndexAtTarget( double* pos, double* distance )
   {
     return m_surfaceSource->FindVertexAtRAS( pos_o, distance );
   }
+  */
+  double realRas[3];
+  m_surfaceSource->ConvertTargetToRAS( pos_o, realRas );
+  return m_surfaceSource->FindVertexAtRAS( realRas, distance );
 }
 
 bool LayerSurface::GetRASAtVertex( int nVertex, double* ras )
@@ -809,10 +905,13 @@ void LayerSurface::GetSurfaceRASAtTarget( double* pos_in, double* ras_out )
   {
     pos_o[i] = pos_in[i] - offset[i];
   }
+  /*
   if ( m_volumeRef )
   {
     m_volumeRef->TargetToRAS( pos_o, pos_o );
   }
+  */
+  m_surfaceSource->ConvertTargetToRAS( pos_o, pos_o );
   m_surfaceSource->ConvertRASToSurface( pos_o, ras_out );
 }
 
@@ -824,10 +923,13 @@ void LayerSurface::GetTargetAtSurfaceRAS( double* ras_in, double* pos_out )
   }
 
   m_surfaceSource->ConvertSurfaceToRAS( ras_in, pos_out );
+  /*
   if ( m_volumeRef )
   {
     m_volumeRef->RASToTarget( pos_out, pos_out );
   }
+  */
+  m_surfaceSource->ConvertRASToTarget(pos_out, pos_out);
 }
 
 bool LayerSurface::GetSurfaceRASAtVertex( int nVertex, double* ras )
@@ -848,9 +950,10 @@ bool LayerSurface::GetTargetAtVertex( int nVertex, double* ras )
   }
 
   bool bRet = m_surfaceSource->GetRASAtVertex( nVertex, ras );
-  if ( bRet && m_volumeRef )
+  if ( bRet )
   {
-    m_volumeRef->RASToTarget( ras, ras );
+    //m_volumeRef->RASToTarget( ras, ras );
+    m_surfaceSource->ConvertRASToTarget(ras, ras);
   }
 
   double* offset = GetProperty()->GetPosition();
@@ -945,7 +1048,9 @@ void LayerSurface::SetActiveOverlay( int nOverlay )
   {
     if ( m_nActiveOverlay < 0 && nOverlay >= 0 )
     {
+      this->GetProperty()->blockSignals(true);
       this->GetProperty()->SetCurvatureMap( LayerPropertySurface::CM_Binary );
+      this->GetProperty()->blockSignals(false);
     }
     m_nActiveOverlay = nOverlay;
     UpdateOverlay(false);
@@ -956,7 +1061,7 @@ void LayerSurface::SetActiveOverlay( int nOverlay )
 
 void LayerSurface::SetActiveOverlay( const QString& name )
 {
-  for ( size_t i = 0; i < m_overlays.size(); i++ )
+  for ( int i = 0; i < m_overlays.size(); i++ )
   {
     if ( m_overlays[i]->GetName() == name )
     {
@@ -973,7 +1078,7 @@ int LayerSurface::GetNumberOfOverlays()
 
 SurfaceOverlay* LayerSurface::GetOverlay( const QString& name )
 {
-  for ( size_t i = 0; i < m_overlays.size(); i++ )
+  for ( int i = 0; i < m_overlays.size(); i++ )
   {
     if ( m_overlays[i]->GetName() == name )
     {
@@ -999,6 +1104,16 @@ SurfaceOverlay* LayerSurface::GetActiveOverlay()
   {
     return NULL;
   }
+}
+
+SurfaceOverlay* LayerSurface::GetCorrelationOverlay()
+{
+  for (int i = 0; i < m_overlays.size(); i++)
+  {
+    if ( m_overlays[i]->HasCorrelationData())
+      return m_overlays[i];
+  }
+  return NULL;
 }
 
 SurfaceOverlay* LayerSurface::GetOverlay( int n )
@@ -1040,9 +1155,15 @@ void LayerSurface::UpdateCorrelationOverlay()
 void LayerSurface::UpdateOverlay( bool bAskRedraw )
 {
   vtkPolyDataMapper* mapper = vtkPolyDataMapper::SafeDownCast( m_mainActor->GetMapper() );
+  vtkPolyDataMapper* wf_mapper = vtkPolyDataMapper::SafeDownCast( m_wireframeActor->GetMapper() );
+  if (!mapper->GetInput() || !wf_mapper->GetInput())
+  {
+    mapper->Update();
+    wf_mapper->Update();
+  }
   vtkPolyData* polydata = mapper->GetInput();
-  vtkPolyData* polydataWireframe = vtkPolyDataMapper::SafeDownCast( m_wireframeActor->GetMapper() )->GetInput();
-  if ( m_nActiveOverlay >= 0 )
+  vtkPolyData* polydataWireframe = wf_mapper->GetInput();
+  if ( m_nActiveOverlay >= 0 || m_nActiveAnnotation >= 0 )
   {
     if ( mapper )
     {
@@ -1058,8 +1179,26 @@ void LayerSurface::UpdateOverlay( bool bAskRedraw )
         polydataWireframe->GetPointData()->AddArray( array );
       }
       unsigned char* data = new unsigned char[ nCount*4 ];
-      GetProperty()->GetCurvatureLUT()->MapScalarsThroughTable( polydata->GetPointData()->GetScalars("Curvature"), data, VTK_RGBA );
-      GetActiveOverlay()->MapOverlay( data );
+      if (polydata->GetPointData()->GetScalars("Curvature"))
+        GetProperty()->GetCurvatureLUT()->MapScalarsThroughTable( polydata->GetPointData()->GetScalars("Curvature"), data, VTK_RGBA );
+      else
+      {
+        double* c = GetProperty()->GetBinaryColor();
+        int r = (int)(c[0]*255);
+        int g = (int)(c[1]*255);
+        int b = (int)(c[2]*255);
+        for (int i = 0; i < nCount; i++)
+        {
+          data[i*4] = r;
+          data[i*4+1] = g;
+          data[i*4+2] = b;
+          data[i*4+3] = 255;
+        }
+      }
+      if (m_nActiveOverlay >= 0)
+        GetActiveOverlay()->MapOverlay( data );
+      if (m_nActiveAnnotation >= 0)
+        GetActiveAnnotation()->MapAnnotationColor(data);
       MapLabels( data, nCount );
       for ( int i = 0; i < nCount; i++ )
       {
@@ -1072,10 +1211,6 @@ void LayerSurface::UpdateOverlay( bool bAskRedraw )
         polydataWireframe->GetPointData()->SetActiveScalars( "Overlay" );
       }
     }
-  }
-  else if ( m_nActiveAnnotation >= 0 )
-  {
-    UpdateAnnotation( false );
   }
   else
   {
@@ -1103,7 +1238,8 @@ void LayerSurface::UpdateOverlay( bool bAskRedraw )
           polydataWireframe->GetPointData()->AddArray( array );
         }
         unsigned char* data = new unsigned char[ nCount*4 ];
-        GetProperty()->GetCurvatureLUT()->MapScalarsThroughTable( polydata->GetPointData()->GetScalars("Curvature"), data, VTK_RGBA );
+        if (polydata->GetPointData()->GetScalars("Curvature"))
+          GetProperty()->GetCurvatureLUT()->MapScalarsThroughTable( polydata->GetPointData()->GetScalars("Curvature"), data, VTK_RGBA );
         MapLabels( data, nCount );
         for ( int i = 0; i < nCount; i++ )
         {
@@ -1152,6 +1288,10 @@ void LayerSurface::SetActiveAnnotation( int n )
 {
   if ( n < (int)m_annotations.size() )
   {
+    if ( m_nActiveAnnotation < 0 && n >= 0 )
+    {
+      this->GetProperty()->SetCurvatureMap( LayerPropertySurface::CM_Binary );
+    }
     m_nActiveAnnotation = n;
     UpdateAnnotation();
     emit ActiveAnnotationChanged( n );
@@ -1161,7 +1301,7 @@ void LayerSurface::SetActiveAnnotation( int n )
 
 void LayerSurface::SetActiveAnnotation( const QString& name )
 {
-  for ( size_t i = 0; i < m_annotations.size(); i++ )
+  for ( int i = 0; i < m_annotations.size(); i++ )
   {
     if ( m_annotations[i]->GetName() == name )
     {
@@ -1178,7 +1318,7 @@ int LayerSurface::GetNumberOfAnnotations()
 
 SurfaceAnnotation* LayerSurface::GetAnnotation( const QString& name )
 {
-  for ( size_t i = 0; i < m_annotations.size(); i++ )
+  for ( int i = 0; i < m_annotations.size(); i++ )
   {
     if ( m_annotations[i]->GetName() == name )
     {
@@ -1220,6 +1360,9 @@ SurfaceAnnotation* LayerSurface::GetAnnotation( int n )
 
 void LayerSurface::UpdateAnnotation( bool bAskRedraw )
 {
+  UpdateOverlay(bAskRedraw);
+  return;
+
   vtkPolyDataMapper* mapper = vtkPolyDataMapper::SafeDownCast( m_mainActor->GetMapper() );
   vtkPolyData* polydata = mapper->GetInput();
   vtkPolyDataMapper* mapperWireframe = vtkPolyDataMapper::SafeDownCast( m_wireframeActor->GetMapper() );
@@ -1269,6 +1412,12 @@ void LayerSurface::UpdateVertexRender()
   m_vertexActor->SetVisibility( GetProperty()->GetShowVertices()? 1: 0 );
   m_vertexActor->GetProperty()->SetPointSize( GetProperty()->GetVertexPointSize() );
   m_vertexActor->GetProperty()->SetColor( GetProperty()->GetVertexColor() );
+  for (int i = 0; i < 3; i++)
+  {
+    m_vertexActor2D[i]->SetVisibility( GetProperty()->GetShowVertices()? 1: 0 );
+    m_vertexActor2D[i]->GetProperty()->SetPointSize( GetProperty()->GetVertexPointSize() );
+    m_vertexActor2D[i]->GetProperty()->SetColor( GetProperty()->GetVertexColor() );
+  }
   emit ActorUpdated();
 }
 
@@ -1282,7 +1431,8 @@ void LayerSurface::UpdateMeshRender()
   switch ( GetProperty()->GetMeshColorMap() )
   {
   case LayerPropertySurface::MC_Surface:
-    polydataWireframe->GetPointData()->SetActiveScalars( polydata->GetPointData()->GetScalars()->GetName() );
+    if (polydata->GetPointData()->GetScalars())
+      polydataWireframe->GetPointData()->SetActiveScalars( polydata->GetPointData()->GetScalars()->GetName() );
     mapperWireframe->SetLookupTable( mapper->GetLookupTable() );
     break;
   case LayerPropertySurface::MC_Curvature:
@@ -1321,11 +1471,26 @@ void LayerSurface::UpdateActorPositions()
   m_vectorActor2D[1]->SetPosition( pos[0], 1.0, pos[2] );
   m_vectorActor2D[2]->SetPosition( pos[0], pos[1], -1.0 );
 
+  m_vertexActor2D[0]->SetPosition( 0.1, pos[1], pos[2] );
+  m_vertexActor2D[1]->SetPosition( pos[0], 0.1, pos[2] );
+  m_vertexActor2D[2]->SetPosition( pos[0], pos[1], -0.1 );
+
   m_mainActor->SetPosition( pos );
   m_vectorActor->SetPosition( pos );
   m_vertexActor->SetPosition( pos );
   m_wireframeActor->SetPosition( pos );
+
+  for (int i = 0; i < m_labels.size(); i++)
+  {
+    m_labels[i]->GetOutlineActor()->SetPosition(pos);
+  }
+
   emit ActorUpdated();
+}
+
+void LayerSurface::UpdateROIPosition(double dx, double dy, double dz)
+{
+  m_roi->GetActor()->AddPosition(dx, dy, dz);
 }
 
 int LayerSurface::GetHemisphere()
@@ -1356,6 +1521,12 @@ void LayerSurface::SetActiveLabel( int n )
   {
     m_nActiveLabel = n;
     UpdateColorMap();
+    for (int i = 0; i < m_labels.size(); i++)
+    {
+      m_labels[i]->GetOutlineActor()->VisibilityOff();
+    }
+    if (n >= 0 && m_labels[n]->GetShowOutline())
+      m_labels[n]->GetOutlineActor()->VisibilityOn();
     emit ActiveLabelChanged( n );
     emit ActorUpdated();
   }
@@ -1363,7 +1534,7 @@ void LayerSurface::SetActiveLabel( int n )
 
 void LayerSurface::MapLabels( unsigned char* data, int nVertexCount )
 {
-  for ( size_t i = 0; i < m_labels.size(); i++ )
+  for ( int i = 0; i < m_labels.size(); i++ )
   {
     if (i == m_nActiveLabel)
       m_labels[i]->MapLabel( data, nVertexCount );
@@ -1380,17 +1551,68 @@ void LayerSurface::SetActiveLabelColor(const QColor &c)
   }
 }
 
-void LayerSurface::RepositionSurface( LayerMRI* mri, int nVertex, double value, int size, double sigma )
+void LayerSurface::SetActiveLabelOutline(bool bOutline)
 {
-  m_surfaceSource->Reposition( mri->GetSourceVolume(), nVertex, value, size, sigma );
+  if ( m_nActiveLabel >= 0)
+  {
+    m_labels[m_nActiveLabel]->SetShowOutline(bOutline);
+    if (!this->IsVisible())
+      m_labels[m_nActiveLabel]->GetOutlineActor()->VisibilityOff();
+    UpdateColorMap();
+    emit ActorUpdated();
+  }
+}
+
+void LayerSurface::SetActiveAnnotationOutline(bool bOutline)
+{
+  if ( m_nActiveAnnotation >= 0)
+  {
+    m_annotations[m_nActiveAnnotation]->SetShowOutline(bOutline);
+    UpdateColorMap();
+    emit ActorUpdated();
+  }
+}
+
+
+void LayerSurface::RepositionSurface( LayerMRI* mri, int nVertex, double value, int size, double sigma, int flags )
+{
+  m_surfaceSource->Reposition( mri->GetSourceVolume(), nVertex, value, size, sigma, flags );
   SetModified();
   m_bUndoable = true;
   emit ActorUpdated();
 }
 
-void LayerSurface::RepositionSurface( LayerMRI* mri, int nVertex, double* pos, int size, double sigma )
+void LayerSurface::RepositionSurface( LayerMRI* mri, int nVertex, double* pos, int size, double sigma, int flags )
 {
-  m_surfaceSource->Reposition( mri->GetSourceVolume(), nVertex, pos, size, sigma );
+  m_surfaceSource->Reposition( mri->GetSourceVolume(), nVertex, pos, size, sigma, flags );
+  SetModified();
+  m_bUndoable = true;
+  emit ActorUpdated();
+}
+
+bool LayerSurface::SmoothSurface(int nMethod, int niters, double lambda, double k_cutoff)
+{
+  bool ret = m_surfaceSource->Smooth(nMethod, niters, lambda, k_cutoff);
+  if (ret)
+  {
+    SetModified();
+    m_bUndoable = true;
+    emit ActorUpdated();
+  }
+  return ret;
+}
+
+void LayerSurface::RemoveIntersections()
+{
+  m_surfaceSource->RemoveIntersections();
+  SetModified();
+  m_bUndoable = true;
+  emit ActorUpdated();
+}
+
+void LayerSurface::RepositionVertex(int nVertex, double* pos)
+{
+  m_surfaceSource->RepositionVertex(nVertex, pos);
   SetModified();
   m_bUndoable = true;
   emit ActorUpdated();
@@ -1417,4 +1639,10 @@ bool LayerSurface::HasValidVolumeGeometry()
 int LayerSurface::GetNumberOfVertices()
 {
   return this->m_surfaceSource->GetNumberOfVertices();
+}
+
+void LayerSurface::ResetVolumeRef()
+{
+  m_volumeRef = NULL;
+  m_surfaceSource->ResetVolumeRef();
 }

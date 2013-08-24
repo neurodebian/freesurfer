@@ -1,27 +1,3 @@
-/**
- * @file  kvlRegister.cxx
- * @brief REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
- *
- * REPLACE_WITH_LONG_DESCRIPTION_OR_REFERENCE
- */
-/*
- * Original Author: Koen Van Leemput
- * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/09/28 21:04:06 $
- *    $Revision: 1.1.2.4 $
- *
- * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
- *
- * Terms and conditions for use, reproduction, distribution and contribution
- * are found in the 'FreeSurfer Software License Agreement' contained
- * in the file 'LICENSE' found in the FreeSurfer distribution, and here:
- *
- * https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
- *
- * Reporting: freesurfer@nmr.mgh.harvard.edu
- *
- */
 #include "kvlRegisterer.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
@@ -40,7 +16,7 @@ public:
   typedef itk::SimpleMemberCommand< OptimizerWatcher > CommandType;
 
   // Constructor
-  OptimizerWatcher( const itk::PowellOptimizer* optimizer,
+  OptimizerWatcher( const ParameterOrderPowellOptimizer* optimizer,
                     const Registerer::RegistrationType* registration )
   {
     m_Optimizer = optimizer;
@@ -50,6 +26,12 @@ public:
     m_OptimizerIterationCommand->SetCallbackFunction( this,
         &OptimizerWatcher::HandleOptimizerIteration );
     m_Optimizer->AddObserver( itk::IterationEvent(), m_OptimizerIterationCommand );
+
+    m_OptimizerEndCommand = CommandType::New();
+    m_OptimizerEndCommand->SetCallbackFunction( this,
+        &OptimizerWatcher::HandleOptimizerEnd );
+    m_Optimizer->AddObserver( itk::EndEvent(), m_OptimizerEndCommand );
+
 
     m_RegistrationIterationCommand = CommandType::New();
     m_RegistrationIterationCommand->SetCallbackFunction( this,
@@ -68,10 +50,8 @@ protected:
   virtual void HandleOptimizerIteration()
   {
     std::cout << "       Iteration " << m_Optimizer->GetCurrentIteration()
-              << ": value = " << m_Optimizer->GetCurrentValue()
-              << " (" << m_Optimizer->GetNumberOfFunctionEvaluations()
-              << " evaluations)" << std::endl;
-    const itk::PowellOptimizer::ParametersType&  currentPosition = m_Optimizer->GetCurrentPosition();
+              << ": value = " << m_Optimizer->GetCurrentCost() << std::endl;
+    const ParameterOrderPowellOptimizer::ParametersType&  currentPosition = m_Optimizer->GetCurrentPosition();
     std::cout << "            Current position: " << std::endl;
     std::cout << "                    Rotation: ";
     for ( int i = 0; i < 3; i++ )
@@ -101,6 +81,12 @@ protected:
   }
 
   //
+  virtual void HandleOptimizerEnd()
+  {
+    std::cout << m_Optimizer->GetStopConditionDescription() << std::endl;
+  }
+
+  //
   virtual void HandleRegistrationIteration()
   {
     std::cout << "Doing registration at level " << m_Registration->GetCurrentLevel()
@@ -110,10 +96,11 @@ protected:
 
 
 private:
-  itk::PowellOptimizer::ConstPointer m_Optimizer;
+  ParameterOrderPowellOptimizer::ConstPointer m_Optimizer;
   Registerer::RegistrationType::ConstPointer  m_Registration;
 
   CommandType::Pointer  m_OptimizerIterationCommand ;
+  CommandType::Pointer  m_OptimizerEndCommand ;
   CommandType::Pointer  m_RegistrationIterationCommand ;
 
 };

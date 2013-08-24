@@ -11,8 +11,8 @@
  * Original Author: Bruce Fischl
  * CVS Revision Info:
  *    $Author: nicks $
- *    $Date: 2011/03/02 00:04:09 $
- *    $Revision: 1.114 $
+ *    $Date: 2013/01/08 19:37:41 $
+ *    $Revision: 1.114.2.2 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -49,6 +49,7 @@ extern "C" {
 #define GCA_PARAM      2  // used T1 and PD data to create GCA
 #define GCA_UNKNOWN   99  // what ???
 
+#define DEFAULT_CLAMP 6   // anything more negative than -DEFAULT_CLAMP is set to -DEFAULT_CLAMP in logSample stuff
 
 // somehow these were in here and not in tags.h. For backwards compatibility
 // have to keep using them
@@ -242,16 +243,16 @@ float GCAcomputeNumberOfGoodFittingSamples(GCA *gca, GCA_SAMPLE *gcas,
 
 float  GCAcomputeLogSampleProbability(GCA *gca, GCA_SAMPLE *gcas,
                                       MRI *mri_inputs,
-                                      TRANSFORM *transform,int nsamples);
+                                      TRANSFORM *transform,int nsamples, double clamp);
 float  GCAcomputeLogSampleProbabilityLongitudinal(GCA *gca, GCA_SAMPLE *gcas,
                                                   MRI *mri_inputs,
-                                                  TRANSFORM *transform,int nsamples);
+                                                  TRANSFORM *transform,int nsamples, double clamp);
 float  GCAcomputeLogSampleProbabilityUsingCoords(GCA *gca, GCA_SAMPLE *gcas,
     MRI *mri_inputs,
-    TRANSFORM *transform,int nsamples);
+    TRANSFORM *transform,int nsamples, double clamp);
 float  GCAnormalizedLogSampleProbability(GCA *gca, GCA_SAMPLE *gcas,
     MRI *mri_inputs,
-    TRANSFORM *transform,int nsamples);
+    TRANSFORM *transform,int nsamples, double clamp);
 int   GCAremoveOutlyingSamples(GCA *gca, GCA_SAMPLE *gcas,
                                MRI *mri_inputs,
                                TRANSFORM *transform,int nsamples, float nsigma);
@@ -267,6 +268,9 @@ int    GCAsourceVoxelToPrior( const GCA *gca, MRI *mri, TRANSFORM *transform,
 			      int *pxp, int *pyp, int *pzp) ;
 int    GCAsourceVoxelToPriorReal(GCA *gca, MRI *mri, TRANSFORM *transform,
                                  int xv, int yv, int zv,
+                                 double *pxp, double *pyp, double *pzp) ;
+int    GCAsourceFloatVoxelToPriorReal(GCA *gca, MRI *mri, TRANSFORM *transform,
+                                 float xv, float yv, float zv,
                                  double *pxp, double *pyp, double *pzp) ;
 int    GCAsourceFloatVoxelToPrior(GCA *gca, MRI *mri, TRANSFORM *transform,
                                   float xv, float yv, float zv,
@@ -361,6 +365,7 @@ int  GCArenormalize(MRI *mri_in, MRI *mri_labeled, GCA *gca, TRANSFORM *transfor
 int  GCAmapRenormalize(GCA *gca, MRI *mri, TRANSFORM *transform) ;
 int  GCAmapRenormalizeWithAlignment(GCA *gca, MRI *mri, TRANSFORM *transform, FILE *logfp,const  char *base_name, LTA **plta, int handle_expanded_ventricles);
 int  GCAseqRenormalizeWithAlignment(GCA *gca, MRI *mri, TRANSFORM *transform, FILE *logfp,const char *base_name, LTA **plta, int handle_expanded_ventricles, float *old_label_scales, float *old_label_offsets, float *old_label_peaks, int *old_label_computed);
+int  GCAmapRenormalizeWithHistograms(GCA *gca, MRI *mri, TRANSFORM *transform, FILE *logfp,const char *base_name, float *old_label_scales, float *old_label_offsets, float *old_label_peaks, int *old_label_computed);
 int  GCAcomputeRenormalizationWithAlignment(GCA *gca, MRI *mri, TRANSFORM *transform, FILE *logfp, const  char *base_name, LTA **plta, int handle_expanded_ventricles, float *plabel_scales, float *plabel_offsets, float *plabel_peaks, int *plabel_computed);
 int  GCArenormalizeAdaptive(MRI *mri_in, MRI *mri_labeled, GCA *gca, TRANSFORM *transform,
                             int wsize, float pthresh) ;
@@ -390,6 +395,7 @@ int     GCAhisto(GCA *gca, int nbins, int **pcounts) ;
 int     GCAcomputeVoxelLikelihoods(GCA *gca, MRI *mri_in, int x, int y, int z,
                                    TRANSFORM *transform, int *labels, double *likelihoods);
 GCA_PRIOR *getGCAP(GCA *gca, MRI *mri, TRANSFORM *transform, int xv, int yv, int zv) ;
+int      GCAisLeftHemisphere(GCA *gca, MRI *mri, TRANSFORM *transform, int x, int y, int z) ;
 float getPrior(GCA_PRIOR *gcap, int label) ;
 int   GCApriorToNode( const GCA *gca,
 		      int xp, int yp, int zp,
@@ -539,6 +545,11 @@ GCA *gcaAllocMax(int ninputs, float prior_spacing, float node_spacing,
                  int width, int height, int depth,
                  int max_labels, int flags) ;
 int GCAreadLabelIntensities(char *fname, float *label_scales, float *label_offsets) ;
+int is_possible_wmsa(GCA *gca, MRI *mri, TRANSFORM *transform, int x, int y, int z, int whalf) ;
+double wm_prior(GCA *gca, MRI *mri, TRANSFORM *transform, int x, int y, int z) ;
+double cortex_prior(GCA *gca, MRI *mri, TRANSFORM *transform, int x, int y, int z) ;
+double csf_prior(GCA *gca, MRI *mri, TRANSFORM *transform, int x, int y, int z) ;
+double gm_prior(GCA *gca, MRI *mri, TRANSFORM *transform, int x, int y, int z) ;
 
 #if defined(__cplusplus)
 };

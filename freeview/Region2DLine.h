@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/14 23:44:48 $
- *    $Revision: 1.10 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:36 $
+ *    $Revision: 1.10.2.6 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -61,6 +61,10 @@ public:
   void UpdateSlicePosition( int nPlane, double pos );
 
   void GetWorldPoint( int nIndex, double* pt );
+
+  QString DataToString();
+
+  Region2D* ObjectFromString(RenderView2D* view, const QString& text);
 
 protected:
   void UpdateWorldCoords();

@@ -1,14 +1,14 @@
 /**
  * @file  RenderView.cpp
- * @brief REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+ * @brief View class for rendering 2D and 3D actors
  *
  */
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/14 23:44:48 $
- *    $Revision: 1.40 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:36 $
+ *    $Revision: 1.40.2.6 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -26,6 +26,11 @@
 #include "MainWindow.h"
 #include "LayerMRI.h"
 #include "LayerPropertyMRI.h"
+#include "LayerPointSet.h"
+#include "LayerPropertyPointSet.h"
+#include "LayerSurface.h"
+#include "SurfaceOverlay.h"
+#include "SurfaceOverlayProperty.h"
 #include <QTimer>
 #include <QApplication>
 #include "MyVTKUtils.h"
@@ -40,7 +45,11 @@
 #include "vtkMath.h"
 #include "vtkScalarBarActor.h"
 #include "vtkLookupTable.h"
+#include "vtkRGBAColorTransferFunction.h"
 #include <QPainter>
+#include <QAction>
+#include <vtkCellPicker.h>
+#include <vtkRenderWindow.h>
 
 #define SCALE_FACTOR  200
 
@@ -71,6 +80,12 @@ RenderView::RenderView( QWidget* parent ) : GenericRenderView( parent),
   Lines->InsertNextCell( 2 );
   Lines->InsertCellPoint( 3 );
   Lines->InsertCellPoint( 0 );
+
+  vtkCellPicker* picker = vtkCellPicker::New();
+  picker->SetTolerance( 0.0005 );
+  picker->PickFromListOn();
+  this->GetRenderWindow()->GetInteractor()->SetPicker( picker );
+  picker->Delete();
 
   vtkSmartPointer<vtkPolyData> Grid = vtkSmartPointer<vtkPolyData>::New();
   Grid->SetPoints(Pts);
@@ -132,7 +147,7 @@ void RenderView::OnIdle()
 //   if ( qApp->hasPendingEvents() )
 //       return;
 
-  if ( m_bNeedRedraw )
+  if ( m_bNeedRedraw && isVisible())
   {
     Render();
     m_bNeedRedraw = false;
@@ -258,14 +273,15 @@ void RenderView::keyReleaseEvent( QKeyEvent* event )
   }
 }
 
-void RenderView::SetWorldCoordinateInfo( const double* origin, const double* size )
+void RenderView::SetWorldCoordinateInfo( const double* origin, const double* size, bool bResetView )
 {
   for ( int i = 0; i < 3; i++ )
   {
     m_dWorldOrigin[i] = origin[i];
     m_dWorldSize[i] = size[i];
   }
-  UpdateViewByWorldCoordinate();
+  if (bResetView)
+    UpdateViewByWorldCoordinate();
 }
 
 void RenderView::ViewportToWorld( double x, double y, double& world_x, double& world_y, double& world_z )
@@ -306,7 +322,7 @@ void RenderView::MoveLeft()
   double focal_pt[3], cam_pos[3];
   cam->GetFocalPoint( focal_pt );
   cam->GetPosition( cam_pos );
-  double scale = qMin( qMin( m_dWorldSize[0], m_dWorldSize[1] ), m_dWorldSize[2] ) / SCALE_FACTOR;
+  double scale = qMax( qMax( m_dWorldSize[0], m_dWorldSize[1] ), m_dWorldSize[2] ) / SCALE_FACTOR;
   for ( int i = 0; i < 3; i++ )
   {
     focal_pt[i] -= v[i] * scale;
@@ -316,6 +332,7 @@ void RenderView::MoveLeft()
   cam->SetPosition( cam_pos );
 
   RequestRedraw();
+  emit ViewChanged();
 }
 
 void RenderView::MoveRight()
@@ -328,7 +345,7 @@ void RenderView::MoveRight()
   double focal_pt[3], cam_pos[3];
   cam->GetFocalPoint( focal_pt );
   cam->GetPosition( cam_pos );
-  double scale = qMin( qMin( m_dWorldSize[0], m_dWorldSize[1] ), m_dWorldSize[2] ) / SCALE_FACTOR;
+  double scale = qMax( qMax( m_dWorldSize[0], m_dWorldSize[1] ), m_dWorldSize[2] ) / SCALE_FACTOR;
   for ( int i = 0; i < 3; i++ )
   {
     focal_pt[i] += v[i] * scale;
@@ -338,6 +355,7 @@ void RenderView::MoveRight()
   cam->SetPosition( cam_pos );
 
   RequestRedraw();
+  emit ViewChanged();
 }
 
 void RenderView::MoveUp()
@@ -348,7 +366,7 @@ void RenderView::MoveUp()
   double focal_pt[3], cam_pos[3];
   cam->GetFocalPoint( focal_pt );
   cam->GetPosition( cam_pos );
-  double scale = qMin( qMin( m_dWorldSize[0], m_dWorldSize[1] ), m_dWorldSize[2] ) / SCALE_FACTOR;
+  double scale = qMax( qMax( m_dWorldSize[0], m_dWorldSize[1] ), m_dWorldSize[2] ) / SCALE_FACTOR;
   for ( int i = 0; i < 3; i++ )
   {
     focal_pt[i] -= v[i] * scale;
@@ -358,6 +376,7 @@ void RenderView::MoveUp()
   cam->SetPosition( cam_pos );
 
   RequestRedraw();
+  emit ViewChanged();
 }
 
 void RenderView::MoveDown()
@@ -368,7 +387,7 @@ void RenderView::MoveDown()
   double focal_pt[3], cam_pos[3];
   cam->GetFocalPoint( focal_pt );
   cam->GetPosition( cam_pos );
-  double scale = qMin( qMin( m_dWorldSize[0], m_dWorldSize[1] ), m_dWorldSize[2] ) / SCALE_FACTOR;
+  double scale = qMax( qMax( m_dWorldSize[0], m_dWorldSize[1] ), m_dWorldSize[2] ) / SCALE_FACTOR;
   for ( int i = 0; i < 3; i++ )
   {
     focal_pt[i] += v[i] * scale;
@@ -378,6 +397,7 @@ void RenderView::MoveDown()
   cam->SetPosition( cam_pos );
 
   RequestRedraw();
+  emit ViewChanged();
 }
 
 void RenderView::Zoom( double dFactor )
@@ -385,7 +405,26 @@ void RenderView::Zoom( double dFactor )
   vtkCamera* cam = m_renderer->GetActiveCamera();
   cam->Zoom( dFactor );
 
+  emit ViewChanged();
   Render();
+}
+
+void RenderView::CenterAtWorldPosition(double *pos)
+{
+  vtkCamera* cam = m_renderer->GetActiveCamera();
+  double v[3], cam_pos[3];
+  cam->GetDirectionOfProjection( v );
+  double dist = cam->GetDistance();
+  for ( int i = 0; i < 3; i++ )
+  {
+    cam_pos[i] = pos[i] - v[i] * dist;
+  }
+  cam->SetFocalPoint( pos );
+  cam->SetPosition( cam_pos );
+
+  ResetCameraClippingRange();
+  RequestRedraw();
+  emit ViewChanged();
 }
 
 int RenderView::GetAction()
@@ -416,10 +455,61 @@ bool RenderView::GetShowScalarBar()
 
 void RenderView::UpdateScalarBar()
 {
-  LayerMRI* mri = (LayerMRI*)MainWindow::GetMainWindow()->GetActiveLayer( "MRI" );
-  if ( mri )
+  if (m_layerScalarBar.isNull())
   {
-    m_actorScalarBar->SetLookupTable( mri->GetProperty()->GetActiveLookupTable() );
+    QList<Layer*> layers = MainWindow::GetMainWindow()->GetLayers("MRI");
+    foreach (Layer* layer, layers)
+    {
+      LayerMRI* mri = qobject_cast<LayerMRI*>(layer);
+      if (mri && mri->GetProperty()->GetColorMap() != LayerPropertyMRI::LUT)
+      {
+        m_actorScalarBar->SetLookupTable( mri->GetProperty()->GetActiveLookupTable() );
+        m_layerScalarBar = mri;
+        break;
+      }
+    }
+  }
+  else
+  {
+    if (m_layerScalarBar->IsTypeOf("MRI"))
+    {
+      LayerMRI* mri = qobject_cast<LayerMRI*>(m_layerScalarBar);
+      m_actorScalarBar->SetLookupTable( mri->GetProperty()->GetActiveLookupTable() );
+    }
+    else if (m_layerScalarBar->IsTypeOf("PointSet"))
+    {
+      LayerPointSet* ps = qobject_cast<LayerPointSet*>(m_layerScalarBar);
+      if (ps->GetProperty()->GetColorMap() == LayerPropertyPointSet::HeatScale)
+      {
+        m_actorScalarBar->SetLookupTable(ps->GetProperty()->GetHeatScaleLUT());
+      }
+    }
+    else if (m_layerScalarBar->IsTypeOf("Surface"))
+    {
+      LayerSurface* surf = qobject_cast<LayerSurface*>(m_layerScalarBar);
+      if (surf->GetActiveOverlay())
+        m_actorScalarBar->SetLookupTable( surf->GetActiveOverlay()->GetProperty()->GetLookupTable() );
+    }
+  }
+}
+
+void RenderView::SetScalarBarLayer(Layer *layer)
+{
+  m_layerScalarBar = layer;
+  UpdateScalarBar();
+  if (!GetShowScalarBar())
+    ShowScalarBar(true);
+}
+
+void RenderView::SetScalarBarLayer(QAction *act)
+{
+  Layer* layer = qobject_cast<Layer*>(act->data().value<QObject*>());
+  if (layer)
+  {
+    if (act->isChecked())
+      SetScalarBarLayer(layer);
+    else
+      ShowScalarBar(false);
   }
 }
 
@@ -431,4 +521,22 @@ bool RenderView::SaveScreenShot(const QString& filename, bool bAntiAliasing, int
   bool ret = SaveImage(filename, bAntiAliasing, nMag);
   RefreshAllActors(false);
   return ret;
+}
+
+int RenderView::PickCell( vtkProp* prop, int posX, int posY, double* pos_out )
+{
+  vtkCellPicker* picker = vtkCellPicker::SafeDownCast( GetRenderWindow()->GetInteractor()->GetPicker() );
+  if ( !picker )
+  {
+    return -1;
+  }
+
+  picker->InitializePickList();
+  picker->AddPickList( prop );
+  picker->Pick( posX, this->rect().height() - posY, 0, GetRenderer() );
+  if ( pos_out )
+  {
+    picker->GetPickPosition( pos_out );
+  }
+  return picker->GetCellId();
 }

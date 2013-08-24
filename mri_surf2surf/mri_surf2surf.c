@@ -472,7 +472,7 @@ int main(int argc, char **argv)
   nargs = handle_version_option (
     argc, argv,
     "$Id: mri_surf2surf.c,v 1.90.2.1 2011/11/17 21:35:11 greve Exp $",
-    "$Name: stable5 $");
+    "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1) {
     exit (0);
   }

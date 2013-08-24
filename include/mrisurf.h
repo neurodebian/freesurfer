@@ -9,8 +9,8 @@
  * Original Author: Bruce Fischl
  * CVS Revision Info:
  *    $Author: nicks $
- *    $Date: 2011/04/27 17:36:41 $
- *    $Revision: 1.351.2.1 $
+ *    $Date: 2013/05/12 22:28:00 $
+ *    $Revision: 1.351.2.5 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -112,6 +112,7 @@ typedef struct vertex_type_
   float targx, targy, targz ;   // target coordinates
   float pialx, pialy, pialz ;   /* pial surface coordinates */
   float whitex, whitey, whitez ;/* white surface coordinates */
+  float l4x, l4y, l4z ;   /* layerIV surface coordinates */
   float infx, infy, infz; /* inflated coordinates */
   float fx, fy, fz ;      /* flattened coordinates */
   int   px,qx, py,qy, pz,qz; /* rational coordinates for exact calculations */
@@ -175,6 +176,7 @@ typedef struct vertex_type_
   float theta, phi ;     /* parameterization */
   short  marked;         /* for a variety of uses */
   short  marked2 ;
+  short  marked3 ;
   char   ripflag ;
   char   border;         /* flag */
   float area, origarea, group_avg_area ;
@@ -325,6 +327,9 @@ that will
 maximize the
 positive areas */
 #define IPFLAG_NOSCALE_TOL            0x8000   // don't scale tol with navgs
+#define IPFLAG_FORCE_GRADIENT_OUT    0x10000
+#define IPFLAG_FORCE_GRADIENT_IN     0x20000
+#define IPFLAG_FIND_FIRST_WM_PEAK    0x40000  // for Matt Glasser/David Van Essen
 
 #define INTEGRATE_LINE_MINIMIZE    0  /* use quadratic fit */
 #define INTEGRATE_MOMENTUM         1
@@ -435,8 +440,10 @@ typedef struct
                                  along normal */
   float   l_spring ;          /* coefficient of spring term */
   float   l_nlspring ;        /* nonlinear spring term */
+  float   l_max_spring ;      /* draws vertices towards the most distant neighbor */
   float   l_spring_norm ;     /* coefficient of normalize spring term */
   float   l_tspring ;         /* coefficient of tangential spring term */
+  float   l_nltspring ;       /* coefficient of nonlinear tangential spring term */
   float   l_nspring ;         /* coefficient of normal spring term */
   float   l_repulse ;         /* repulsize force on tessellation */
   float   l_repulse_ratio ;   /* repulsize force on tessellation */
@@ -459,11 +466,13 @@ typedef struct
   float   l_expandwrap ;      /* move out */
   float   l_unfold ;          /* move inwards along normal */
   float   l_dura ;            // move away from dura
+  float   l_histo ;           // increase the likelihood of the entire volume given the surfaces
   double  dura_thresh ;
   MRI     *mri_dura ;         /* ratio of early to late echo -
                                          dura shows up bright */
   int     n_averages ;        /* # of averages */
   int     min_averages ;
+  int     first_pass_averages;// # of averages to use in the first pass
   int     nbhd_size ;
   int     max_nbrs ;
   int     write_iterations ;  /* # of iterations between saving movies */
@@ -558,6 +567,20 @@ typedef struct
   int          smooth_averages ;
   int          ico_order ;  // which icosahedron to use
   int          remove_neg ;
+  MRI          *mri_hires ;
+  MRI          *mri_hires_smooth ;
+  MRI          *mri_vno ;
+  MRI          *mri_template ;
+  int          which_surface ;
+  float        trinarize_thresh;   // for trinarizing curvature in registration
+  int          smooth_intersections ;  // run soap bubble smoothing during surface positioning
+  int          uncompress ;            // run code to remove compressions in tessellation
+  double       min_dist ;
+  HISTOGRAM    *h_wm ;
+  HISTOGRAM    *h_gm ;
+  HISTOGRAM    *h_nonbrain ;
+  MRI          *mri_labels ;   // hires labeling of interior of WM, GM and nonbrain
+  MRI          *mri_white ;
 }
 INTEGRATION_PARMS ;
 
@@ -608,6 +631,7 @@ int MRISrigidBodyAlignVectorGlobal(MRI_SURFACE *mris,
                                    float min_degrees,
                                    float max_degrees, int nangles);
 void MRISnormalizeField(MRIS *mris , int distance_field, int which_norm);
+int  MRISsmoothCurvatures(MRI_SURFACE *mris, int niterations) ;
 void MRISsetCurvaturesToValues(MRIS *mris,int fno);
 void MRISsetCurvaturesToOrigValues(MRIS *mris,int fno);
 void MRISsetOrigValuesToCurvatures(MRIS *mris,int fno);
@@ -712,11 +736,12 @@ int          MRISwriteWhiteNormals(MRI_SURFACE *mris, const char *fname) ;
 int          MRISwriteNormalsAscii(MRI_SURFACE *mris,const  char *fname) ;
 int          MRISreadNormals(MRI_SURFACE *mris, const char *fname) ;
 int          MRISwriteNormals(MRI_SURFACE *mris,const  char *fname) ;
+int          MRISwritePrincipalDirection(MRI_SURFACE *mris, int dir_index, const  char *fname) ;
 int          MRISwriteVTK(MRI_SURFACE *mris,const  char *fname);
 int          MRISwriteCurvVTK(MRI_SURFACE *mris, const char *fname);
 int          MRISwriteGeo(MRI_SURFACE *mris,const  char *fname) ;
 int          MRISwriteICO(MRI_SURFACE *mris,const  char *fname) ;
-int          MRISwriteSTL(MRI_SURFACE *mris, char *fname) ;
+int          MRISwriteSTL(MRI_SURFACE *mris, const char *fname) ;
 int          MRISwritePatchAscii(MRI_SURFACE *mris,const  char *fname) ;
 int          MRISwriteDists(MRI_SURFACE *mris,const  char *fname) ;
 int          MRISwriteCurvature(MRI_SURFACE *mris,const  char *fname) ;
@@ -756,6 +781,8 @@ MRI_SURFACE  *MRISalloc(int nvertices, int nfaces) ;
 int          MRISfreeDists(MRI_SURFACE *mris) ;
 int          MRISfree(MRI_SURFACE **pmris) ;
 int   MRISintegrate(MRI_SURFACE *mris, INTEGRATION_PARMS *parms, int n_avgs);
+int   mrisLogIntegrationParms(FILE *fp, MRI_SURFACE *mris,
+			      INTEGRATION_PARMS *parms) ;
 MRI_SURFACE  *MRISprojectOntoSphere(MRI_SURFACE *mris_src,
                                     MRI_SURFACE *mris_dst, double r) ;
 MRI_SURFACE  *MRISprojectOntoEllipsoid(MRI_SURFACE *mris_src,
@@ -919,6 +946,8 @@ double       MRIScomputeAnalyticDistanceError(MRI_SURFACE *mris, int which,
     FILE *fp);
 int          MRISzeroNegativeAreas(MRI_SURFACE *mris) ;
 int          MRIScountNegativeTriangles(MRI_SURFACE *mris) ;
+int          MRIScountMarked(MRI_SURFACE *mris, int mark_threshold) ;
+int          MRIScountTotalNeighbors(MRI_SURFACE *mris, int nsize) ;
 int          MRISstoreMeanCurvature(MRI_SURFACE *mris) ;
 int          MRISreadTetherFile(MRI_SURFACE *mris,
                                 const char *fname,
@@ -1005,6 +1034,7 @@ double       MRISParea(MRI_SP *mrisp) ;
 #define WHITE_VERTICES      9
 #define TARGET_VERTICES     10
 #define LAYERIV_VERTICES    11
+#define LAYER4_VERTICES     LAYERIV_VERTICES
 
 int MRISsaveVertexPositions(MRI_SURFACE *mris, int which) ;
 int MRISrestoreVertexPositions(MRI_SURFACE *mris, int which) ;
@@ -1116,6 +1146,7 @@ int   MRIScopyFixedValFlagsToMarks(MRI_SURFACE *mris) ;
 int   MRISclearAnnotations(MRI_SURFACE *mris) ;
 int   MRISsetMarks(MRI_SURFACE *mris, int mark) ;
 int   MRISsequentialAverageVertexPositions(MRI_SURFACE *mris, int navgs) ;
+int   MRISreverseCoords(MRI_SURFACE *mris, int which_direction, int reverse_face_order, int which_coords) ;
 int   MRISreverse(MRI_SURFACE *mris, int which, int reverse_face_order) ;
 int   MRISreverseFaceOrder(MRIS *mris);
 int   MRISdisturbOriginalDistances(MRI_SURFACE *mris, double max_pct) ;
@@ -1190,7 +1221,7 @@ int   MRIScomputeBorderValues(MRI_SURFACE *mris,
                               float max_dist,
                               FILE *log_fp,
                               int white,
-                              MRI *mri_mask, double thresh);
+                              MRI *mri_mask, double thresh, int flags);
 int  MRIScomputeWhiteSurfaceValues(MRI_SURFACE *mris, MRI *mri_brain,
                                    MRI *mri_smooth);
 int  MRIScomputeGraySurfaceValues(MRI_SURFACE *mris, MRI *mri_brain,
@@ -1225,6 +1256,7 @@ double MRIScomputeTotalVertexSpacingStats(MRI_SURFACE *mris, double *psigma,
 double MRIScomputeFaceAreaStats(MRI_SURFACE *mris, double *psigma,
                                 double *pmin, double *pmax);
 int MRISprintTessellationStats(MRI_SURFACE *mris, FILE *fp) ;
+int MRISprintVertexStats(MRI_SURFACE *mris, int vno, FILE *fp, int which_vertices) ;
 int MRISmergeIcosahedrons(MRI_SURFACE *mri_src, MRI_SURFACE *mri_dst) ;
 int MRISinverseSphericalMap(MRI_SURFACE *mris, MRI_SURFACE *mris_ico) ;
 
@@ -1367,16 +1399,22 @@ int MRISdivideEdges(MRI_SURFACE *mris, int npoints) ;
 int MRISremoveTriangleLinks(MRI_SURFACE *mris) ;
 int MRISsetOriginalFileName(char *orig_name) ;
 int MRISsetSulcFileName(const char *sulc_name) ;
+int MRISsetCurvatureName(int nth, char *name);
+int MRISprintCurvatureNames(FILE *fp);
 int MRISsetInflatedFileName(char *inflated_name) ;
 int MRISsetRegistrationSigmas(float *sigmas, int nsigmas) ;
 
+int MRISextractVertexCoords(MRI_SURFACE *mris, float *locations[3], int which_vertices) ;
+int MRISimporttVertexCoords(MRI_SURFACE *mris, float *locations[3], int which_vertices) ;
 int MRISextractCurvatureVector(MRI_SURFACE *mris, float *curvs) ;
 int MRISextractCurvatureDoubleVector(MRI_SURFACE *mris, double *curvs) ;
+int MRISextractCurvatureVectorDouble(MRI_SURFACE *mris, double *curvs, int offset) ;
 #define MRISexportCurvatureVector  MRISextractCurvatureVector
 
 int MRISimportCurvatureVector(MRI_SURFACE *mris, float *curvs) ;
 int MRISimportValVector(MRI_SURFACE *mris, float *vals) ;
 int MRISexportValVector(MRI_SURFACE *mris, float *vals) ;
+int MRISexportValVectorDouble(MRI_SURFACE *mris, double *vals, int offset) ;
 int MRISimportValFromMatrixColumn(MRI_SURFACE *mris, MATRIX *m, int col) ;
 
 
@@ -1475,6 +1513,7 @@ MRI   *MRISpartialfloodoutside(MRI *mri_src,
 #define MRIS_STL_FILE                  6
 #define MRIS_GIFTI_FILE                7
 #define MRIS_ANNOT_FILE                8
+#define MRIS_VOLUME_FILE               9
 
 
 #define IS_QUADRANGULAR(mris)                   \
@@ -1561,11 +1600,13 @@ int   MRISnormalize(MRI_SURFACE *mris, int dof, int which) ;
 
 int  MRIScopyMRI(MRIS *Surf, MRI *Src, int Frame, char *Field);
 MRI *MRIcopyMRIS(MRI *mri, MRIS *surf, int Frame, char *Field);
-MRI *MRISsmoothMRI(MRIS *Surf,
-                   MRI *Src,
-                   int nSmoothSteps,
-                   MRI *binmask,
-                   MRI *Targ);
+
+MRI *MRISsmoothMRI(MRIS *Surf, MRI *Src, int nSmoothSteps, MRI *IncMask, MRI *Targ);
+MRI *MRISsmoothMRIFast(MRIS *Surf, MRI *Src, int nSmoothSteps, MRI *IncMask,  MRI *Targ);
+int MRISsmoothMRIFastCheck(int nSmoothSteps);
+int MRISsmoothMRIFastFrame(MRIS *Surf, MRI *Src, int frame, int nSmoothSteps, MRI *IncMask);
+
+
 int  MRISclearFlags(MRI_SURFACE *mris, int flags) ;
 int  MRISsetCurvature(MRI_SURFACE *mris, float val) ;
 int  MRISsetFlags(MRI_SURFACE *mris, int flags) ;
@@ -1633,6 +1674,8 @@ MRI *MRISremoveRippedFromMask(MRIS *surf, MRI *mask, MRI *outmask);
 int MRISremoveIntersections(MRI_SURFACE *mris) ;
 int MRIScopyMarkedToMarked2(MRI_SURFACE *mris) ;
 int MRIScopyMarked2ToMarked(MRI_SURFACE *mris) ;
+int MRIScopyMarkedToMarked3(MRI_SURFACE *mris) ;
+int MRIScopyMarked3ToMarked(MRI_SURFACE *mris) ;
 int MRISexpandMarked(MRI_SURFACE *mris) ;
 double MRISsmoothingArea(MRIS *mris, int vtxno, int niters);
 
@@ -1717,7 +1760,11 @@ int MRISsegmentAnnotated(MRI_SURFACE *mris,
                          LABEL ***plabel_array,
                          int *pnlabels,
                          float min_label_area) ;
+
 int MRISaverageGradients(MRI_SURFACE *mris, int num_avgs) ;
+int MRISaverageGradientsFast(MRI_SURFACE *mris, int num_avgs);
+int MRISaverageGradientsFastCheck(int num_avgs);
+
 int MRISnormalTermWithGaussianCurvature(MRI_SURFACE *mris,double l_lambda) ;
 int MRISnormalSpringTermWithGaussianCurvature(MRI_SURFACE *mris,
                                               double gaussian_norm,
@@ -1994,13 +2041,32 @@ int MRISreadMarked(MRI_SURFACE *mris, const char *sname) ;
 int MRISstoreTangentPlanes(MRI_SURFACE *mris, int which_vertices) ;
 double MRISsampleFace(MRI_SURFACE *mris, int fno, int which, double x, double y, double z, double val0, double val1, double val2);
 int MRISrepositionSurface(MRI_SURFACE *mris, MRI *mri, int *target_vnos, float *target_vals, 
-                          int nv, int nsize, double sigma)  ;
+                          int nv, int nsize, double sigma, int flags)  ;
 int MRISrepositionSurfaceToCoordinate(MRI_SURFACE *mris, MRI *mri, int target_vno, 
                                       float tx, 
                                       float ty, 
                                       float tz, 
-                                      int nsize, double sigma)  ;
+                                      int nsize, double sigma, int flags)  ;
 int face_barycentric_coords(MRI_SURFACE *mris, int fno, int which_vertices,
                             double cx, double cy, double cz, double *pl1, double *pl2, double *pl3) ;
+
+MRI *MRIScomputeFlattenedVolume(MRI_SURFACE *mris,
+                                MRI *mri,
+                                double res,
+                                int nsamples,
+                                int normalize,
+                                MRI **pmri_vertices,
+                                int smooth_iters,
+                                double wm_dist,
+                                double outside_dist);
+int MRIStrinarizeCurvature(MRI_SURFACE *mris, float binarize_thresh) ;
+int MRISthresholdValIntoMarked(MRI_SURFACE *mris, float thresh) ;
+int MRISremoveCompressedRegions(MRI_SURFACE *mris, double min_dist) ;
+int  MRISweightedSoapBubbleVertexPositions(MRI_SURFACE *mris, int navgs) ;
+int MRIStaubinSmooth(MRI_SURFACE *mris, int niters, double lambda, double mu, int which) ;
+
+#define TAUBIN_UNIFORM_WEIGHTS   0
+#define TAUBIN_INVERSE_WEIGHTS   1
+#define TAUBIN_EDGE_WEIGHTS      2
 
 #endif // MRISURF_H

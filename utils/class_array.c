@@ -7,8 +7,8 @@
  * Original Author: Bruce Fischl
  * CVS Revision Info:
  *    $Author: nicks $
- *    $Date: 2011/03/02 00:04:42 $
- *    $Revision: 1.6 $
+ *    $Date: 2012/10/17 19:11:32 $
+ *    $Revision: 1.6.2.1 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -738,10 +738,10 @@ caComputeSurfaceNormals(MRI *mri_aseg, MRI *mri_normals, int label)
   for (i = 0 ; i < 3 ; i++)  // dx, dy, dz
   {
     mri_tmp = MRIcopyFrame(mri_normals, NULL, i, 0) ;
-    mri_tmp2 = MRIsoapBubble(mri_tmp, mri_ctrl, NULL, 50) ;
-    MRIsoapBubble(mri_tmp2, mri_ctrl, mri_tmp, 50) ;
+    mri_tmp2 = MRIsoapBubble(mri_tmp, mri_ctrl, NULL, 50, 1) ;
+    MRIsoapBubble(mri_tmp2, mri_ctrl, mri_tmp, 50, 1) ;
 #if 0
-    MRIsoapBubble(mri_tmp, mri_ctrl, mri_tmp2, 50) ;
+    MRIsoapBubble(mri_tmp, mri_ctrl, mri_tmp2, 50, 1) ;
     MRImean(mri_tmp2, mri_tmp, 5) ;
 #endif
     MRIcopyFrame(mri_tmp, mri_normals, 0, i) ;

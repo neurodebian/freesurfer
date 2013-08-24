@@ -1,27 +1,3 @@
-/**
- * @file  kvlAtlasMeshBuilder.h
- * @brief REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
- *
- * REPLACE_WITH_LONG_DESCRIPTION_OR_REFERENCE
- */
-/*
- * Original Author: Koen Van Leemput
- * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/09/28 21:04:04 $
- *    $Revision: 1.1.2.4 $
- *
- * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
- *
- * Terms and conditions for use, reproduction, distribution and contribution
- * are found in the 'FreeSurfer Software License Agreement' contained
- * in the file 'LICENSE' found in the FreeSurfer distribution, and here:
- *
- * https://surfer.nmr.mgh.harvard.edu/fswiki/FreeSurferSoftwareLicense
- *
- * Reporting: freesurfer@nmr.mgh.harvard.edu
- *
- */
 #ifndef __kvlAtlasMeshBuilder_h
 #define __kvlAtlasMeshBuilder_h
 
@@ -160,14 +136,10 @@ public :
   }
 
   //
-  void SetPositionGradientDescentStepSize( float stepSize )
-  {
-    m_Mesher->SetPositionGradientDescentStepSize( stepSize );
-  }
-  float  GetPositionGradientDescentStepSize() const
-  {
-    return m_Mesher->GetPositionGradientDescentStepSize();
-  }
+  //void SetPositionGradientDescentStepSize( float stepSize )
+  //  { m_Mesher->SetPositionGradientDescentStepSize( stepSize ); }
+  //float  GetPositionGradientDescentStepSize() const
+  //  { return m_Mesher->GetPositionGradientDescentStepSize(); }
 
   //
   void SetAlphaEstimationStopCriterion( float stopCriterion )
@@ -180,14 +152,10 @@ public :
   }
 
   //
-  void SetPositionEstimationStopCriterion( float stopCriterion )
-  {
-    m_Mesher->SetPositionEstimationStopCriterion( stopCriterion );
-  }
-  float GetPositionEstimationStopCriterion() const
-  {
-    return m_Mesher->GetPositionEstimationStopCriterion();
-  }
+  //void SetPositionEstimationStopCriterion( float stopCriterion )
+  //  { m_Mesher->SetPositionEstimationStopCriterion( stopCriterion ); }
+  //float GetPositionEstimationStopCriterion() const
+  //  { return m_Mesher->GetPositionEstimationStopCriterion(); }
 
   //
   void SetPowellAbsolutePrecision( float powellAbsolutePrecision )
@@ -212,6 +180,9 @@ public :
 
   //
   float GetCurrentAlphasCost() const;
+
+  //
+  void GetCurrentDataAndAlphasCost( float& currentDataCost, float& currentAlphasCost ) const;
 
   //
   float GetCurrentPositionCost() const;

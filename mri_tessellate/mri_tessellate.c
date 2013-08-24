@@ -163,13 +163,13 @@ main(int argc, char *argv[])
   make_cmd_version_string
   (argc, argv,
    "$Id: mri_tessellate.c,v 1.36 2011/03/02 00:04:25 nicks Exp $",
-   "$Name: stable5 $", cmdline);
+   "$Name: release_5_3_0 $", cmdline);
 
   /* rkt: check for and handle version tag */
   nargs = handle_version_option
           (argc, argv,
            "$Id: mri_tessellate.c,v 1.36 2011/03/02 00:04:25 nicks Exp $",
-           "$Name: stable5 $");
+           "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
   {
     exit (0);

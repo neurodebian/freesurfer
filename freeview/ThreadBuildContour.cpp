@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/14 23:44:48 $
- *    $Revision: 1.4 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:37 $
+ *    $Revision: 1.4.2.7 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -30,6 +30,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkActor.h"
 #include "vtkPolyDataMapper.h"
+#include "vtkImageExtractComponents.h"
 #include <QDebug>
 
 ThreadBuildContour::ThreadBuildContour(QObject *parent) :
@@ -54,8 +55,15 @@ void ThreadBuildContour::run()
   }
   double dTh1 = m_mri->GetProperty()->GetContourMinThreshold();
   double dTh2 = m_mri->GetProperty()->GetContourMaxThreshold();
-  int nSmoothFactor = m_mri->GetProperty()->GetContourSmoothIterations();
   bool bExtractAllRegions = m_mri->GetProperty()->GetContourExtractAllRegions();
+  bool bLabelContour = m_mri->GetProperty()->GetShowAsLabelContour();
+  bool bUpsampleContour = m_mri->GetProperty()->GetContourUpsample();
+  if (bLabelContour)
+  {
+    m_mri->GetProperty()->GetLabelContourRange(&dTh1, &dTh2);
+    bExtractAllRegions = true;
+  }
+  int nSmoothFactor = m_mri->GetProperty()->GetContourSmoothIterations();
   if ( m_nSegValue >= 0 )
   {
     dTh1 = m_nSegValue - 0.5;
@@ -65,7 +73,24 @@ void ThreadBuildContour::run()
   vtkActor* actor = vtkActor::New();
   actor->SetMapper( vtkSmartPointer<vtkPolyDataMapper>::New() );
   //  int ext[6] = { 370, 520, 0, 140, 0, 280 };
-  MyVTKUtils::BuildContourActor( m_mri->GetImageData(), dTh1, dTh2, actor, nSmoothFactor, NULL, bExtractAllRegions );
+  if (m_mri->GetNumberOfFrames() == 1)
+  {
+    if (bLabelContour)
+      MyVTKUtils::BuildLabelContourActor( m_mri->GetImageData(), dTh1, dTh2, actor, nSmoothFactor, NULL, bExtractAllRegions, bUpsampleContour );
+    else
+      MyVTKUtils::BuildContourActor( m_mri->GetImageData(), dTh1, dTh2, actor, nSmoothFactor, NULL, bExtractAllRegions, bUpsampleContour );
+  }
+  else
+  {
+    vtkSmartPointer<vtkImageExtractComponents> extract = vtkSmartPointer<vtkImageExtractComponents>::New();
+    extract->SetComponents(m_mri->GetActiveFrame());
+    extract->SetInput(m_mri->GetImageData());
+    extract->Update();
+    if (bLabelContour)
+      MyVTKUtils::BuildLabelContourActor( extract->GetOutput(), dTh1, dTh2, actor, nSmoothFactor, NULL, bExtractAllRegions, bUpsampleContour );
+    else
+      MyVTKUtils::BuildContourActor( extract->GetOutput(), dTh1, dTh2, actor, nSmoothFactor, NULL, bExtractAllRegions, bUpsampleContour );
+  }
   m_mri->m_actorContourTemp = actor;
   actor->Delete();
 

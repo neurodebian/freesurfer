@@ -6,9 +6,9 @@
 /*
  * Original Author: Sebastien Gicquel and Douglas Greve, 06/04/2001
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/02 00:04:09 $
- *    $Revision: 1.29 $
+ *    $Author: greve $
+ *    $Date: 2012/10/11 03:02:42 $
+ *    $Revision: 1.29.2.1 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -146,10 +146,8 @@ typedef struct
 
   // pixels
   void *PixelData;
-  unsigned char min8,
-  max8;
-  unsigned short int min16,
-  max16;
+  unsigned char min8,  max8;
+  unsigned short int min16, max16;
 
 }
 DICOMInfo ;
@@ -206,6 +204,8 @@ typedef struct
   int   NFrames;     /* Equals lRepetitions + 1 */
   double bValue;        /* for DWI */
   int    nthDirection;  /* also for DWI */
+  int UseSliceScaleFactor; /* for slice-by-slice scaling (0020,4000) */
+  double SliceScaleFactor; /* for slice-by-slice scaling (0020,4000) */
 
   int   ErrorFlag;   /* Set for error, eg, aborted run */
 
@@ -295,6 +295,7 @@ int sdfiCountFilesInRun(int RunNo, SDCMFILEINFO **sdfi_list, int nlist);
 int *sdfiRunFileList(const char *dcmfile, SDCMFILEINFO **sdfi_list,
                      int nlist, int *NRunList);
 MRI * sdcmLoadVolume(const char *dcmfile, int LoadVolume, int nthonly);
+MRI * sdcmLoadVolumeAutoScale(const char *dcmfile, int LoadVolume, int nthonly);
 int sdfiVolCenter(SDCMFILEINFO *sdfi);
 int sdfiFixImagePosition(SDCMFILEINFO *sdfi);
 int sdfiSameSlicePos(SDCMFILEINFO *sdfi1, SDCMFILEINFO *sdfi2);

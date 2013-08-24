@@ -121,7 +121,7 @@ main(int argc, char *argv[]) {
   nargs = handle_version_option
     (argc, argv,
      "$Id: mris_convert.c,v 1.39 2011/03/02 00:04:30 nicks Exp $",
-     "$Name: stable5 $");
+     "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
     exit (0);
   argc -= nargs;

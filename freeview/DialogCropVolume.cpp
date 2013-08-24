@@ -1,14 +1,14 @@
 /**
  * @file  DialogCropVolume.cpp
- * @brief REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+ * @brief Dialog window to apply volume crop
  *
  */
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/14 23:44:46 $
- *    $Revision: 1.12 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:28 $
+ *    $Revision: 1.12.2.6 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *

@@ -10,8 +10,8 @@ function flac = fast_ldanaflac(anadir)
 % Original Author: Doug Greve
 % CVS Revision Info:
 %    $Author: greve $
-%    $Date: 2011/03/11 23:48:16 $
-%    $Revision: 1.63 $
+%    $Date: 2012/11/26 23:07:24 $
+%    $Revision: 1.63.2.2 $
 %
 % Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
 %
@@ -165,6 +165,10 @@ while(1)
     nnuisregList = [nnuisregList nnuisreg];
    case 'UseB0DC'
     UseB0DC = sscanf(tline,'%*s %d',1);
+   case 'ApplySubCortMask'
+    ApplySubCortMask = sscanf(tline,'%*s %d',1);
+   case 'PerSession'
+    flac.PerSession = sscanf(tline,'%*s %d',1);
    otherwise
     fprintf('INFO: key %s unrecognized, line %d, skipping\n',key,nthline);
   end
@@ -173,6 +177,14 @@ end % while (1)
 fclose(fp);
 if(isempty(flac.funcstem))
   flac.funcstem = flac_funcstem(flac,0);
+end
+
+if(isempty(flac.PerSession))
+  if(strcmp(flac.RawSpace,'native'))
+    flac.PerSession = 1;
+  else
+    flac.PerSession = 0;
+  end
 end
 
 %fprintf('RED %g\n',flac.RefEventDur);
@@ -187,12 +199,15 @@ if(isempty(flac.mask))
   flac.mask = 'brain';
   fprintf('INFO: mask is not set, setting to brain\n');
 end
+if(strcmp(flac.mask,'nomask')) flac.mask = ''; end
+
 if(isempty(flac.fsd)) flac.fsd = 'bold'; end 
 if(isempty(flac.acfsegstem)) flac.acfsegstem = 'acfseg'; end 
 
 flac.designtype = designtype;
 
 ana.analysis     = analysis;
+ana.info = char(textread(info,'%s','delimiter','\n'));
 ana.designtype   = designtype;
 ana.PolyOrder    = PolyOrder;
 %ana.extregList   = extregList;
@@ -306,6 +321,7 @@ if(strcmp(designtype,'retinotopy'))
 end
 
 if(strcmp(designtype,'abblocked'))
+  flac.IsABBlocked = 1;
   nharmonics = 1;
   tline = sprintf('EV Fourier abret task %g',period);
   flac.ev(nthev) = flac_ev_parse(tline);

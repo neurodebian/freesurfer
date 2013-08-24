@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/14 23:44:47 $
- *    $Revision: 1.22 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:33 $
+ *    $Revision: 1.22.2.6 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -43,14 +43,17 @@ LayerVolumeBase::LayerVolumeBase( QObject* parent ) : LayerEditable( parent )
 {
   m_strTypeNames.push_back( "VolumeBase" );
 
-  m_fFillValue = 1;
-  m_fBlankValue = 0;
-  m_nBrushRadius = 1;
   m_nActiveFrame = 0;
   m_propertyBrush = MainWindow::GetMainWindow()->GetBrushProperty();
+  m_fFillValue = m_propertyBrush->GetFillValue();
+  m_fBlankValue = m_propertyBrush->GetEraseValue();
+  m_nBrushRadius = m_propertyBrush->GetBrushSize();
   m_livewire = new LivewireTool();
   m_imageData = NULL;
   m_imageDataRef = NULL;
+  connect(m_propertyBrush, SIGNAL(FillValueChanged(double)), this, SLOT(SetFillValue(double)));
+  connect(m_propertyBrush, SIGNAL(EraseValueChanged(double)), this, SLOT(SetBlankValue(double)));
+  connect(m_propertyBrush, SIGNAL(BrushSizeChanged(int)), this, SLOT(SetBrushRadius(int)));
 }
 
 LayerVolumeBase::~LayerVolumeBase()
@@ -143,6 +146,61 @@ bool LayerVolumeBase::SetVoxelByIndex( int* n_in, int nPlane, bool bAdd )
   }
   return true;
 }
+
+bool LayerVolumeBase::CloneVoxelByIndex( int* n_in, int nPlane )
+{
+  int* nDim = m_imageData->GetDimensions();
+
+  int nBrushSize = m_propertyBrush->GetBrushSize();
+  int n[3], nsize[3] = { nBrushSize/2+1, nBrushSize/2+1, nBrushSize/2+1 };
+  nsize[nPlane] = 1;
+  int nActiveComp = GetActiveFrame();
+  double* draw_range = m_propertyBrush->GetDrawRange();
+  double* exclude_range = m_propertyBrush->GetExcludeRange();
+  LayerVolumeBase* ref_layer = m_propertyBrush->GetReferenceLayer();
+  vtkImageData* ref = m_imageData;
+  int nActiveCompRef = 0;
+  if ( ref_layer != NULL )
+  {
+    ref = ref_layer->GetImageData();
+    nActiveCompRef = ref_layer->GetActiveFrame();
+  }
+  for ( int i = -nsize[0]+1; i < nsize[0]; i++ )
+  {
+    for ( int j = -nsize[1]+1; j < nsize[1]; j++ )
+    {
+      for ( int k = -nsize[2]+1; k < nsize[2]; k++ )
+      {
+        n[0] = n_in[0] + i;
+        n[1] = n_in[1] + j;
+        n[2] = n_in[2] + k;
+        if ( n[0] >= 0 && n[0] < nDim[0] &&
+             n[1] >= 0 && n[1] < nDim[1] &&
+             n[2] >= 0 && n[2] < nDim[2] &&
+             MyUtils::GetDistance<int>( n, n_in ) <= nBrushSize/2.0 )
+        {
+          double fvalue = ref->GetScalarComponentAsDouble( n[0], n[1], n[2], nActiveCompRef );
+          if ( ( m_propertyBrush->GetDrawRangeEnabled() &&
+                   ( fvalue < draw_range[0] || fvalue > draw_range[1] ) ) ||
+                 ( m_propertyBrush->GetExcludeRangeEnabled() &&
+                   ( fvalue >= exclude_range[0] && fvalue <= exclude_range[1] ) ) ||
+                 ( m_propertyBrush->GetDrawConnectedOnly() &&
+                   ( !GetConnectedToOld( m_imageData, nActiveComp, n, nPlane ) ) ) )
+          {
+            ;
+          }
+          else
+          {
+            m_imageData->SetScalarComponentFromFloat( n[0], n[1], n[2], nActiveComp, fvalue );
+            UpdateVoxelValueRange( fvalue );
+          }
+        }
+      }
+    }
+  }
+  return true;
+}
+
 
 bool LayerVolumeBase::GetConnectedToOld( vtkImageData* img, int nFrame, int* n_in, int nPlane )
 {
@@ -274,7 +332,7 @@ bool LayerVolumeBase::SetVoxelByIndex( int* n1, int* n2, int nPlane, bool bAdd )
   return true;
 }
 
-bool LayerVolumeBase::FloodFillByRAS( double* ras, int nPlane, bool bAdd, char* mask_out )
+void LayerVolumeBase::CloneVoxelByRAS( double* ras, int nPlane )
 {
   int n[3];
   double* origin = m_imageData->GetOrigin();
@@ -284,23 +342,144 @@ bool LayerVolumeBase::FloodFillByRAS( double* ras, int nPlane, bool bAdd, char* 
     n[i] = ( int )( ( ras[i] - origin[i] ) / voxel_size[i] + 0.5 );
   }
 
-  if ( FloodFillByIndex( n, nPlane, bAdd, mask_out ) )
+  if ( CloneVoxelByIndex( n, nPlane ) )
   {
-    if ( !mask_out )
-    {
-      SetModified();
-    }
+    SetModified();
     emit ActorUpdated();
-    return true;
   }
   else
   {
-    return false;
+    // PopUndo();  // pop the previously saved undo step
+  }
+}
+
+void LayerVolumeBase::CloneVoxelByRAS( double* ras1, double* ras2, int nPlane )
+{
+  int n1[3], n2[3];
+  double* origin = m_imageData->GetOrigin();
+  double* voxel_size = m_imageData->GetSpacing();
+  for ( int i = 0; i < 3; i++ )
+  {
+    n1[i] = ( int )( ( ras1[i] - origin[i] ) / voxel_size[i] + 0.5 );
+    n2[i] = ( int )( ( ras2[i] - origin[i] ) / voxel_size[i] + 0.5 );
+  }
+
+  if ( CloneVoxelByIndex( n1, n2, nPlane ) )
+  {
+    SetModified();
+    emit ActorUpdated();
+  }
+  else
+  {
+    // PopUndo();
+  }
+}
+
+bool LayerVolumeBase::CloneVoxelByIndex( int* n1, int* n2, int nPlane)
+{
+  int nx = 1, ny = 2;
+  if ( nPlane == 1 )
+  {
+    nx = 0;
+    ny = 2;
+  }
+  else if (  nPlane == 2 )
+  {
+    nx = 0;
+    ny = 1;
+  }
+  int x0 = n1[nx], y0 = n1[ny], x1 = n2[nx], y1 = n2[ny];
+
+  int dx = x1 - x0;
+  int dy = y1 - y0;
+  double t = 0.5;
+  int n[3];
+  bool bChanged = CloneVoxelByIndex( n1, nPlane );
+  if ( abs( dx ) > abs( dy ) )
+  {
+    double m = (double) dy / (double) dx;
+    t += y0;
+    dx = ( dx < 0 ? -1 : 1 );
+    m *= dx;
+    while ( x0 != x1 )
+    {
+      x0 += dx;
+      t += m;
+      n[nx] = x0;
+      n[ny] = (int) t;
+      n[nPlane] = n1[nPlane];
+      bChanged = CloneVoxelByIndex( n, nPlane );
+    }
+  }
+  else
+  {
+    double m = (double) dx / (double) dy;
+    t += x0;
+    dy = ( dy < 0 ? -1 : 1 );
+    m *= dy;
+    while ( y0 != y1 )
+    {
+      y0 += dy;
+      t += m;
+      n[nx] = (int) t;
+      n[ny] = y0;
+      n[nPlane] = n1[nPlane];
+      bChanged = CloneVoxelByIndex( n, nPlane );
+    }
+  }
+  return true;
+}
+
+bool LayerVolumeBase::FloodFillByRAS( double* ras, int nPlane, bool bAdd, bool b3D, char* mask_out )
+{
+  int n[3];
+  double* origin = m_imageData->GetOrigin();
+  double* voxel_size = m_imageData->GetSpacing();
+  int* dim = m_imageData->GetDimensions();
+  for ( int i = 0; i < 3; i++ )
+  {
+    n[i] = ( int )( ( ras[i] - origin[i] ) / voxel_size[i] + 0.5 );
+  }
+
+  if (!b3D)
+  {
+    if ( FloodFillByIndex( n, nPlane, bAdd, true, mask_out ) )
+    {
+      if ( !mask_out )
+      {
+        SetModified();
+      }
+      emit ActorUpdated();
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+  else
+  {
+    int n0[3] = { n[0], n[1], n[2]};
+    for (int i = n0[nPlane]; i < dim[nPlane]; i++)
+    {
+      n[nPlane] = i;
+      if (!FloodFillByIndex( n, nPlane, bAdd, false))
+        break;
+    }
+    for (int i = n0[nPlane]-1; i >= 0; i--)
+    {
+      n[nPlane] = i;
+      if (!FloodFillByIndex( n, nPlane, bAdd, false))
+        break;
+    }
+    SetModified();
+    emit ActorUpdated();
+    return true;
   }
 }
 
 // when mask_out is not null, do not fill the actual image data. instead, fill the mask_out buffer
-bool LayerVolumeBase::FloodFillByIndex( int* n, int nPlane, bool bAdd, char* mask_out )
+bool LayerVolumeBase::FloodFillByIndex( int* n, int nPlane, bool bAdd, bool ignore_overflow, char* mask_out )
 {
   int* nDim = m_imageData->GetDimensions();
   int nx = 0, ny = 0, x = 0, y = 0;
@@ -422,7 +601,14 @@ bool LayerVolumeBase::FloodFillByIndex( int* n, int nPlane, bool bAdd, char* mas
   }
 
   MyUtils::FloodFill( mask, x, y, 0, 0, nx-1, ny-1, 2, 0 );
-
+  if (!ignore_overflow)
+  {
+    if (mask[0][0] == 2 && mask[ny-1][nx=1] == 2)
+    {
+      MyUtils::FreeMatrix( mask, ny );
+      return false;
+    }
+  }
   int ncnt;
   switch ( nPlane )
   {
@@ -860,25 +1046,32 @@ void LayerVolumeBase::LoadBufferItem( UndoRedoBufferItem& item, bool bIgnoreZero
   }
 }
 
-float LayerVolumeBase::GetFillValue()
+double LayerVolumeBase::GetFillValue()
 {
   return m_fFillValue;
 }
 
-void LayerVolumeBase::SetFillValue( float fFill )
+void LayerVolumeBase::SetFillValue( double fFill )
 {
-  m_fFillValue = fFill;
-  emit FillValueChanged( fFill );
+  if (m_fFillValue != fFill)
+  {
+    m_fFillValue = fFill;
+    emit FillValueChanged( fFill );
+  }
 }
 
-float LayerVolumeBase::GetBlankValue()
+double LayerVolumeBase::GetBlankValue()
 {
   return m_fBlankValue;
 }
 
-void LayerVolumeBase::SetBlankValue( float fBlank )
+void LayerVolumeBase::SetBlankValue( double fBlank )
 {
-  m_fBlankValue = fBlank;
+  if (m_fBlankValue != fBlank)
+  {
+    m_fBlankValue = fBlank;
+    emit EraseValueChanged(fBlank);
+  }
 }
 
 int LayerVolumeBase::GetBrushRadius()
@@ -888,7 +1081,11 @@ int LayerVolumeBase::GetBrushRadius()
 
 void LayerVolumeBase::SetBrushRadius( int nRadius )
 {
-  m_nBrushRadius = nRadius;
+  if (m_nBrushRadius != nRadius)
+  {
+    m_nBrushRadius = nRadius;
+    emit BrushRadiusChanged(nRadius);
+  }
 }
 
 double LayerVolumeBase::GetMinimumVoxelSize()

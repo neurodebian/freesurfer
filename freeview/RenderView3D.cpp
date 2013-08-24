@@ -1,14 +1,14 @@
 /**
  * @file  RenderView3D.cpp
- * @brief REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+ * @brief 3D view
  *
  */
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/05/13 15:04:33 $
- *    $Revision: 1.54.2.5 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:37 $
+ *    $Revision: 1.54.2.11 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -33,6 +33,7 @@
 #include "VolumeCropper.h"
 #include "Cursor3D.h"
 #include "SurfaceRegion.h"
+#include "SurfaceROI.h"
 #include "SurfaceOverlayProperty.h"
 #include <vtkProp.h>
 #include <vtkCellPicker.h>
@@ -63,11 +64,8 @@
 
 RenderView3D::RenderView3D( QWidget* parent ) : RenderView( parent )
 {
-  vtkCellPicker* picker = vtkCellPicker::New();
-  picker->SetTolerance( 0.0005 );
-  picker->PickFromListOn();
-  this->GetRenderWindow()->GetInteractor()->SetPicker( picker );
-  picker->Delete();
+  this->GetRenderWindow()->GetInteractor()->SetDesiredUpdateRate(30);
+  this->GetRenderWindow()->GetInteractor()->SetStillUpdateRate(0.01);
 
   m_bShowSlices = true;
   for ( int i = 0; i < 3; i++ )
@@ -171,18 +169,15 @@ void RenderView3D::UpdateSliceFrames()
 
   vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
   vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
-  vtkSmartPointer<vtkCellArray> polys = vtkSmartPointer<vtkCellArray>::New();
   points->InsertPoint( 0, slicepos[0], bounds[2], bounds[4] );
   points->InsertPoint( 1, slicepos[0], bounds[2], bounds[5] );
   points->InsertPoint( 2, slicepos[0], bounds[3], bounds[5] );
   points->InsertPoint( 3, slicepos[0], bounds[3], bounds[4] );
   vtkIdType ids[5] = { 0, 1, 2, 3, 0 };
   lines->InsertNextCell( 5, ids );
-  polys->InsertNextCell( 4, ids );
   vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
   polydata->SetPoints( points );
   polydata->SetLines( lines );
-//  polydata->SetPolys( polys );
   vtkPolyDataMapper::SafeDownCast(m_actorSliceFrames[0]->GetMapper())->SetInput( polydata );
 
   points = vtkSmartPointer<vtkPoints>::New();
@@ -193,7 +188,6 @@ void RenderView3D::UpdateSliceFrames()
   polydata = vtkSmartPointer<vtkPolyData>::New();
   polydata->SetPoints( points );
   polydata->SetLines( lines );
-//  polydata->SetPolys( polys );
   vtkPolyDataMapper::SafeDownCast(m_actorSliceFrames[1]->GetMapper())->SetInput( polydata );
 
   points = vtkSmartPointer<vtkPoints>::New();
@@ -204,7 +198,6 @@ void RenderView3D::UpdateSliceFrames()
   polydata = vtkSmartPointer<vtkPolyData>::New();
   polydata->SetPoints( points );
   polydata->SetLines( lines );
-//  polydata->SetPolys( polys );
   vtkPolyDataMapper::SafeDownCast(m_actorSliceFrames[2]->GetMapper())->SetInput( polydata );
 
   for ( int i = 0; i < 3; i++ )
@@ -223,24 +216,6 @@ void RenderView3D::UpdateSliceFrames()
   }
 
   RequestRedraw();
-}
-
-int RenderView3D::PickCell( vtkProp* prop, int posX, int posY, double* pos_out )
-{
-  vtkCellPicker* picker = vtkCellPicker::SafeDownCast( GetRenderWindow()->GetInteractor()->GetPicker() );
-  if ( !picker )
-  {
-    return -1;
-  }
-
-  picker->InitializePickList();
-  picker->AddPickList( prop );
-  picker->Pick( posX, this->rect().height() - posY, 0, GetRenderer() );
-  if ( pos_out )
-  {
-    picker->GetPickPosition( pos_out );
-  }
-  return picker->GetCellId();
 }
 
 void RenderView3D::UpdateViewByWorldCoordinate()
@@ -262,6 +237,7 @@ void RenderView3D::UpdateViewByWorldCoordinate()
 void RenderView3D::RefreshAllActors(bool bForScreenShot)
 {
   MainWindow* mainwnd = MainWindow::GetMainWindow();
+  SettingsScreenshot setting = mainwnd->GetScreenShotSettings();
 
   m_renderer->RemoveAllViewProps();
   bool b[3] = { m_bShowSlices, m_bShowSlices, m_bShowSlices };
@@ -269,11 +245,14 @@ void RenderView3D::RefreshAllActors(bool bForScreenShot)
   mainwnd->GetLayerCollection( "ROI" )->Append3DProps( m_renderer, b );
   mainwnd->GetLayerCollection( "Surface" )->Append3DProps( m_renderer, b );
   mainwnd->GetLayerCollection( "PointSet" )->Append3DProps( m_renderer, b );
+  mainwnd->GetLayerCollection( "Track" )->Append3DProps( m_renderer, b );
+  mainwnd->GetLayerCollection( "CMAT")->Append3DProps( m_renderer, b );
   mainwnd->GetLayerCollection( "Supplement" )->Append3DProps( m_renderer, b );
 
   if (!mainwnd->IsEmpty())
   {
-    m_cursor3D->AppendActor( m_renderer );
+    if (!bForScreenShot || !setting.HideCursor)
+      m_cursor3D->AppendActor( m_renderer );
   }
 
   // add focus frame
@@ -811,6 +790,58 @@ void RenderView3D::DeleteCurrentSelectRegion()
   }
 }
 
+SurfaceROI* RenderView3D::InitializeSurfaceROI( int posX, int posY )
+{
+  double pos[3];
+  vtkProp* prop = this->PickProp( posX, posY, pos );
+  if ( !prop )
+  {
+    return NULL;
+  }
+
+  LayerCollection* lc_surf = MainWindow::GetMainWindow()->GetLayerCollection( "Surface" );
+  LayerSurface* surf = NULL;
+  for ( int i = 0; i < lc_surf->GetNumberOfLayers(); i++ )
+  {
+    LayerSurface* temp = (LayerSurface*)lc_surf->GetLayer(i);
+    if ( temp->HasProp( prop ) )
+    {
+      surf = temp;
+      break;
+    }
+  }
+
+  if ( !surf )
+  {
+    return false;
+  }
+
+  lc_surf->SetActiveLayer( surf );
+  SurfaceROI* roi = surf->GetSurfaceROI();
+  if ( roi )
+  {
+    roi->InitializeOutline(pos);
+  }
+  return roi;
+}
+
+void RenderView3D::AddSurfaceROIPoint( int posX, int posY )
+{
+  LayerSurface* surf = (LayerSurface*)MainWindow::GetMainWindow()->GetActiveLayer( "Surface" );
+  if ( surf )
+  {
+    double pos[3];
+    vtkProp* prop = this->PickProp( posX, posY, pos );
+    if ( !prop || !surf->HasProp( prop ) )
+    {
+      return;
+    }
+
+    surf->GetSurfaceROI()->AddPoint( pos );
+    RequestRedraw();
+  }
+}
+
 bool RenderView3D::UpdateBounds()
 {
   MainWindow* mainwnd = MainWindow::GetMainWindow();
@@ -941,12 +972,14 @@ void RenderView3D::SnapToNearestAxis()
 
 void RenderView3D::UpdateScalarBar()
 {
+  /*
   LayerSurface* surf = (LayerSurface*) MainWindow::GetMainWindow()->GetActiveLayer( "Surface" );
   if ( surf && surf->GetActiveOverlay() )
   {
     m_actorScalarBar->SetLookupTable( surf->GetActiveOverlay()->GetProperty()->GetLookupTable() );
   }
   else
+  */
   {
     RenderView::UpdateScalarBar();
   }
@@ -954,8 +987,37 @@ void RenderView3D::UpdateScalarBar()
 
 void RenderView3D::TriggerContextMenu( QMouseEvent* event )
 {
-  QMenu menu;
-  menu.addAction(MainWindow::GetMainWindow()->ui->actionShowSlices);
-  menu.addAction(MainWindow::GetMainWindow()->ui->actionShowSliceFrames);
-  menu.exec(event->globalPos());
+  QMenu* menu = new QMenu(this);
+  menu->addAction(MainWindow::GetMainWindow()->ui->actionShowSlices);
+  menu->addAction(MainWindow::GetMainWindow()->ui->actionShowSliceFrames);
+  bool bShowBar = this->GetShowScalarBar();
+  MainWindow* mainwnd = MainWindow::GetMainWindow();
+  QList<Layer*> layers = mainwnd->GetLayers("Surface");
+  layers << mainwnd->GetLayers("MRI");
+  layers << mainwnd->GetLayers("PointSet");
+  if (!layers.isEmpty())
+  {
+    QMenu* menu2 = menu->addMenu("Show Color Bar");
+    QActionGroup* ag = new QActionGroup(this);
+    ag->setExclusive(false);
+    foreach (Layer* layer, layers)
+    {
+      QAction* act = new QAction(layer->GetName(), this);
+      act->setCheckable(true);
+      act->setChecked(bShowBar && layer == m_layerScalarBar);
+      act->setData(QVariant::fromValue((QObject*)layer));
+      menu2->addAction(act);
+      ag->addAction(act);
+    }
+    connect(ag, SIGNAL(triggered(QAction*)), this, SLOT(SetScalarBarLayer(QAction*)));
+  }
+  LayerMRI* mri = qobject_cast<LayerMRI*>(mainwnd->GetActiveLayer("MRI"));
+  if (mri && mri->GetProperty()->GetShowAsContour())
+  {
+    menu->addSeparator();
+    QAction* act = new QAction("Save IsoSurface As...", this);
+    menu->addAction(act);
+    connect(act, SIGNAL(triggered()), mainwnd, SLOT(OnSaveIsoSurface()));
+  }
+  menu->exec(event->globalPos());
 }

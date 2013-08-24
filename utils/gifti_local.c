@@ -9,11 +9,11 @@
 /*
  * Original Authors: Kevin Teich and Nick Schmansky
  * CVS Revision Info:
- *    $Author: fischl $
- *    $Date: 2011/03/16 17:31:48 $
- *    $Revision: 1.28 $
+ *    $Author: nicks $
+ *    $Date: 2012/11/13 18:57:50 $
+ *    $Revision: 1.28.2.3 $
  *
- * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+ * Copyright © 2011-2012 The General Hospital Corporation (Boston, MA) "MGH"
  *
  * Terms and conditions for use, reproduction, distribution and contribution
  * are found in the 'FreeSurfer Software License Agreement' contained
@@ -150,7 +150,7 @@ static double gifti_get_DA_value_2D (giiDataArray* da, int row, int col)
       return (double)*((unsigned char*)
                        (da->data) + (dim0_index*dims_1) + dim1_index);
     else
-                              return (double)*((unsigned char*)
+      return (double)*((unsigned char*)
                        (da->data) + dim0_index + (dim1_index*dims_0));
     break;
   }
@@ -181,6 +181,26 @@ static double gifti_get_DA_value_2D (giiDataArray* da, int row, int col)
                        (da->data) + (dim0_index*dims_1) + dim1_index);
     else
       return (double)*((float*)
+                       (da->data) + dim0_index + (dim1_index*dims_0));
+    break;
+  }
+  case NIFTI_TYPE_FLOAT64:
+  {
+    if ( GIFTI_IND_ORD_ROW_MAJOR == da->ind_ord )
+      return (double)*((double*)
+                       (da->data) + (dim0_index*dims_1) + dim1_index);
+    else
+      return (double)*((double*)
+                       (da->data) + dim0_index + (dim1_index*dims_0));
+    break;
+  }
+  case NIFTI_TYPE_COMPLEX64:
+  {
+    if ( GIFTI_IND_ORD_ROW_MAJOR == da->ind_ord )
+      return (double)*((double*)
+                       (da->data) + (dim0_index*dims_1) + dim1_index);
+    else
+      return (double)*((double*)
                        (da->data) + dim0_index + (dim1_index*dims_0));
     break;
   }
@@ -379,16 +399,16 @@ static void gifti_set_DA_value_2D (giiDataArray* da,
 
   Returns value: freesurfer surface structure
 
-  Description:   reads a GIFTI file, putting vertices, 
+  Description:   reads a GIFTI file, putting vertices,
                  and faces into an MRIS_SURFACE structure,
                  along with any other data, like labels,
                  colors, curv data, stats or values.
-                 if daNum is not -1, then read only the 
+                 if daNum is not -1, then read only the
                  data in data array number daNum
   -------------------------------------------------------------------*/
 MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
 {
-  /* 
+  /*
    * attempt to read the file
    */
   gifti_image* image = gifti_read_image (fname, 1);
@@ -398,8 +418,8 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
     return NULL;
   }
 
-  /* 
-   * check for compliance 
+  /*
+   * check for compliance
    */
   int valid = gifti_valid_gifti_image (image, 1);
   if (valid == 0)
@@ -418,10 +438,10 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
     /* check validity of labeltable data */
     if (!gifti_valid_LabelTable(&image->labeltable,1))
     {
-      fprintf 
-        (stderr,
-         "mrisReadGIFTIfile: invalid labeltable found in file %s\n", 
-         fname);
+      fprintf
+      (stderr,
+       "mrisReadGIFTIfile: invalid labeltable found in file %s\n",
+       fname);
       gifti_free_image (image);
       return NULL;
     }
@@ -430,9 +450,9 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
     ct = (COLOR_TABLE *)calloc(1, sizeof(COLOR_TABLE));
     if (ct == NULL)
     {
-      fprintf 
-        (stderr,
-         "mrisReadGIFTIfile: could not alloc colortable memory\n");
+      fprintf
+      (stderr,
+       "mrisReadGIFTIfile: could not alloc colortable memory\n");
       gifti_free_image (image);
       return NULL;
     }
@@ -440,12 +460,12 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
     ct->nentries = image->labeltable.length;
     ct->version = 2;
     ct->entries = (COLOR_TABLE_ENTRY**)
-      calloc(ct->nentries+1, sizeof(COLOR_TABLE_ENTRY*));
+                  calloc(ct->nentries+1, sizeof(COLOR_TABLE_ENTRY*));
     if (ct->entries == NULL)
     {
-      fprintf 
-        (stderr,
-         "mrisReadGIFTIfile: could not alloc colortable entries\n");
+      fprintf
+      (stderr,
+       "mrisReadGIFTIfile: could not alloc colortable entries\n");
       gifti_free_image (image);
       return NULL;
     }
@@ -455,9 +475,9 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
     float* rgba = image->labeltable.rgba;
     if (NULL == rgba)
     {
-      // optional rgba values are missing, so we must create colors for 
+      // optional rgba values are missing, so we must create colors for
       // the labels
-      image->labeltable.rgba = 
+      image->labeltable.rgba =
         (float *)calloc(image->labeltable.length, 4*sizeof(float *));
       if (NULL == image->labeltable.rgba)
       {
@@ -468,7 +488,7 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
       rgba = image->labeltable.rgba;
       setRandomSeed(12);// so that color generation is consistent
       int label_index;
-      for (label_index = 0; 
+      for (label_index = 0;
            label_index < image->labeltable.length;
            label_index++)
       {
@@ -482,16 +502,16 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
 
     rgba = image->labeltable.rgba;
     int label_index;
-    for (label_index = 0; 
-         label_index < image->labeltable.length; 
+    for (label_index = 0;
+         label_index < image->labeltable.length;
          label_index++)
     {
       ct->entries[label_index] = (CTE*) malloc(sizeof(CTE));
       if (ct->entries[label_index] == NULL)
       {
-        fprintf 
-          (stderr,
-           "mrisReadGIFTIfile: could not alloc colortable entry\n");
+        fprintf
+        (stderr,
+         "mrisReadGIFTIfile: could not alloc colortable entry\n");
         gifti_free_image (image);
         return NULL;
       }
@@ -501,16 +521,28 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
 
       ct->entries[label_index]->rf = rgba[0];
       ct->entries[label_index]->ri = floor((rgba[0])*256);
-      if (ct->entries[label_index]->ri > 255) ct->entries[label_index]->ri=255;
+      if (ct->entries[label_index]->ri > 255)
+      {
+        ct->entries[label_index]->ri=255;
+      }
       ct->entries[label_index]->gf = rgba[1];
       ct->entries[label_index]->gi = floor((rgba[1])*256);
-      if (ct->entries[label_index]->gi > 255) ct->entries[label_index]->gi=255;
+      if (ct->entries[label_index]->gi > 255)
+      {
+        ct->entries[label_index]->gi=255;
+      }
       ct->entries[label_index]->bf = rgba[2];
       ct->entries[label_index]->bi = floor((rgba[2])*256);
-      if (ct->entries[label_index]->bi > 255) ct->entries[label_index]->bi=255;
+      if (ct->entries[label_index]->bi > 255)
+      {
+        ct->entries[label_index]->bi=255;
+      }
       ct->entries[label_index]->af = rgba[3];
       ct->entries[label_index]->ai = floor((rgba[3])*256);
-      if (ct->entries[label_index]->ai > 255) ct->entries[label_index]->ai=255;
+      if (ct->entries[label_index]->ai > 255)
+      {
+        ct->entries[label_index]->ai=255;
+      }
       rgba += 4;
       /*
         printf("RGBA: %d %d %d %d %f %f %f %f\n",
@@ -557,16 +589,18 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
    * if we found coordinate and face data....create mris struct and fill it
    */
   if (coords && faces)
-  {    
+  {
     /* Check the number of vertices and faces. */
     long long num_vertices = 0;
     long long num_cols = 0;
     if (coords->ind_ord == GIFTI_IND_ORD_ROW_MAJOR)
-    { // RowMajorOrder
+    {
+      // RowMajorOrder
       gifti_DA_rows_cols (coords, &num_vertices, &num_cols);
     }
     else
-    { // ColumnMajorOrder
+    {
+      // ColumnMajorOrder
       gifti_DA_rows_cols (coords, &num_cols, &num_vertices);
     }
     if (num_vertices <= 0 || num_cols != 3)
@@ -580,11 +614,13 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
     long long num_faces = 0;
     num_cols = 0;
     if (faces->ind_ord == GIFTI_IND_ORD_ROW_MAJOR)
-    { // RowMajorOrder
+    {
+      // RowMajorOrder
       gifti_DA_rows_cols (faces, &num_faces, &num_cols);
     }
     else
-    { // ColumnMajorOrder
+    {
+      // ColumnMajorOrder
       gifti_DA_rows_cols (faces, &num_cols, &num_faces);
     }
     if (num_faces <= 0 || num_cols != 3)
@@ -613,11 +649,17 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
     char* hemi = gifti_get_meta_value(&coords->meta,
                                       "AnatomicalStructurePrimary'");
     if (hemi && (strcmp(hemi,"CortexRight")==0))
+    {
       mris->hemisphere = RIGHT_HEMISPHERE ;
+    }
     else if (hemi && (strcmp(hemi,"CortexLeft")==0))
+    {
       mris->hemisphere = LEFT_HEMISPHERE ;
+    }
     else
+    {
       mris->hemisphere = NO_HEMISPHERE;
+    }
 
     /* Copy in the vertices. */
     float x, y, z, xhi, xlo, yhi, ylo, zhi, zlo ;
@@ -637,12 +679,30 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
       x = mris->vertices[vertex_index].x;
       y = mris->vertices[vertex_index].y;
       z = mris->vertices[vertex_index].z;
-      if (x>xhi) xhi=x;
-      if (x<xlo) xlo=x;
-      if (y>yhi) yhi=y;
-      if (y<ylo) ylo=y;
-      if (z>zhi) zhi=z;
-      if (z<zlo) zlo=z;
+      if (x>xhi)
+      {
+        xhi=x;
+      }
+      if (x<xlo)
+      {
+        xlo=x;
+      }
+      if (y>yhi)
+      {
+        yhi=y;
+      }
+      if (y<ylo)
+      {
+        ylo=y;
+      }
+      if (z>zhi)
+      {
+        zhi=z;
+      }
+      if (z<zlo)
+      {
+        zlo=z;
+      }
     }
     mris->xlo = xlo ;
     mris->ylo = ylo ;
@@ -684,18 +744,20 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
       int n;
       for (n = 0 ; n < VERTICES_PER_FACE ; n++)
         mris->vertices[face->v[n]].f[mris->vertices[face->v[n]].num++]
-          = face_index; // note that .num is auto-incremented!
+        = face_index; // note that .num is auto-incremented!
     }
     for (vertex_index = 0; vertex_index < num_vertices; vertex_index++)
     {
       int n,m;
-      for (n=0;n<mris->vertices[vertex_index].num;n++)
+      for (n=0; n<mris->vertices[vertex_index].num; n++)
       {
-        for (m=0;m<VERTICES_PER_FACE;m++)
+        for (m=0; m<VERTICES_PER_FACE; m++)
         {
-          if (mris->faces[mris->vertices[vertex_index].f[n]].v[m] == 
+          if (mris->faces[mris->vertices[vertex_index].f[n]].v[m] ==
               vertex_index)
+          {
             mris->vertices[vertex_index].n[n] = m;
+          }
         }
       }
     }
@@ -717,9 +779,9 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
   // parameter, or created when we found coord and face data)
   if (NULL == mris)
   {
-    fprintf 
-      (stderr,
-       "mriseadGIFTIfile: mris is NULL! found when parsing file %s\n",fname);
+    fprintf
+    (stderr,
+     "mriseadGIFTIfile: mris is NULL! found when parsing file %s\n",fname);
     gifti_free_image (image);
     return NULL;
   }
@@ -735,10 +797,10 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
     CTABgetNumberOfValidEntries(mris->ct,&numEntries);
     if (numEntries != image->labeltable.length)
     {
-      fprintf 
-        (stderr,
-         "mrisReadGIFTIfile: ct_entries:%d != labeltable_entries:%d\n", 
-         numEntries, image->labeltable.length);
+      fprintf
+      (stderr,
+       "mrisReadGIFTIfile: ct_entries:%d != labeltable_entries:%d\n",
+       numEntries, image->labeltable.length);
       gifti_free_image (image);
       return NULL;
     }
@@ -766,9 +828,12 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
 
     // did these already
     if ((darray->intent == NIFTI_INTENT_POINTSET) ||
-        (darray->intent == NIFTI_INTENT_TRIANGLE)) continue;
+        (darray->intent == NIFTI_INTENT_TRIANGLE))
+    {
+      continue;
+    }
 
-    /* support for sparse data storage.  this array contains a list of node 
+    /* support for sparse data storage.  this array contains a list of node
        numbers and it should be the first data array in the file. The remaining
        data arrays in the file that contain data assigned to nodes must contain
        the same number of elements as the NIFTI_INTENT_NODE_INDEX array. */
@@ -776,10 +841,10 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
     {
       if (numDA != 0)
       {
-        fprintf 
-          (stderr,
-           "mrisReadGIFTIfile: NODE_INDEX data array found but its not the "
-           "first data array in file %s\n", fname);
+        fprintf
+        (stderr,
+         "mrisReadGIFTIfile: NODE_INDEX data array found but its not the "
+         "first data array in file %s\n", fname);
         gifti_free_image (image);
         return NULL;
       }
@@ -789,11 +854,11 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
           num_index_nodes > mris->nvertices ||
           num_cols > 1)
       {
-        fprintf 
-          (stderr,
-           "mrisReadGIFTIfile: malformed NODE_INDEX data array in file %s: "
-           "num_index_nodes=%d num_cols=%d max nvertices=%d, num_cols>1\n",
-           fname, (int)num_index_nodes, (int)num_cols, mris->nvertices);
+        fprintf
+        (stderr,
+         "mrisReadGIFTIfile: malformed NODE_INDEX data array in file %s: "
+         "num_index_nodes=%d num_cols=%d max nvertices=%d, num_cols>1\n",
+         fname, (int)num_index_nodes, (int)num_cols, mris->nvertices);
         gifti_free_image (image);
         return NULL;
       }
@@ -808,32 +873,40 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
       long long num_cols = 0;
       long long expected_num_cols = 1;
       if (darray->intent == NIFTI_INTENT_VECTOR)
+      {
         expected_num_cols = 3;
+      }
       else if (darray->intent == NIFTI_INTENT_RGB_VECTOR)
+      {
         expected_num_cols = 3;
+      }
       else if (darray->intent == NIFTI_INTENT_RGBA_VECTOR)
+      {
         expected_num_cols = 4;
+      }
       else if (darray->intent == NIFTI_INTENT_GENMATRIX)
+      {
         expected_num_cols = 9;
+      }
       gifti_DA_rows_cols (darray, &num_vertices, &num_cols);
       if (num_vertices <= 0 ||
           num_vertices != mris->nvertices ||
           num_cols > expected_num_cols)
       {
-        fprintf 
-          (stderr,
-           "mrisReadGIFTIfile: malformed data array [%d] in file %s: "
-           "num_vertices=%d num_cols=%d expected nvertices=%d, num_cols=%d\n",
-           numDA, fname, (int)num_vertices, 
-           (int)num_cols, mris->nvertices, (int)expected_num_cols);
+        fprintf
+        (stderr,
+         "mrisReadGIFTIfile: malformed data array [%d] in file %s: "
+         "num_vertices=%d num_cols=%d expected nvertices=%d, num_cols=%d\n",
+         numDA, fname, (int)num_vertices,
+         (int)num_cols, mris->nvertices, (int)expected_num_cols);
         gifti_free_image (image);
         return NULL;
       }
     }
 
 
-    /* 
-     * parse each intent type 
+    /*
+     * parse each intent type
      */
     if (darray->intent == NIFTI_INTENT_SHAPE)
     {
@@ -855,8 +928,11 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
           for (nindex = 0; nindex < num_index_nodes; nindex++)
           {
             int vno = gifti_get_DA_value_2D (node_index, nindex, 0);
-            if (mris->vertices[vno].ripflag) continue;
-            mris->vertices[vno].curv = 
+            if (mris->vertices[vno].ripflag)
+            {
+              continue;
+            }
+            mris->vertices[vno].curv =
               (float) gifti_get_DA_value_2D (darray, nindex, 0);
           }
         }
@@ -865,8 +941,11 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
           int vno;
           for (vno = 0; vno < mris->nvertices; vno++)
           {
-            if (mris->vertices[vno].ripflag) continue;
-            mris->vertices[vno].curv = 
+            if (mris->vertices[vno].ripflag)
+            {
+              continue;
+            }
+            mris->vertices[vno].curv =
               (float) gifti_get_DA_value_2D (darray, vno, 0);
           }
         }
@@ -897,7 +976,10 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
           da_index = vno;
         }
 
-        if (mris->vertices[vno].ripflag) continue;
+        if (mris->vertices[vno].ripflag)
+        {
+          continue;
+        }
         int table_key = *(label_data + da_index);
         int table_index = 0;
         for (table_index = 0; table_index < ct->nentries; table_index++)
@@ -909,7 +991,7 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
           }
         }
         int annotation = 0; // default to no label found
-        if ((table_index < ct->nentries) && (table_index >= 0)) 
+        if ((table_index < ct->nentries) && (table_index >= 0))
         {
           //printf("vno: %d, tidx: %d, name: %s\n",
           //     vno,table_index,ct->entries[table_index]->name);
@@ -924,22 +1006,25 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
         int result = CTABfindAnnotation(mris->ct,
                                         mris->vertices[vno].annotation,
                                         &index);
-        if ((result != NO_ERROR) || 
-            (index < 0) || 
+        if ((result != NO_ERROR) ||
+            (index < 0) ||
             (index > image->labeltable.length))
         {
-          fprintf 
-            (stderr,
-             "mrisReadGIFTIfile: label node data not found in colortable! "
-             "vno: %d, annot: %8.8X\n",
-             vno, mris->vertices[vno].annotation);
+          fprintf
+          (stderr,
+           "mrisReadGIFTIfile: label node data not found in colortable! "
+           "vno: %d, annot: %8.8X\n",
+           vno, mris->vertices[vno].annotation);
           gifti_free_image (image);
           return NULL;
         }
 
         if (node_index) // sparse data storage support
         {
-          if (++nindex >= num_index_nodes) break;
+          if (++nindex >= num_index_nodes)
+          {
+            break;
+          }
         }
         else // regular indexing
         {
@@ -953,7 +1038,10 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
       int vno;
       for (vno = 0; vno < mris->nvertices; vno++)
       {
-        if (mris->vertices[vno].ripflag) continue;
+        if (mris->vertices[vno].ripflag)
+        {
+          continue;
+        }
         mris->vertices[vno].dx =
           (float) gifti_get_DA_value_2D (darray, vno, 0);
         mris->vertices[vno].dy =
@@ -969,19 +1057,52 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
       int vno;
       for (vno = 0; vno < mris->nvertices; vno++)
       {
-        if (mris->vertices[vno].ripflag) continue;
+        if (mris->vertices[vno].ripflag)
+        {
+          continue;
+        }
         int r,g,b;
 
         float red = (float) gifti_get_DA_value_2D (darray, vno, 0);
         float green = (float) gifti_get_DA_value_2D (darray, vno, 0);
         float blue = (float) gifti_get_DA_value_2D (darray, vno, 0);
 
-        if (red > 1) r = (int)red; else r = (int)floor(red*256);
-        if (r > 255) r = 255;
-        if (green > 1) g = (int)green; else g = (int)floor(green*256);
-        if (g > 255) g = 255;
-        if (blue > 1) b = (int)blue; else b = (int)floor(blue*256);
-        if (b > 255) b = 255;
+        if (red > 1)
+        {
+          r = (int)red;
+        }
+        else
+        {
+          r = (int)floor(red*256);
+        }
+        if (r > 255)
+        {
+          r = 255;
+        }
+        if (green > 1)
+        {
+          g = (int)green;
+        }
+        else
+        {
+          g = (int)floor(green*256);
+        }
+        if (g > 255)
+        {
+          g = 255;
+        }
+        if (blue > 1)
+        {
+          b = (int)blue;
+        }
+        else
+        {
+          b = (int)floor(blue*256);
+        }
+        if (b > 255)
+        {
+          b = 255;
+        }
 
         MRISRGBToAnnot(r,g,b,mris->vertices[vno].annotation);
       }
@@ -994,7 +1115,7 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
     }
     else
     {
-      // 'statistics' and all other kinds of data we'll put in both our 
+      // 'statistics' and all other kinds of data we'll put in both our
       // 'stat' and 'val' data elements of the mris structure
       if (found_statval_data)
       {
@@ -1013,10 +1134,13 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
           for (nindex = 0; nindex < num_index_nodes; nindex++)
           {
             int vno = gifti_get_DA_value_2D (node_index, nindex, 0);
-            if (mris->vertices[vno].ripflag) continue;
-            mris->vertices[vno].val = 
+            if (mris->vertices[vno].ripflag)
+            {
+              continue;
+            }
+            mris->vertices[vno].val =
               (float) gifti_get_DA_value_2D (darray, nindex, 0);
-            mris->vertices[vno].stat = 
+            mris->vertices[vno].stat =
               (float) gifti_get_DA_value_2D (darray, nindex, 0);
           }
         }
@@ -1025,10 +1149,13 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
           int vno;
           for (vno = 0; vno < mris->nvertices; vno++)
           {
-            if (mris->vertices[vno].ripflag) continue;
-            mris->vertices[vno].val = 
+            if (mris->vertices[vno].ripflag)
+            {
+              continue;
+            }
+            mris->vertices[vno].val =
               (float) gifti_get_DA_value_2D (darray, vno, 0);
-            mris->vertices[vno].stat = 
+            mris->vertices[vno].stat =
               (float) gifti_get_DA_value_2D (darray, vno, 0);
           }
         }
@@ -1036,8 +1163,8 @@ MRIS *mrisReadGIFTIdanum(const char *fname, MRIS *mris, int daNum)
     }
   }
 
-  /* 
-   * And we're done. 
+  /*
+   * And we're done.
    */
   gifti_free_image (image);
 
@@ -1065,9 +1192,9 @@ MRI *MRISreadGiftiAsMRI(const char *fname, int read_volume)
   gifti_image* image = gifti_read_image (fname, 1);
   if (NULL == image)
   {
-    fprintf 
-      (stderr,
-       "MRISreadGiftiAsMRI: gifti_read_image() returned NULL\n");
+    fprintf
+    (stderr,
+     "MRISreadGiftiAsMRI: gifti_read_image() returned NULL\n");
     return NULL;
   }
 
@@ -1075,59 +1202,96 @@ MRI *MRISreadGiftiAsMRI(const char *fname, int read_volume)
   int valid = gifti_valid_gifti_image (image, 1);
   if (valid == 0)
   {
-    fprintf 
-      (stderr,
-       "MRISreadGiftiAsMRI: GIFTI file %s is invalid!\n", fname);
+    fprintf
+    (stderr,
+     "MRISreadGiftiAsMRI: GIFTI file %s is invalid!\n", fname);
     gifti_free_image (image);
     return NULL;
   }
 
   /* check for overlay data */
   giiDataArray* scalars = NULL;
-  int da_num = 0;
   int frame_count = 0;
   long long num_vertices = -1;
   long long num_cols = 0;
-  do
+#define INTENT_CODE_MAX_IDX 4
+  int intent_code[INTENT_CODE_MAX_IDX] =
   {
-    scalars = gifti_find_DA (image, NIFTI_INTENT_TIME_SERIES, da_num);
-    if (NULL == scalars)
+    NIFTI_INTENT_TIME_SERIES,
+    NIFTI_INTENT_SHAPE,
+    NIFTI_INTENT_NONE,
+    NIFTI_INTENT_NORMAL
+  };
+  int intent_code_idx = 0;
+  // search all DAs for time series, then shape, then none, then normal.
+  // if time series found, check all DAs to make sure all the same size.
+  for (intent_code_idx = 0; intent_code_idx < INTENT_CODE_MAX_IDX;
+       intent_code_idx++)
+  {
+    int da_num = 0;
+    do
     {
-      if (++da_num >= image->numDA) break;
-      else continue;
-    }
-    frame_count++;
-    long long nvertices=0, ncols=0;
-    gifti_DA_rows_cols (scalars, &nvertices, &ncols);
-    if (num_vertices == -1)
-    {
-      num_vertices=nvertices;
-      num_cols=ncols;
-    }
-    else
-    {
-      if (num_vertices <= 0 ||
-          num_vertices != nvertices ||
-          ncols != 1)
+      scalars = gifti_find_DA (image, intent_code[intent_code_idx], da_num);
+      if (NULL == scalars)
       {
-        fprintf 
+        if (++da_num >= image->numDA)
+        {
+          break;
+        }
+        else
+        {
+          continue;
+        }
+      }
+      frame_count++;
+      long long nvertices=0, ncols=0;
+      gifti_DA_rows_cols (scalars, &nvertices, &ncols);
+      if (num_vertices == -1)
+      {
+        num_vertices=nvertices;
+        num_cols=ncols;
+      }
+      else
+      {
+        if (num_vertices <= 0 ||
+            num_vertices != nvertices ||
+            ncols != 1)
+        {
+          fprintf
           (stderr,
            "MRISreadGiftiAsMRI: malformed time-series data array in file "
            "%s: nvertices=%d ncols=%d expected num_vertices=%d\n",
            fname, (int)nvertices, (int)num_cols, (int)num_vertices);
-        gifti_free_image (image);
-        return NULL;
+          gifti_free_image (image);
+          return NULL;
+        }
+      }
+      if (++da_num >= image->numDA)
+      {
+        break;
+      }
+      if ((intent_code[intent_code_idx] != NIFTI_INTENT_TIME_SERIES) &&
+          (intent_code[intent_code_idx] != NIFTI_INTENT_SHAPE) &&
+          (intent_code[intent_code_idx] != NIFTI_INTENT_NONE) &&
+          (intent_code[intent_code_idx] != NIFTI_INTENT_NORMAL))
+      {
+        break;
       }
     }
-    if (++da_num >= image->numDA) break;
-  } while ( scalars );
+    while ( scalars );
+
+    if (scalars)
+    {
+      break;  // found some data, no need to check other intents
+    }
+  }
 
   if (frame_count == 0)
   {
-    fprintf 
-      (stderr,
-       "MRISreadGiftiAsMRI: no overlay data found in file %s\n", 
-       fname);
+    fprintf
+    (stderr,
+     "MRISreadGiftiAsMRI: no overlay data found in file %s\n",
+     fname);
     gifti_free_image (image);
     return NULL;
   }
@@ -1144,10 +1308,14 @@ MRI *MRISreadGiftiAsMRI(const char *fname, int read_volume)
   /* Copy in each scalar frame to 'volume' frame. */
   mri =  MRIallocSequence(num_vertices,1,1,MRI_FLOAT,frame_count);
   frame_count = 0;
+  int da_num;
   for (da_num = 0; da_num < image->numDA; da_num++)
   {
-    scalars = gifti_find_DA (image, NIFTI_INTENT_TIME_SERIES, da_num);
-    if (NULL == scalars) continue;
+    scalars = gifti_find_DA (image, intent_code[intent_code_idx], da_num);
+    if (NULL == scalars)
+    {
+      continue;
+    }
     int vno;
     for (vno = 0; vno < num_vertices; vno++)
     {
@@ -1188,9 +1356,15 @@ static void insertCommonMetaData(giiMetaData* md)
   struct tm *lt = localtime(&tyme);
   char *date = asctime(lt);
   char *chr = strchr(date,'\r');
-  if (chr) *chr = 0; // remove carriage return
+  if (chr)
+  {
+    *chr = 0;  // remove carriage return
+  }
   chr = strchr(date,'\n');
-  if (chr) *chr = 0; // remove linefeed
+  if (chr)
+  {
+    *chr = 0;  // remove linefeed
+  }
   gifti_add_to_meta( md, "Date", date, 1 );
 }
 
@@ -1246,10 +1420,10 @@ int MRISwriteGIFTI(MRIS* mris,
   /* -------------------------------------------------------
    * Surface file
    */
-  if (intent_code == NIFTI_INTENT_POINTSET || 
+  if (intent_code == NIFTI_INTENT_POINTSET ||
       intent_code == NIFTI_INTENT_TRIANGLE)
-  { 
-    /* 
+  {
+    /*
      * Coordinates
      */
     giiDataArray* coords = gifti_alloc_and_add_darray (image);
@@ -1279,7 +1453,8 @@ int MRISwriteGIFTI(MRIS* mris,
     if (mris->SRASToTalSRAS_ &&
         mris->SRASToTalSRAS_->rows==4 &&
         mris->SRASToTalSRAS_->cols==4)
-    { // found a valid xform, so use it...
+    {
+      // found a valid xform, so use it...
       gifti_add_empty_CS( coords );
       coords->coordsys[0]->dataspace = strcpyalloc("NIFTI_XFORM_UNKNOWN");
       coords->coordsys[0]->xformspace = strcpyalloc("NIFTI_XFORM_TALAIRACH");
@@ -1287,7 +1462,9 @@ int MRISwriteGIFTI(MRIS* mris,
       int r,c;
       for (r=1; r <= 4; r++)
         for (c=1; c <= 4; c++)
+        {
           coords->coordsys[0]->xform[r-1][c-1] = xform->rptr[r][c];
+        }
     }
 
     coords->nvals = gifti_darray_nvals (coords);
@@ -1309,7 +1486,10 @@ int MRISwriteGIFTI(MRIS* mris,
     int vertex_index;
     for (vertex_index = 0; vertex_index < mris->nvertices; vertex_index++)
     {
-      if (mris->vertices[vertex_index].ripflag) continue;
+      if (mris->vertices[vertex_index].ripflag)
+      {
+        continue;
+      }
       gifti_set_DA_value_2D (coords, vertex_index, 0,
                              mris->vertices[vertex_index].x);
       gifti_set_DA_value_2D (coords, vertex_index, 1,
@@ -1318,7 +1498,7 @@ int MRISwriteGIFTI(MRIS* mris,
                              mris->vertices[vertex_index].z);
     }
 
-    /* 
+    /*
      * Faces
      */
     giiDataArray* faces = gifti_alloc_and_add_darray (image);
@@ -1335,9 +1515,18 @@ int MRISwriteGIFTI(MRIS* mris,
     int face_index;
     for (face_index = 0; face_index < mris->nfaces; face_index++)
     {
-      if (mris->vertices[mris->faces[face_index].v[0]].ripflag) continue;
-      if (mris->vertices[mris->faces[face_index].v[1]].ripflag) continue;
-      if (mris->vertices[mris->faces[face_index].v[2]].ripflag) continue;
+      if (mris->vertices[mris->faces[face_index].v[0]].ripflag)
+      {
+        continue;
+      }
+      if (mris->vertices[mris->faces[face_index].v[1]].ripflag)
+      {
+        continue;
+      }
+      if (mris->vertices[mris->faces[face_index].v[2]].ripflag)
+      {
+        continue;
+      }
       numFaces++;
     }
 
@@ -1375,9 +1564,18 @@ int MRISwriteGIFTI(MRIS* mris,
     int faceNum = 0;
     for (face_index = 0; face_index < mris->nfaces; face_index++)
     {
-      if (mris->vertices[mris->faces[face_index].v[0]].ripflag) continue;
-      if (mris->vertices[mris->faces[face_index].v[1]].ripflag) continue;
-      if (mris->vertices[mris->faces[face_index].v[2]].ripflag) continue;
+      if (mris->vertices[mris->faces[face_index].v[0]].ripflag)
+      {
+        continue;
+      }
+      if (mris->vertices[mris->faces[face_index].v[1]].ripflag)
+      {
+        continue;
+      }
+      if (mris->vertices[mris->faces[face_index].v[2]].ripflag)
+      {
+        continue;
+      }
 
       gifti_set_DA_value_2D (faces, faceNum, 0,
                              mris->faces[face_index].v[0]);
@@ -1394,42 +1592,96 @@ int MRISwriteGIFTI(MRIS* mris,
       const char *primary=NULL, *secondary=NULL, *geotype=NULL;
       char *name = mris->fname;
       char *topotype="Closed";
-      if (strstr(name, "lh.")) primary = "CortexLeft";
-      if (strstr(name, "rh.")) primary = "CortexRight";
-      if (strstr(name, ".orig"))     secondary = "GrayWhite";
-      if (strstr(name, ".smoothwm")) secondary = "GrayWhite";
-      if (strstr(name, ".white"))    secondary = "GrayWhite";
-      if (strstr(name, ".graymid"))  secondary = "MidThickness";
-      if (strstr(name, ".gray"))     secondary = "Pial";
-      if (strstr(name, ".pial"))     secondary = "Pial";
-      if (strstr(name, ".orig"))     geotype = "Reconstruction";
-      if (strstr(name, ".smoothwm")) geotype = "Anatomical";
-      if (strstr(name, ".white"))    geotype = "Anatomical";
-      if (strstr(name, ".gray"))     geotype = "Anatomical";
-      if (strstr(name, ".graymid"))  geotype = "Anatomical";
-      if (strstr(name, ".pial"))     geotype = "Anatomical";
-      if (strstr(name, ".inflated")) geotype = "Inflated";
-      if (strstr(name, ".sphere"))   geotype = "Sphere";
-      if (strstr(name, ".qsphere"))  geotype = "Sphere";
-      if (strstr(name,"pial-outer")) geotype = "Hull";
+      if (strstr(name, "lh."))
+      {
+        primary = "CortexLeft";
+      }
+      if (strstr(name, "rh."))
+      {
+        primary = "CortexRight";
+      }
+      if (strstr(name, ".orig"))
+      {
+        secondary = "GrayWhite";
+      }
+      if (strstr(name, ".smoothwm"))
+      {
+        secondary = "GrayWhite";
+      }
+      if (strstr(name, ".white"))
+      {
+        secondary = "GrayWhite";
+      }
+      if (strstr(name, ".graymid"))
+      {
+        secondary = "MidThickness";
+      }
+      if (strstr(name, ".gray"))
+      {
+        secondary = "Pial";
+      }
+      if (strstr(name, ".pial"))
+      {
+        secondary = "Pial";
+      }
+      if (strstr(name, ".orig"))
+      {
+        geotype = "Reconstruction";
+      }
+      if (strstr(name, ".smoothwm"))
+      {
+        geotype = "Anatomical";
+      }
+      if (strstr(name, ".white"))
+      {
+        geotype = "Anatomical";
+      }
+      if (strstr(name, ".gray"))
+      {
+        geotype = "Anatomical";
+      }
+      if (strstr(name, ".graymid"))
+      {
+        geotype = "Anatomical";
+      }
+      if (strstr(name, ".pial"))
+      {
+        geotype = "Anatomical";
+      }
+      if (strstr(name, ".inflated"))
+      {
+        geotype = "Inflated";
+      }
+      if (strstr(name, ".sphere"))
+      {
+        geotype = "Sphere";
+      }
+      if (strstr(name, ".qsphere"))
+      {
+        geotype = "Sphere";
+      }
+      if (strstr(name,"pial-outer"))
+      {
+        geotype = "Hull";
+      }
       if (mris->patch)
       {
         geotype = "Flat";
         topotype = "Cut";
       }
-      
+
       if (primary) gifti_add_to_meta( &coords->meta,
-                                      "AnatomicalStructurePrimary",
-                                      primary,
-                                      1 );
-      if (secondary) gifti_add_to_meta( &coords->meta,
-                                        "AnatomicalStructureSecondary",
-                                        secondary,
+                                        "AnatomicalStructurePrimary",
+                                        primary,
                                         1 );
+      if (secondary) gifti_add_to_meta( &coords->meta,
+                                          "AnatomicalStructureSecondary",
+                                          secondary,
+                                          1 );
       if (geotype) gifti_add_to_meta( &coords->meta,
-                                      "GeometricType",
-                                      geotype,
-                                      1 );
+                                        "GeometricType",
+                                        geotype,
+                                        1 );
       gifti_add_to_meta( &faces->meta, "TopologicalType", topotype, 1 );
       gifti_add_to_meta( &coords->meta, "Name", name, 1 );
       gifti_add_to_meta( &faces->meta, "Name", name, 1 );
@@ -1477,13 +1729,34 @@ int MRISwriteGIFTI(MRIS* mris,
     /* include some metadata describing this shape */
     gifti_add_to_meta( &shape->meta, "Name", curv_fname, 1 );
     char *meta=NULL;
-    if (strstr(curv_fname, ".thickness")) meta = "Thickness";
-    if (strstr(curv_fname, ".curv"))      meta = "CurvatureRadial";
-    if (strstr(curv_fname, ".sulc"))      meta = "SulcalDepth";
-    if (strstr(curv_fname, ".area"))      meta = "Area";
-    if (strstr(curv_fname, ".volume"))    meta = "Volume";
-    if (strstr(curv_fname, ".jacobian"))  meta = "Jacobian";
-    if (meta) gifti_add_to_meta( &shape->meta, "ShapeDataType", meta, 1 );
+    if (strstr(curv_fname, ".thickness"))
+    {
+      meta = "Thickness";
+    }
+    if (strstr(curv_fname, ".curv"))
+    {
+      meta = "CurvatureRadial";
+    }
+    if (strstr(curv_fname, ".sulc"))
+    {
+      meta = "SulcalDepth";
+    }
+    if (strstr(curv_fname, ".area"))
+    {
+      meta = "Area";
+    }
+    if (strstr(curv_fname, ".volume"))
+    {
+      meta = "Volume";
+    }
+    if (strstr(curv_fname, ".jacobian"))
+    {
+      meta = "Jacobian";
+    }
+    if (meta)
+    {
+      gifti_add_to_meta( &shape->meta, "ShapeDataType", meta, 1 );
+    }
 
     /* Allocate the data array. */
     shape->data = NULL;
@@ -1501,7 +1774,10 @@ int MRISwriteGIFTI(MRIS* mris,
     int vno;
     for (vno = 0; vno < mris->nvertices; vno++)
     {
-      if (mris->vertices[vno].ripflag) continue;
+      if (mris->vertices[vno].ripflag)
+      {
+        continue;
+      }
       gifti_set_DA_value_2D (shape, vno, 0,
                              mris->vertices[vno].curv);
     }
@@ -1516,7 +1792,7 @@ int MRISwriteGIFTI(MRIS* mris,
     /*
      * Writes .annot data to a label table data gifti file:
      * puts the freesurfer colortable struct into a LabelTable,
-     * and puts the .annotation field from each vertex into a 
+     * and puts the .annotation field from each vertex into a
      * DataArray
      */
     /*
@@ -1543,9 +1819,16 @@ int MRISwriteGIFTI(MRIS* mris,
     int idx;
     for (idx=0; idx < labeltable.length; idx++)
     {
-      labeltable.key[idx] = CTABrgb2Annotation(mris->ct->entries[idx]->ri,
-                                               mris->ct->entries[idx]->gi,
-                                               mris->ct->entries[idx]->bi);
+      // the key could be the freesurfer 'annotation' value, which is
+      // supposed to be unique to the FreeSurferColorLUT, but for gifti
+      // purposes, it is more intutive and obvious to use the index.
+      // also, a display application might choose to interpret the
+      // label data at each vertex as indicies rather than keys (which
+      // i think ignores the gifti spec, but is reasonable to do so).
+      labeltable.key[idx] = idx;
+      //labeltable.key[idx] = CTABrgb2Annotation(mris->ct->entries[idx]->ri,
+      //                                       mris->ct->entries[idx]->gi,
+      //                                       mris->ct->entries[idx]->bi);
       //printf("%8.8X\n",labeltable.key[idx]);
 
       labeltable.label[idx] = strcpyalloc(mris->ct->entries[idx]->name);
@@ -1627,13 +1910,24 @@ int MRISwriteGIFTI(MRIS* mris,
       return ERROR_NOMEMORY;
     }
 
-    /* Copy our 'annotation' data for each vertex */
+    /* Copy our 'annotation' data for each vertex (actually an index) */
     unsigned int* label_data = labels->data;
-    int label_index;
+    int label_index, theIdx, result;
     for (label_index = 0; label_index < mris->nvertices; label_index++)
     {
-      if (mris->vertices[label_index].ripflag) continue;
-      *(label_data + label_index) = mris->vertices[label_index].annotation;
+      if (mris->vertices[label_index].ripflag)
+      {
+        continue;
+      }
+      result = CTABfindAnnotation(mris->ct,
+                                  mris->vertices[label_index].annotation,
+                                  &theIdx);
+      if (result)
+      {
+        return ERROR_BADFILE;
+      }
+
+      *(label_data + label_index) = theIdx;
       //printf("%8.8X ", *(label_data + label_index));
     }
   } // end of if NIFTI_INTENT_LABEL
@@ -1719,7 +2013,10 @@ int MRISwriteGIFTI(MRIS* mris,
     int vno;
     for (vno = 0; vno < mris->nvertices; vno++)
     {
-      if (mris->vertices[vno].ripflag) continue;
+      if (mris->vertices[vno].ripflag)
+      {
+        continue;
+      }
       gifti_set_DA_value_2D (stats, vno, 0, mris->vertices[vno].stat);
     }
   } // end of if NIFTI_INTENT_<stats>
@@ -1792,7 +2089,10 @@ int mriWriteGifti(MRI* mri, const char *out_fname)
 
     /* Set its attributes. */
     scalars->intent = NIFTI_INTENT_NONE;
-    if (mri->nframes > 1) scalars->intent = NIFTI_INTENT_TIME_SERIES;
+    if (mri->nframes > 1)
+    {
+      scalars->intent = NIFTI_INTENT_TIME_SERIES;
+    }
     if (scalars->intent == NIFTI_INTENT_TIME_SERIES)
     {
       // add TR (repetition time) to metadata:
@@ -1842,7 +2142,7 @@ int mriWriteGifti(MRI* mri, const char *out_fname)
   int valid = gifti_valid_gifti_image (image, 1);
   if (valid == 0)
   {
-    fprintf (stderr,"mriWriteGifti: GIFTI file %s is invalid!\n", 
+    fprintf (stderr,"mriWriteGifti: GIFTI file %s is invalid!\n",
              out_fname);
     gifti_free_image (image);
     return ERROR_BADFILE;

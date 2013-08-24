@@ -101,5 +101,7 @@
         <file>resource/icons/track_load.png</file>
         <file>resource/icons/track_delete.png</file>
         <file>resource/icons/voxel_draw_replace_color.png</file>
+        <file>resource/icons/view_time_course.png</file>
+        <file>resource/icons/voxel_draw_clone.png</file>
     </qresource>
 </RCC>

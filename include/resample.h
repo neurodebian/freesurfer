@@ -8,8 +8,8 @@
  * Original Author: REPLACE_WITH_FULL_NAME_OF_CREATING_AUTHOR 
  * CVS Revision Info:
  *    $Author: nicks $
- *    $Date: 2011/03/02 00:04:10 $
- *    $Revision: 1.17 $
+ *    $Date: 2013/01/27 23:40:09 $
+ *    $Revision: 1.17.2.2 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -53,10 +53,10 @@ extern char *ResampleVtxMapFile;
 int interpolation_code(char *interpolation_string);
 int float2int_code(char *float2int_string);
 
-int ProjNormFracThick(float *x, float *y, float *z,
-                      MRI_SURFACE *surf, int vtx, float frac);
-int ProjNormDist(float *x, float *y, float *z,
-                 MRI_SURFACE *surf, int vtx, float dist);
+int ProjNormFracThick( float *x, float *y, float *z,
+                       const MRI_SURFACE *surf, int vtx, float frac );
+int ProjNormDist( float *x, float *y, float *z,
+                  const MRI_SURFACE *surf, int vtx, float dist );
 int ProjNormDistNbr(float *x, float *y, float *z, MRI_SURFACE *surf, 
 		    int vtxno, float dist, int nthNbr);
 int ProjNormFracThickNbr(float *x, float *y, float *z, MRI_SURFACE *surf, 
@@ -116,6 +116,8 @@ MRI *vol2surf_linear(MRI *SrcVol,
                      int InterpMethod, int float2int, MRI *SrcHitVol,
                      int ProjDistFlag, int nskip);
 
+MRI *MRISapplyReg(MRI *SrcSurfVals, MRI_SURFACE **SurfReg, int nsurfs,
+		  int ReverseMapFlag, int DoJac, int UseHash);
 MRI *surf2surf_nnfr(MRI *SrcSurfVals, MRI_SURFACE *SrcSurfReg,
                     MRI_SURFACE *TrgSurfReg, MRI **SrcHits,
                     MRI **SrcDist, MRI **TrgHits, MRI **TrgDist,

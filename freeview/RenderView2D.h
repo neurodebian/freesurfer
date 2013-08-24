@@ -1,14 +1,14 @@
 /**
  * @file  RenderView2D.h
- * @brief REPLACE_WITH_ONE_LINE_SHORT_DESCRIPTION
+ * @brief 2D slice view
  *
  */
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/05/13 15:04:33 $
- *    $Revision: 1.26.2.4 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:37 $
+ *    $Revision: 1.26.2.10 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -39,6 +39,7 @@ class Interactor2DROIEdit;
 class Interactor2DPointSetEdit;
 class Interactor2DVolumeCrop;
 class LayerMRI;
+class LayerLineProfile;
 
 class RenderView2D : public RenderView
 {
@@ -104,6 +105,10 @@ public:
     return m_interactorNavigate;
   }
 
+  void TriggerContextMenu( QMouseEvent* event );
+
+  bool PickLineProfile(int x, int y);
+
 public slots:
   void RefreshAllActors(bool bForScreenShot = false);
   void StopSelection();
@@ -115,10 +120,13 @@ signals:
   void RegionSelected( Region2D* );
   void RegionRemoved( Region2D* );
   void Zooming(RenderView2D* view);
+  void LineProfileIdPicked(LayerLineProfile* lp, int nId);
 
 protected slots:
   virtual void OnSlicePositionChanged();
   void SyncZoomTo(RenderView2D* view);
+  void OnDuplicateRegion();
+  void OnInteractorError(const QString& msg);
 
 protected:
   virtual void resizeEvent(QResizeEvent *event);
@@ -127,6 +135,7 @@ protected:
 
 private:
   int m_nViewPlane;
+  double    m_dPreSlicePosition;
   Cursor2D*       m_cursor2D;
   Contour2D*      m_contour2D;
   Annotation2D*   m_annotation2D;

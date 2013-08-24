@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/14 23:44:47 $
- *    $Revision: 1.4 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:32 $
+ *    $Revision: 1.4.2.2 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -46,6 +46,7 @@ public:
   virtual ~LayerPointSet();
 
   bool LoadFromFile( const QString& filename );
+  bool LoadFromString( const QString& content);
   bool Save();
 
   bool HasUndo();
@@ -88,11 +89,19 @@ public:
 
   bool Rotate( std::vector<RotationElement>& rotations, wxWindow* wnd, wxCommandEvent& event );
 
+  std::vector<double> GetPoints();
+
+  FSPointSet* GetPointSetData()
+  {
+    return m_pointSetSource;
+  }
+
 protected slots:
   void UpdateColorMap();
   void UpdateOpacity();
   void UpdateScalars();
-  void UpdateSnapToVoxelCenter();
+  void UpdateSnapToVoxelCenter();  
+  void UpdateSplineVisibility();
   void RebuildActors( bool bRebuild3D = true );
 
 protected:
@@ -102,6 +111,7 @@ protected:
   vtkActor*    m_actorBalls;
   vtkActor*    m_actorSpline;
   vtkActor*    m_actorSlice[3];
+  vtkActor*    m_actorSplineSlice[3];
 
   vtkSmartPointer<vtkPolyDataMapper>  m_mapper;
 

@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: rpwang $
- *    $Date: 2011/05/13 15:04:31 $
- *    $Revision: 1.26.2.3 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:28 $
+ *    $Revision: 1.26.2.9 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -31,6 +31,11 @@
 #include <QFileInfo>
 #include <QFileDialog>
 #include <QMessageBox>
+
+extern "C"
+{
+#include "mri.h"
+}
 
 DialogLoadVolume::DialogLoadVolume(QWidget *parent) :
   QDialog(parent),
@@ -128,6 +133,8 @@ void DialogLoadVolume::OnLUT( int nSel )
       UpdateLUT();
       ui->comboBoxLUT->setCurrentIndex( luts->GetCount() - 1 );
     }
+    else
+      ui->comboBoxLUT->setCurrentIndex(0);
   }
 }
 
@@ -162,12 +169,14 @@ int DialogLoadVolume::GetSampleMethod()
 {
   if ( ui->radioNearest->isChecked() )
   {
-    return 0;
+    return SAMPLE_NEAREST;
+  }
+  else if (ui->radioTrilinear->isChecked())
+  {
+    return SAMPLE_TRILINEAR;
   }
   else
-  {
-    return 1;
-  }
+    return SAMPLE_CUBIC_BSPLINE;
 }
 
 QString DialogLoadVolume::GetColorMap()

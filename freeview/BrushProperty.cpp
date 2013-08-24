@@ -8,9 +8,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/14 23:44:46 $
- *    $Revision: 1.14 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:27 $
+ *    $Revision: 1.14.2.6 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -36,7 +36,10 @@ BrushProperty::BrushProperty (QObject* parent) : QObject(parent),
   m_bEnableDrawRange( false ),
   m_bEnableExcludeRange( false ),
   m_bDrawConnectedOnly( false ),
-  m_layerRef( NULL )
+  m_bFill3D(false),
+  m_layerRef( NULL ),
+  m_dFillValue(1.0),
+  m_dEraseValue(0.0)
 {
   m_dDrawRange[0] = 0;
   m_dDrawRange[1] = 1000000;
@@ -76,7 +79,11 @@ int BrushProperty::GetBrushSize()
 
 void BrushProperty::SetBrushSize( int nSize )
 {
-  m_nBrushSize = nSize;
+  if ( m_nBrushSize != nSize)
+  {
+    m_nBrushSize = nSize;
+    emit BrushSizeChanged(nSize);
+  }
 }
 
 int BrushProperty::GetBrushTolerance()
@@ -87,6 +94,24 @@ int BrushProperty::GetBrushTolerance()
 void BrushProperty::SetBrushTolerance( int nTolerance )
 {
   m_nBrushTolerance = nTolerance;
+}
+
+void BrushProperty::SetFillValue(double val)
+{
+  if (val != m_dFillValue)
+  {
+    m_dFillValue = val;
+    emit FillValueChanged(val);
+  }
+}
+
+void BrushProperty::SetEraseValue(double val)
+{
+  if (val != m_dEraseValue)
+  {
+    m_dEraseValue = val;
+    emit EraseValueChanged(val);
+  }
 }
 
 LayerVolumeBase* BrushProperty::GetReferenceLayer()

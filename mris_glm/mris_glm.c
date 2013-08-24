@@ -220,7 +220,7 @@ int main(int argc, char **argv) {
 
   /* rkt: check for and handle version tag */
   nargs = handle_version_option (argc, argv,
-                                 "$Id: mris_glm.c,v 1.54.2.1 2011/05/05 15:29:51 greve Exp $", "$Name: stable5 $");
+                                 "$Id: mris_glm.c,v 1.54.2.1 2011/05/05 15:29:51 greve Exp $", "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
     exit (0);
   argc -= nargs;

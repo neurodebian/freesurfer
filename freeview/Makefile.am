@@ -35,6 +35,16 @@ BUILT_SOURCES = \
 	ui_DialogSavePointSet.h \
 	ui_DialogSaveVolume.h \
   ui_DialogReplaceLabel.h \
+  ui_DialogRepositionSurface.h \
+  ui_WindowTimeCourse.h \
+  ui_DialogLabelStats.h \
+  ui_WindowGroupPlot.h \
+  ui_DialogLoadSurfaceOverlay.h \
+  ui_DialogReloadLayer.h \
+  ui_DialogSmoothSurface.h \
+  ui_DialogLineProfile.h \
+  ui_DialogLoadConnectome.h \
+  ui_PanelConnectomeMatrix.h \
 	qtcolorpicker.moc \
 	moc_BrushProperty.cpp \
 	moc_CommandEdit.cpp \
@@ -125,6 +135,28 @@ BUILT_SOURCES = \
   moc_DialogReplaceLabel.cpp \
   moc_LayerVolumeTrack.cpp \
   moc_LayerLandmarks.cpp \
+  moc_SurfaceROI.cpp \
+  moc_MainApplication.cpp \
+  moc_DialogRepositionSurface.cpp \
+  moc_WindowTimeCourse.cpp \
+  moc_WidgetTimeCoursePlot.cpp \
+  moc_LayerMRIWorkerThread.cpp \
+  moc_DialogLabelStats.cpp \
+  moc_VolumeFilterWorkerThread.cpp \
+  moc_FSGroupDescriptor.cpp \
+  moc_WindowGroupPlot.cpp \
+  moc_WidgetGroupPlot.cpp \
+  moc_SurfaceSpline.cpp \
+  moc_DialogLoadSurfaceOverlay.cpp \
+  moc_DialogReloadLayer.cpp \
+  moc_DialogSmoothSurface.cpp \
+  moc_DialogLineProfile.cpp \
+  moc_LayerLineProfile.cpp \
+  moc_LayerPropertyLineProfile.cpp \
+  moc_DialogLoadConnectome.cpp \
+  moc_LayerConnectomeMatrix.cpp \
+  moc_LayerPropertyConnectomeMatrix.cpp \
+  moc_PanelConnectomeMatrix.cpp \
   qrc_freeview.cpp
 
 freeview_SOURCES = $(BUILT_SOURCES) \
@@ -367,7 +399,58 @@ freeview_SOURCES = $(BUILT_SOURCES) \
   LayerVolumeTrack.cpp \
   LayerVolumeTrack.h \
   LayerLandmarks.cpp \
-  LayerLandmarks.h
+  LayerLandmarks.h \
+  SurfaceROI.cpp \
+  SurfaceROI.h \
+  MainApplication.cpp \
+  MainApplication.h \
+  ProgressCallback.cpp \
+  ProgressCallback.h \
+  DialogRepositionSurface.cpp \
+  DialogRepositionSurface.h \
+  WindowTimeCourse.cpp \
+  WindowTimeCourse.h \
+  WidgetTimeCoursePlot.cpp \
+  WidgetTimeCoursePlot.h \
+  LayerMRIWorkerThread.cpp \
+  LayerMRIWorkerThread.h \
+  DialogLabelStats.cpp \
+  DialogLabelStats.h \
+  VolumeFilterWorkerThread.cpp \
+  VolumeFilterWorkerThread.h \
+  FSGroupDescriptor.cpp \
+  FSGroupDescriptor.h \
+  WindowGroupPlot.cpp \
+  WindowGroupPlot.h \
+  WidgetGroupPlot.cpp \
+  WidgetGroupPlot.h \
+  SurfaceSpline.cpp \
+  SurfaceSpline.h \
+  DialogLoadSurfaceOverlay.cpp \
+  DialogLoadSurfaceOverlay.h \
+  DialogReloadLayer.cpp \
+  DialogReloadLayer.h \
+  DialogSmoothSurface.cpp \
+  DialogSmoothSurface.h \
+  LayerLineProfile.cpp \
+  LayerLineProfile.h \
+  DialogLineProfile.cpp \
+  DialogLineProfile.h \
+  LayerPropertyLineProfile.cpp \
+  LayerPropertyLineProfile.h \
+  LayerConnectomeMatrix.cpp \
+  LayerConnectomeMatrix.h \
+  LayerPropertyConnectomeMatrix.cpp \
+  LayerPropertyConnectomeMatrix.h \
+  PanelConnectomeMatrix.cpp \
+  PanelConnectomeMatrix.h \
+  DialogLoadConnectome.cpp \
+  DialogLoadConnectome.h \
+	freeview.qrc
+
+qrc_freeview.cpp: freeview.qrc
+	cp -v $(top_srcdir)/distribution/FreeSurferColorLUT.txt resource/
+	$(RCC) $<  -o $@
 
 if HAVE_MAC_OSX
 AM_CXXFLAGS=\
@@ -384,17 +467,18 @@ AM_CXXFLAGS=\
 	-I$(top_srcdir)/vtkfsio \
 	-I$(top_srcdir)/vtkutils \
 	$(ITK_CFLAGS) -DHAVE_ITK_LIBS \
-	$(VXL_CFLAGS)
-
+	$(VXL_CFLAGS) \
+	-I$(top_srcdir)/lineprof
 
 freeview_CXXFLAGS = $(QT_CXXFLAGS) $(AM_CXXFLAGS)
 freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS)
 freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS) \
-	-framework Cocoa -framework IOKit
-freeview_LDADD		= $(QT_LIBS)	\
+	-framework Cocoa -framework IOKit -framework Accelerate
+freeview_LDADD		= $(QT_LIBS) \
 	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 	$(top_builddir)/vtkfsio/libvtkfsio.a \
 	$(top_builddir)/vtkutils/libvtkutils.a \
+	$(top_builddir)/lineprof/liblineprof.a \
 	$(VTK_COCOA_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
 	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
 	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) \
@@ -402,39 +486,46 @@ freeview_LDADD		= $(QT_LIBS)	\
 	$(VTK_SQLITE_LIB) \
 	-lvtkImaging -lvtkFiltering \
 	-lvtkCommon -lvtksys -lvtkGenericFiltering \
-	-lvtkexoIIc -lvtkNetCDF \
+	-lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB) \
 	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
-	-lvtkWidgets -lvtkHybrid \
-	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB)
-
+	-lvtkWidgets -lvtkHybrid $(VTK_HDF5_LIB) \
+	-lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
+	$(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat \
+	-lpetscvec -lpetsc -lmpich -lpmpich
 
 # need to create a bundle for Macs
 install-exec-hook:freeview
-	mkdir -p $(DESTDIR)$(bindir)/Freeview.app
-	mkdir -p $(DESTDIR)$(bindir)/Freeview.app/Contents
-	mkdir -p $(DESTDIR)$(bindir)/Freeview.app/Contents/MacOS
-	mkdir -p $(DESTDIR)$(bindir)/Freeview.app/Contents/Resources
-	mkdir -p $(DESTDIR)$(bindir)/Freeview.app/Contents/Resources/English.lproj
-#	mkdir -p $(DESTDIR)$(bindir)/Freeview.app/Contents/Frameworks
-	cp $(top_builddir)/freeview/Info.plist $(DESTDIR)$(bindir)/Freeview.app/Contents
-	echo -n 'APPL????' > $(DESTDIR)$(bindir)/Freeview.app/Contents/PkgInfo
-	cp $(top_builddir)/freeview/freeview $(DESTDIR)$(bindir)/Freeview.app/Contents/MacOS/freeview.bin
-	if [[ -d  /usr/pubsw/packages/qt/current/lib/qt_menu.nib ]]; then \
-	cp -rv /usr/pubsw/packages/qt/current/lib/qt_menu.nib $(DESTDIR)$(bindir)/Freeview.app/Contents/Resources; fi
+	rm -Rf $(DESTDIR)$(bindir)/../Freeview.app
+	mkdir -p $(DESTDIR)$(bindir)/../Freeview.app
+	mkdir -p $(DESTDIR)$(bindir)/../Freeview.app/Contents
+	mkdir -p $(DESTDIR)$(bindir)/../Freeview.app/Contents/MacOS
+	mkdir -p $(DESTDIR)$(bindir)/../Freeview.app/Contents/Resources
+	mkdir -p $(DESTDIR)$(bindir)/../Freeview.app/Contents/Resources/English.lproj
+	mkdir -p $(DESTDIR)$(bindir)/../Freeview.app/Contents/Frameworks
+	echo -n 'APPL????' > $(DESTDIR)$(bindir)/../Freeview.app/Contents/PkgInfo
+	cp $(top_builddir)/freeview/freeview $(DESTDIR)$(bindir)/../Freeview.app/Contents/MacOS/Freeview
+	cp $(top_builddir)/freeview/Info.plist $(DESTDIR)$(bindir)/../Freeview.app/Contents/
+	cp $(top_builddir)/freeview/resource/icons/freeview.icns $(DESTDIR)$(bindir)/../Freeview.app/Contents/Resources/freeview.icns 
 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/freeview
-#	echo "source \$$FREESURFER_HOME/bin/tcl_setup" \
+	echo "if(\$$#argv > 0) then" \
 		>> $(DESTDIR)$(bindir)/freeview
-	echo "source \$$FREESURFER_HOME/bin/qt_setup" \
+	echo "  if(\"\$$argv[1]\" == \"-tkmedit\") then" \
 		>> $(DESTDIR)$(bindir)/freeview
-	echo "exec \$$FREESURFER_HOME/bin/Freeview.app/Contents/MacOS/freeview.bin \$$*" >> $(DESTDIR)$(bindir)/freeview
+	echo "    tkmeditfv \$$argv[2-\$$#argv]" \
+		>> $(DESTDIR)$(bindir)/freeview
+	echo "    exit 0"	>> $(DESTDIR)$(bindir)/freeview
+	echo "  endif"	>> $(DESTDIR)$(bindir)/freeview
+	echo "endif"	>> $(DESTDIR)$(bindir)/freeview
+	echo "\$$FREESURFER_HOME/Freeview.app/Contents/MacOS/Freeview \$$*" >> $(DESTDIR)$(bindir)/freeview
 	chmod a+x $(DESTDIR)$(bindir)/freeview
-#	./mac_package_dylibs.sh $(WXWIDGETS_DIR)lib $(DESTDIR)$(bindir)/Freeview.app/Contents/Frameworks $(DESTDIR)$(bindir)/Freeview.app/Contents/MacOS/freeview.bin
-	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
-	/usr/pubsw/bin/chrpath -d $(DESTDIR)$(bindir)/Freeview.app/Contents/MacOS/freeview.bin; fi
+	chgrp -R admin $(DESTDIR)$(bindir)/../Freeview.app/
+	chmod -R a+rx $(DESTDIR)$(bindir)/../Freeview.app
+	chmod -R g+w $(DESTDIR)$(bindir)/../Freeview.app
+	macdeployqt $(DESTDIR)$(bindir)/../Freeview.app
 
 uninstall-hook:
 	rm -f $(DESTDIR)$(bindir)/freeview
-	rm -rf $(DESTDIR)$(bindir)/Freeview.app
+	rm -rf $(DESTDIR)$(bindir)/../Freeview.app
 
 else
 
@@ -452,7 +543,8 @@ AM_CXXFLAGS=\
 	-I$(top_srcdir)/vtkfsio \
 	-I$(top_srcdir)/vtkutils \
 	$(ITK_CFLAGS) -DHAVE_ITK_LIBS \
-	$(VXL_CFLAGS)
+  $(VXL_CFLAGS) \
+  -I$(top_srcdir)/lineprof
 
 freeview_CXXFLAGS = $(QT_CXXFLAGS) $(AM_CXXFLAGS)
 freeview_CPPFLAGS = $(QT_CPPFLAGS) $(AM_CPPFLAGS)
@@ -460,7 +552,8 @@ freeview_LDFLAGS	= $(QT_LDFLAGS) $(OS_LDFLAGS)
 freeview_LDADD		= $(QT_LIBS)	\
 	$(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 	$(top_builddir)/vtkfsio/libvtkfsio.a \
-	$(top_builddir)/vtkutils/libvtkutils.a \
+  $(top_builddir)/vtkutils/libvtkutils.a \
+  $(top_builddir)/lineprof/liblineprof.a \
 	$(VTK_LIBS) $(VTK_VERDICT_LIB) -lvtkGraphics \
 	$(VTK_EXPAT_LIB) $(VTK_FREETYPE_LIB) \
 	$(VTK_TIFF_LIB) $(VTK_JPEG_LIB) \
@@ -468,10 +561,14 @@ freeview_LDADD		= $(QT_LIBS)	\
 	$(VTK_SQLITE_LIB) \
 	-lvtkImaging -lvtkFiltering \
 	-lvtkCommon -lvtksys -lvtkGenericFiltering \
-	-lvtkexoIIc -lvtkNetCDF \
+	-lvtkexoIIc -lvtkNetCDF $(VTK_NETCDFCXX_LIB) \
 	-lvtkVolumeRendering -lvtkRendering -lvtkftgl \
-	-lvtkWidgets -lvtkHybrid \
-	-lvtkIO	-lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB)
+	-lvtkWidgets -lvtkHybrid $(VTK_HDF5_LIB) \
+  -lvtkIO	$(VTK_LSDYNA_LIB) -lvtkDICOMParser $(VTK_MPEG2ENCODE_LIB) \
+  $(ITK_LIBS) \
+  $(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp \
+  -lpetscdm -lpetscmat -lpetscvec -lpetsc -lmpich -lfmpich \
+  $(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
 
 # put a wrapper around the bin, used to setup tcltktixblt,vtk enviro vars
 # and if the OS is MACOSX have a different install-hook to create a bundle
@@ -484,6 +581,15 @@ install-exec-hook:freeview
 		>> $(DESTDIR)$(bindir)/freeview
 	echo "source \$$FREESURFER_HOME/bin/qt_setup" \
 		>> $(DESTDIR)$(bindir)/freeview
+	echo "if(\$$#argv > 0) then" \
+		>> $(DESTDIR)$(bindir)/freeview
+	echo "  if(\"\$$argv[1]\" == \"-tkmedit\") then" \
+		>> $(DESTDIR)$(bindir)/freeview
+	echo "    tkmeditfv \$$argv[2-\$$#argv]" \
+		>> $(DESTDIR)$(bindir)/freeview
+	echo "    exit 0"	>> $(DESTDIR)$(bindir)/freeview
+	echo "  endif"	>> $(DESTDIR)$(bindir)/freeview
+	echo "endif"	>> $(DESTDIR)$(bindir)/freeview
 	echo "freeview.bin \$$argv" >> $(DESTDIR)$(bindir)/freeview
 	chmod a+x $(DESTDIR)$(bindir)/freeview
 	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
@@ -495,6 +601,7 @@ endif
 
 clean-local:
 	rm -f $(BUILT_SOURCES)
+endif 
 
 EXTRA_DIST=$(freeview_SOURCES)
 
@@ -504,4 +611,3 @@ EXTRA_DIST=$(freeview_SOURCES)
 EXCLUDE_FILES=
 include $(top_srcdir)/Makefile.extra
 
-endif 

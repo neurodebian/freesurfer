@@ -6,8 +6,8 @@
 # Original Author: Doug Greve
 # CVS Revision Info:
 #    $Author: greve $
-#    $Date: 2011/03/22 17:16:19 $
-#    $Revision: 1.45.2.1 $
+#    $Date: 2013/01/22 22:09:10 $
+#    $Revision: 1.45.2.3 $
 #
 # Copyright (C) 2002-2007,
 # The General Hospital Corporation (Boston, MA). 
@@ -27,7 +27,7 @@
 # This creates fmcpr.sm5, then
 # mkanalysis-sess -native -funcstem fmcpr.sm5 ...
 
-set VERSION = '$Id: preproc-sess,v 1.45.2.1 2011/03/22 17:16:19 greve Exp $';
+set VERSION = '$Id: preproc-sess,v 1.45.2.3 2013/01/22 22:09:10 greve Exp $';
 
 set inputargs = ($argv);
 set DateStr = "`date '+%y%m%d%H%M'`"
@@ -246,11 +246,14 @@ foreach sess ($SessList)
     # By default it will do both, so set -hemi to anything
     if("$hemi" == lh || "$hemi" == rh) set cmd = ($cmd -hemi $hemi)
     if($subject == self) set cmd = ($cmd -self)
+    if($subject != self) set cmd = ($cmd -trgsubject $subject)
     if($#RunListFile != 0)  set cmd = ($cmd -rlf $RunListFile);
     if($#SliceOrder) set cmd = ($cmd -stc $SliceOrder)
     if($nolog)      set cmd = ($cmd -nolog);
     if($UpdateOnly) set cmd = ($cmd -update);
     if($UseB0DC)    set cmd = ($cmd -b0dc)
+    if($PerRun)   set cmd = ($cmd -per-run)
+    if($PerSess) set cmd = ($cmd -per-session)
     echo "$sessid To Surface -----------------------------" |& tee -a $LF
     echo $cmd |& tee -a $LF
     $cmd |& tee -a $LF
@@ -268,6 +271,8 @@ foreach sess ($SessList)
     if($UseB0DC)    set cmd = ($cmd -b0dc)
     if($ApplySubCortMask)   set cmd = ($cmd -subcort-mask)
     if(! $ApplySubCortMask) set cmd = ($cmd -no-subcort-mask)
+    if($PerRun)   set cmd = ($cmd -per-run)
+    if($PerSess) set cmd = ($cmd -per-session)
     echo "$sessid To MNI305 -----------------------------" |& tee -a $LF
     echo $cmd |& tee -a $LF
     $cmd |& tee -a $LF
@@ -507,8 +512,8 @@ while( $#argv != 0 )
       set subject = $argv[1]; shift;
       set hemi = $argv[1]; shift;
       set ToSurf = 1;
-      set PerRun = 1;
-      set PerSess = 0;
+      #set PerRun = 1;
+      #set PerSess = 0;
       if($subject != self && ! -e $SUBJECTS_DIR/$subject) then
         echo "ERROR: cannot find $subject in $SUBJECTS_DIR"
         exit 1;
@@ -519,8 +524,8 @@ while( $#argv != 0 )
     case "-mni305":
       set RawRes = 2;
       set ToMNI305 = 1;
-      set PerRun = 1;
-      set PerSess = 0;
+      #set PerRun = 1;
+      #set PerSess = 0;
       breaksw
 
     case "-usual":
@@ -537,8 +542,8 @@ while( $#argv != 0 )
     case "-mni305-1mm":
       set RawRes = 1;
       set ToMNI305 = 1;
-      set PerRun = 1;
-      set PerSess = 0;
+      #set PerRun = 1;
+      #set PerSess = 0;
       breaksw
 
     case "-subcort-mask":
@@ -569,6 +574,7 @@ while( $#argv != 0 )
       set PerSess = `getana -a $analysis -t IsPerSession`;
       set UseB0DC = `getana -a $analysis -t UseB0DC`;
       if($#UseB0DC == 0) set UseB0DC = 0;
+      set ApplySubCortMask = `getana -a $analysis -t ApplySubCortMask`;
       set fwhm = `getana -a $analysis -t RawFWHM`;
       if($fwhm == 0 || $PerRun) set DoVolSmooth = 0;
       set SliceOrder = `getana -a $analysis -t stc`;

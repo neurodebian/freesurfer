@@ -6,7 +6,7 @@ AM_CFLAGS=-I$(top_srcdir)/include
 AM_CXXFLAGS=-I$(top_srcdir)/include $(VXL_CFLAGS)
 
 if HAVE_MAC_OSX
-OTHERLDFLAGS=-framework veclib
+OTHERLDFLAGS=-framework vecLib
 else
 OTHERLDFLAGS=-z muldefs
 endif
@@ -23,15 +23,15 @@ bin_PROGRAMS = mri_robust_register \
 	mri_create_tests \
 	mri_gradient_info
 
-mri_robust_register_SOURCES= \
+mri_robust_register_SOURCES= JointHisto.cpp \
 	CostFunctions.cpp MyMatrix.cpp MyMRI.cpp \
-	Quaternion.cpp Registration.cpp RegPowell.cpp \
+	Quaternion.cpp Registration.cpp RegRobust.cpp RegPowell.cpp \
 	mri_robust_register.cpp mri_robust_register.help.xml.h
 mri_robust_register_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
   $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
 mri_robust_register_LDFLAGS=$(OS_LDFLAGS) $(OTHERLDFLAGS)
 
-mri_robust_template_SOURCES= Registration.cpp \
+mri_robust_template_SOURCES= Registration.cpp  RegRobust.cpp \
 	CostFunctions.cpp MyMatrix.cpp MyMRI.cpp Quaternion.cpp \
 	MultiRegistration.cpp mri_robust_template.cpp mri_robust_template.help.xml.h
 mri_robust_template_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
@@ -45,7 +45,7 @@ lta_diff_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 lta_diff_LDFLAGS=$(OS_LDFLAGS) $(OTHERLDFLAGS)
 
 mri_create_tests_SOURCES=mri_create_tests.cpp Quaternion.cpp \
-	MyMatrix.cpp MyMRI.cpp
+	MyMatrix.cpp MyMRI.cpp CostFunctions.cpp
 mri_create_tests_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
   $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN)
 mri_create_tests_LDFLAGS=$(OS_LDFLAGS) $(OTHERLDFLAGS)
@@ -69,7 +69,7 @@ EXTRA_DIST=Regression.h Regression.cpp Registration.h RegistrationStep.h \
 	MultiRegistration.h Quaternion.h RobustGaussian.cpp RegPowell.cpp \
 	CostFunctions.h RobustGaussian.h RegPowell.h MyMatrix.h MyMRI.h \
 	testdata.tar.gz $(foo_DATA) Registration.cpp test_mri_robust_template \
-	$(BUILT_SOURCES)
+	$(BUILT_SOURCES) JointHisto.h Transformation.h RegRobust.h
 
 # Our release target. Include files to be excluded here. They will be
 # found and removed after 'make install' is run during the 'make

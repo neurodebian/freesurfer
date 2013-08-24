@@ -892,7 +892,7 @@ int main(int argc, char *argv[]) {
 
   make_cmd_version_string 
     (argc, argv, 
-     "$Id: mri_mc.c,v 1.22 2011/03/02 00:04:23 nicks Exp $", "$Name: stable5 $", 
+     "$Id: mri_mc.c,v 1.22 2011/03/02 00:04:23 nicks Exp $", "$Name: release_5_3_0 $", 
      cmdline);
   Progname=argv[0];
 

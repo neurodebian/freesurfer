@@ -23,11 +23,11 @@
 /*
  * Original Author: Bruce Fischl
  * CVS Revision Info:
- *    $Author: fischl $
- *    $Date: 2011/03/02 14:27:40 $
- *    $Revision: 1.78 $
+ *    $Author: nicks $
+ *    $Date: 2013/02/09 00:42:20 $
+ *    $Revision: 1.78.2.3 $
  *
- * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
+ * Copyright © 2011-2012 The General Hospital Corporation (Boston, MA) "MGH"
  *
  * Terms and conditions for use, reproduction, distribution and contribution
  * are found in the 'FreeSurfer Software License Agreement' contained
@@ -44,6 +44,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#ifdef HAVE_OPENMP
+#include <omp.h>
+#endif
 
 #include "mri.h"
 #include "matrix.h"
@@ -62,12 +65,16 @@
 #include "mrisegment.h"
 #include "version.h"
 #include "mri_ca_register.help.xml.h"
+#include "mri2.h"
+#include "fsinit.h"
+#include "ctrpoints.h"
 
 #ifdef FS_CUDA
 #include "devicemanagement.h"
 #endif
 #include "gcamorphtestutils.h"
 
+extern int gcam_write_grad ; // defined in gcamorph.c for diags
 static int remove_cerebellum = 0 ;
 static int remove_lh = 0 ;
 static int remove_rh = 0 ;
@@ -95,6 +102,8 @@ static int renormalize = 0 ;
 static int renormalize_new = 0 ;
 static int renormalize_align = 0 ;
 static int renormalize_align_after = 0 ;
+
+static int  renorm_with_histos = 0 ;
 
 static char *long_reg_fname = NULL ;
 //static int inverted_xform = 0 ;
@@ -133,6 +142,7 @@ static int write_vector_field(MRI *mri, GCA_MORPH *gcam, char *vf_fname) ;
 static int remove_bright_stuff(MRI *mri, GCA *gca, TRANSFORM *transform) ;
 static void print_help(void);
 
+static char *twm_fname = NULL ;  // file with manually specified temporal lobe white matter points
 static char *renormalization_fname = NULL ;
 static char *tissue_parms_fname = NULL ;
 static int center = 1 ;
@@ -150,6 +160,7 @@ static int handle_expanded_ventricles = 0;
 
 static int do_secondpass_renorm = 0;
 
+#define MM_FROM_EXTERIOR  5  // distance into brain mask to go when erasing super bright CSF voxels
 /*
    command line consists of three inputs:
 
@@ -170,6 +181,7 @@ main(int argc, char *argv[])
   GCA          *gca /*, *gca_tmp, *gca_reduced*/ ;
   int          ac, nargs, ninputs, input, extra = 0 ;
   int          msec, hours, minutes, seconds /*, iter*/ ;
+  int          n_omp_threads;
   struct timeb start ;
   GCA_MORPH    *gcam ;
 
@@ -179,6 +191,7 @@ main(int argc, char *argv[])
   int          label_computed[MAX_CMA_LABELS];
   int          got_scales =0;
 
+  FSinit() ;
 #ifdef FS_CUDA
   AcquireCUDADevice();
 #endif
@@ -221,8 +234,8 @@ main(int argc, char *argv[])
 
   nargs = handle_version_option
           (argc, argv,
-           "$Id: mri_ca_register.c,v 1.78 2011/03/02 14:27:40 fischl Exp $",
-           "$Name: stable5 $");
+           "$Id: mri_ca_register.c,v 1.78.2.3 2013/02/09 00:42:20 nicks Exp $",
+           "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
   {
     exit (0);
@@ -255,6 +268,17 @@ main(int argc, char *argv[])
   //  Gdiag |= DIAG_WRITE ;
   printf("logging results to %s.log\n", parms.base_name) ;
 
+#ifdef HAVE_OPENMP
+  #pragma omp parallel
+  {
+    n_omp_threads = omp_get_num_threads();
+  }
+  printf("\n\n ======= NUMBER OF OPENMP THREADS = %d ======= \n",
+         n_omp_threads);
+#else
+  n_omp_threads = 1;
+#endif
+
   TimerStart(&start) ;
 
   // build frames from ninputs ////////////////////////////////
@@ -282,13 +306,15 @@ main(int argc, char *argv[])
     if (mask_fname)
     {
       MRI *mri_mask ;
+      int val ;
 
       mri_mask = MRIread(mask_fname) ;
       if (!mri_mask)
         ErrorExit(ERROR_NOFILE, "%s: could not open mask volume %s.\n",
                   Progname, mask_fname) ;
       // if mask == 0, then set dst as 0
-      MRImask(mri_tmp, mri_mask, mri_tmp, 0, 0) ;
+      for (val = 0 ; val < MIN_WM_VAL ; val++)
+	MRImask(mri_tmp, mri_mask, mri_tmp, val, 0) ;
       MRIfree(&mri_mask) ;
     }
     if (alpha > 0)
@@ -330,6 +356,14 @@ main(int argc, char *argv[])
   if (remove_rh)
   {
     GCAremoveHemi(gca, 0) ;  // for exvivo contrast
+  }
+  if (remove_cerebellum)
+  {
+    GCAremoveLabel(gca, Brain_Stem) ;
+    GCAremoveLabel(gca, Left_Cerebellum_Cortex) ;
+    GCAremoveLabel(gca, Left_Cerebellum_White_Matter) ;
+    GCAremoveLabel(gca, Right_Cerebellum_White_Matter) ;
+    GCAremoveLabel(gca, Right_Cerebellum_Cortex) ;
   }
   /////////////////////////////////////////////////////////////////
   // Remapping GCA
@@ -488,6 +522,70 @@ main(int argc, char *argv[])
     MRIfree(&mri_T1) ;
   }
 
+  if (twm_fname)
+  {
+    int      i, nctrl, x, y, z, bad = 0, useRealRAS, count ;
+    MPoint  *pArray ;
+    double   xr, yr, zr ;
+
+    parms.mri_twm = MRIalloc(mri_inputs->width, mri_inputs->height, mri_inputs->depth, MRI_UCHAR) ;
+    MRIcopyHeader(mri_inputs, parms.mri_twm) ;
+    pArray = MRIreadControlPoints(twm_fname, &nctrl, &useRealRAS);
+    for (count = i = 0 ; i < nctrl ; i++)
+    {
+      switch (useRealRAS)
+      {
+      case 0:
+        MRIsurfaceRASToVoxel(parms.mri_twm,
+                             pArray[i].x, pArray[i].y, pArray[i].z,
+                             &xr, &yr, &zr);
+        break;
+      case 1:
+        MRIworldToVoxel(parms.mri_twm,
+                        pArray[i].x, pArray[i].y, pArray[i].z,
+                        &xr, &yr, &zr) ;
+        break;
+      default:
+        ErrorExit(ERROR_BADPARM,
+                  "MRI3dUseFileControlPoints has bad useRealRAS flag %d\n",
+                  useRealRAS) ;
+      }
+      x = nint(xr) ;
+      y = nint(yr) ;
+      z = nint(zr) ;
+      if (MRIindexNotInVolume(parms.mri_twm, x, y, z) == 0)
+      {
+        GC1D      *gc ;
+        int       lh ;
+
+        if (MRIvox(parms.mri_twm, x, y, z) == 0)
+        {
+          count++ ;
+        }
+        MRIvox(parms.mri_twm, x, y, z) = 1 ;
+        lh = GCAisLeftHemisphere(gca, mri_inputs, transform, x, y, z) ;
+        gc = GCAfindSourceGC(gca, mri_inputs, transform, x, y, z, lh ? Left_Cerebral_White_Matter : Right_Cerebral_White_Matter) ;
+        if (gc)
+        {
+          MRIsetVoxVal(mri_inputs, x, y,z, 0, gc->means[0]) ;
+        }
+        else
+        {
+          MRIsetVoxVal(mri_inputs, x, y,z, 0, 100) ;
+        }
+      }
+      else
+      {
+        bad++ ;
+      }
+    }
+    if (bad > 0)
+    {
+      ErrorPrintf(ERROR_BADFILE, "!!!!! %d control points rejected for being out of bounds !!!!!!\n") ;
+    }
+    printf("%d temporal lobe white matter control points read from file %s\n", count, twm_fname) ;
+  }
+
   /////////////////////////////////////////////////
   // -flash_parms fname option
   if (tissue_parms_fname)   /* use FLASH forward model */
@@ -635,7 +733,8 @@ main(int argc, char *argv[])
       //   TransformInvert(transform_long, mri_inputs) ;
       //   TransformSwapInverse(transform_long) ;
       // }
-      GCAMapplyTransform(gcam, transform_long) ;
+      TransformInvert(transform_long, mri_inputs);
+      GCAMapplyInverseTransform(gcam, transform_long) ;
       TransformFree(&transform_long) ;
       //      GCAMwrite(gcam, "combined_gcam.m3z");
     }
@@ -764,6 +863,33 @@ main(int argc, char *argv[])
     }
   }
   GCAMmarkNegativeNodesInvalid(gcam) ;
+  if (renorm_with_histos)
+  {
+    GCAmapRenormalizeWithHistograms
+    (gcam->gca, mri_inputs, transform,parms.log_fp, parms.base_name,
+     label_scales,label_offsets,label_peaks,label_computed) ;
+    if (parms.write_iterations != 0 && 0)
+    {
+      char fname[STRLEN] ;
+      MRI  *mri_gca, *mri_tmp ;
+      mri_gca = MRIclone(mri_inputs, NULL) ;
+      GCAMbuildMostLikelyVolume(gcam, mri_gca) ;
+      if (mri_gca->nframes > 1)
+      {
+        printf("careg: extracting %dth frame\n", mri_gca->nframes-1) ;
+        mri_tmp = MRIcopyFrame(mri_gca, NULL, mri_gca->nframes-1, 0) ;
+        MRIfree(&mri_gca) ;
+        mri_gca = mri_tmp ;
+      }
+      sprintf(fname, "%s_target_after_histo", parms.base_name) ;
+      MRIwriteImageViews(mri_gca, fname, IMAGE_SIZE) ;
+      sprintf(fname, "%s_target_after_histo.mgz", parms.base_name) ;
+      printf("writing target volume to %s...\n", fname) ;
+      MRIwrite(mri_gca, fname) ;
+      MRIfree(&mri_gca) ;
+    }
+  }
+
 
   ///////////////////////////////////////////////////////////////////
   // -wm option (default = 0)
@@ -904,7 +1030,7 @@ main(int argc, char *argv[])
            parms.log_fp,
            parms.base_name,
            &lta,
-           handle_expanded_ventricles,
+           0,
            label_scales,label_offsets,label_peaks,label_computed) ;
           got_scales = 1;
         }
@@ -914,7 +1040,7 @@ main(int argc, char *argv[])
           // not passing lta
           GCAcomputeRenormalizationWithAlignment
           (gcam->gca, mri_morphed, transform,
-           parms.log_fp, parms.base_name, NULL, handle_expanded_ventricles,
+           parms.log_fp, parms.base_name, NULL, 0,
            label_scales,label_offsets,label_peaks,label_computed) ;
 
           // sequential call gets passed the results from first call
@@ -923,7 +1049,7 @@ main(int argc, char *argv[])
                  "intensity distributions\n");
           GCAseqRenormalizeWithAlignment
           (gcam->gca, mri_morphed, transform,
-           parms.log_fp, parms.base_name, &lta, handle_expanded_ventricles,
+           parms.log_fp, parms.base_name, &lta, 0,
            label_scales,label_offsets,label_peaks,label_computed) ;
           got_scales = 1;
         }
@@ -960,7 +1086,7 @@ main(int argc, char *argv[])
          parms.log_fp,
          parms.base_name,
          &lta,
-         handle_expanded_ventricles,
+         0,
          label_scales,label_offsets,label_peaks,label_computed) ;
         got_scales = 1;
       }
@@ -970,7 +1096,7 @@ main(int argc, char *argv[])
         // not passing lta
         GCAcomputeRenormalizationWithAlignment
         (gcam->gca, mri_inputs, trans,
-         parms.log_fp, parms.base_name, NULL, handle_expanded_ventricles,
+         parms.log_fp, parms.base_name, NULL, 0,
          label_scales,label_offsets,label_peaks,label_computed) ;
 
         // sequential call gets passed the results from first call
@@ -979,7 +1105,7 @@ main(int argc, char *argv[])
                "intensity distributions\n");
         GCAseqRenormalizeWithAlignment
         (gcam->gca, mri_inputs, trans,
-         parms.log_fp, parms.base_name, &lta, handle_expanded_ventricles,
+         parms.log_fp, parms.base_name, &lta, 0,
          label_scales,label_offsets,label_peaks,label_computed) ;
         got_scales = 1;
       }
@@ -1112,6 +1238,27 @@ main(int argc, char *argv[])
 
   //////////////////////////////////////////////////////////////////
   // here is the main work force
+  if (handle_expanded_ventricles)
+  {
+    GCA_MORPH_PARMS old_parms ;
+    int               start_t ;
+
+    memmove(&old_parms, (const void *)&parms, sizeof(old_parms)) ;
+    parms.tol = .01 ;
+    parms.l_label = 0 ;
+    parms.l_smoothness = .1 ;   // defaults to 10 when renormalizing by alignment
+    parms.uncompress = 1 ;
+    parms.ratio_thresh = .25;
+    parms.navgs = 256 ;
+    parms.integration_type = GCAM_INTEGRATE_OPTIMAL ;
+    parms.noneg = 0 ;
+    printf("registering ventricular system...\n") ;
+    GCAMregisterVentricles(gcam, mri_inputs, &parms) ;
+    start_t = parms.start_t ;
+    memmove(&parms, (const void *)&old_parms, sizeof(old_parms)) ;
+    parms.start_t = start_t ;
+  }
+
   GCAMregister(gcam, mri_inputs, &parms) ;
   if (renormalize_align_after)
   {
@@ -1135,7 +1282,7 @@ main(int argc, char *argv[])
     }
 
     // GCA Renormalization with Alignment:
-    // check wether or not this is a sequential call
+    // check whether or not this is a sequential call
     if (!got_scales)
       // this is the first (and also last) call
       // do not bother passing or receiving scales info
@@ -1147,7 +1294,7 @@ main(int argc, char *argv[])
        parms.log_fp,
        parms.base_name,
        NULL,
-       handle_expanded_ventricles) ;
+       0) ;
 
       if (parms.write_iterations != 0)
       {
@@ -1178,7 +1325,7 @@ main(int argc, char *argv[])
        parms.log_fp,
        parms.base_name,
        NULL,
-       handle_expanded_ventricles,
+       0,
        label_scales,label_offsets,label_peaks,label_computed) ;
 
     got_scales = 1;
@@ -1195,10 +1342,17 @@ main(int argc, char *argv[])
       parms.tol /= 5 ;  // reset parameters to previous level
       parms.l_smoothness /= 5 ;
       GCAMregister(gcam, mri_inputs, &parms) ;
+      printf("*********************************************************************************************\n") ;
+      printf("*********************************************************************************************\n") ;
+      printf("*********************************************************************************************\n") ;
+      printf("********************* ALLOWING NEGATIVE NODES IN DEFORMATION ********************************\n") ;
+      printf("*********************************************************************************************\n") ;
+      printf("*********************************************************************************************\n") ;
+      printf("*********************************************************************************************\n") ;
       parms.noneg = 0 ;
       parms.tol = 0.25 ;
       parms.orig_dt = 1e-6 ;
-      parms.navgs = 16 ;
+      parms.navgs = 256 ;
       GCAMregister(gcam, mri_inputs, &parms) ;
     }
   }
@@ -1309,10 +1463,27 @@ get_option(int argc, char *argv[])
     printf("regularizing variance to be sigma+%2.1fC(noise)\n", regularize) ;
     nargs = 1 ;
   }
+  else if (!stricmp(option, "TWM"))
+  {
+    twm_fname = argv[2] ;
+    printf("specifying temporal white matter using control points in %s\n", twm_fname) ;
+    nargs = 1 ;
+  }
   else if (!stricmp(option, "LH"))
   {
     remove_rh = 1  ;
     printf("removing right hemisphere labels\n") ;
+  }
+  else if (!stricmp(option, "FROM_ATLAS"))
+  {
+    parms.diag_morph_from_atlas = 1 ;
+    printf("morphing diagnostics from atlas\n") ;
+  }
+  else if (!stricmp(option, "write_grad"))
+  {
+    gcam_write_grad = 1 ;
+    Gdiag |= DIAG_WRITE ;
+    printf("writing gradients each iteration\n") ;
   }
   else if (!stricmp(option, "RH"))
   {
@@ -1779,6 +1950,17 @@ get_option(int argc, char *argv[])
   else if (!stricmp(option, "invert-and-save"))
   {
     printf("Loading, Inverting, Saving, Exiting ...\n");
+    err = GCAMwriteInverse(argv[2],NULL);
+    exit(err);
+  }
+  else if (!stricmp(option, "histo-norm"))
+  {
+    printf("using prior subject histograms for initial GCA renormalization\n") ;
+    renorm_with_histos = 1 ;
+  }
+  else if (!stricmp(option, ""))
+  {
+    printf("using histogram matching of prior subjects for initial gca renormalization\n") ;
     err = GCAMwriteInverse(argv[2],NULL);
     exit(err);
   }

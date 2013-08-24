@@ -9,9 +9,9 @@
 /*
  * Original Author: Bruce Fischl
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/02 00:04:33 $
- *    $Revision: 1.16 $
+ *    $Author: greve $
+ *    $Date: 2012/09/15 00:53:41 $
+ *    $Revision: 1.16.2.4 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -44,11 +44,13 @@
 #include "macros.h"
 #include "version.h"
 #include "mrishash.h"
+#include "fio.h"
+#include "colortab.h"
 
 
 #define MAX_PARCEL_VERTICES 10000
 static char vcid[] =
-  "$Id: mris_make_face_parcellation.c,v 1.16 2011/03/02 00:04:33 nicks Exp $";
+  "$Id: mris_make_face_parcellation.c,v 1.16.2.4 2012/09/15 00:53:41 greve Exp $";
 
 typedef struct
 {
@@ -158,6 +160,8 @@ static int randomize = 0 ;
 static int  do_vertices =1 ;
 static char *write_corr_fname = NULL ;
 static char *write_annot_fname = NULL ;
+char *ctab_fname = NULL ;
+int InflatedOK = 0;
 
 int
 main(int argc, char *argv[]) {
@@ -166,7 +170,7 @@ main(int argc, char *argv[]) {
   float              scale ;
   MRI_SURFACE        *mris, *mris_ico ;
   float              radius ;
-  int                fno, r, g, b, vno, annot ;
+  int                fno, vno, annot,k ;
   char               cmdline[CMD_LINE_LEN] ;
   double             fdist ;
   FACE               *face ;
@@ -188,16 +192,16 @@ main(int argc, char *argv[]) {
 
   make_cmd_version_string
   (argc, argv,
-   "$Id: mris_make_face_parcellation.c,v 1.16 2011/03/02 00:04:33 nicks Exp $",
-   "$Name: stable5 $", cmdline);
+   "$Id: mris_make_face_parcellation.c,v 1.16.2.4 2012/09/15 00:53:41 greve Exp $",
+   "$Name: release_5_3_0 $", cmdline);
 
   setRandomSeed(1L) ;
 
   /* rkt: check for and handle version tag */
   nargs = handle_version_option
     (argc, argv,
-     "$Id: mris_make_face_parcellation.c,v 1.16 2011/03/02 00:04:33 nicks Exp $",
-     "$Name: stable5 $");
+     "$Id: mris_make_face_parcellation.c,v 1.16.2.4 2012/09/15 00:53:41 greve Exp $",
+     "$Name: release_5_3_0 $");
   if (nargs && argc - nargs == 1)
     exit (0);
   argc -= nargs;
@@ -214,8 +218,7 @@ main(int argc, char *argv[]) {
     argv += nargs ;
   }
 
-  if (argc < 4)
-    print_help() ;
+  if(argc < 4) print_help() ;
 
   in_fname = argv[1] ;
   ico_fname = argv[2] ;
@@ -223,21 +226,27 @@ main(int argc, char *argv[]) {
   FileNamePath(out_fname, path) ;
   FileNameOnly(ico_fname, ico_name) ;
 
+  if(strcmp("lh.inflated",fio_basename(in_fname,NULL))==0 ||
+     strcmp("rh.inflated",fio_basename(in_fname,NULL))==0){
+    if(InflatedOK == 0){
+      printf("ERROR: do not use the inflated surface for this function\n");
+      printf(" You probably want to use sphere or sphere.reg\n");
+      exit(1);
+    }
+    printf("You have selected inflated surface\n");    
+  }
+
+  printf("Reading %s\n",in_fname) ;
   mris = MRISread(in_fname) ;
-  if (!mris)
-    ErrorExit(ERROR_NOFILE, "%s: could not read surface file %s",
-              Progname, in_fname) ;
-  if (MRISreadCanonicalCoordinates(mris,"sphere") != NO_ERROR)
-    ErrorExit(ERROR_BADPARM, "%s: could not read spherical coordinates", Progname) ;
+  if (!mris)  ErrorExit(ERROR_NOFILE, "%s: could not read surface file %s",Progname, in_fname) ;
+  MRISsaveVertexPositions(mris, CANONICAL_VERTICES) ;
   MRISresetNeighborhoodSize(mris, 3) ; // reset current size to 1-nbrs
+
+  printf("Reading %s\n",ico_fname) ;
   mris_ico = MRISread(ico_fname) ;
-  if (!mris_ico)
-    ErrorExit(ERROR_NOFILE, "%s: could not read ico file %s",
-              Progname, ico_fname) ;
-  if (mris_ico->nfaces < 256)
-    scale = 256 / mris_ico->nfaces ;
-  else
-    scale = 1 ;
+  if (!mris_ico) ErrorExit(ERROR_NOFILE, "%s: could not read ico file %s",Progname, ico_fname) ;
+  if (mris_ico->nfaces < 256) scale = 256 / mris_ico->nfaces ;
+  else                        scale = 1 ;
   parms.mris_ico = mris_ico ;
   radius = MRISaverageRadius(mris) ;
   MRISscaleBrain(mris_ico, mris_ico, radius / mris_ico->radius) ;
@@ -343,141 +352,54 @@ main(int argc, char *argv[]) {
   }
 
   MRISaddCommandLine(mris, cmdline) ;
+  printf("parcellating hemisphere into %d units\n", mris_ico->nvertices) ;
 
+  mris->ct = CTABalloc(mris_ico->nvertices) ;
+  // Search an additional 100 times for a unique set of RGBs
+  CTABunique(mris->ct, 100);
+  if(CTABcountRepeats(mris->ct) != 0){
+    printf("ERROR: could not find a unique color table\n");
+    exit(1);
+  }
+  strcpy (mris->ct->fname, ico_fname);
+  for (vno = 0 ; vno < mris_ico->nvertices ; vno++)
+    sprintf (mris->ct->entries[vno]->name, "%s_vertex_%d", ico_name, vno);
+  // Note: there was logic here that attempted to assure that nearby patches did not 
+  // have similar color, but it caused some patches to have the same color, and so
+  // resolve to the same ROI. Now just uses random ctab
+  if(ctab_fname) CTABwriteFileASCII(mris->ct,ctab_fname);
 
-  if (do_vertices)
-  {
-    mris->ct = CTABalloc(mris_ico->nvertices) ;
-    strcpy (mris->ct->fname, ico_fname);
-    printf("parcellating hemisphere into %d units\n", mris_ico->nvertices) ;
-    for (vno = 0 ; vno < mris_ico->nvertices ; vno++)
-    {
-      int f = nint(scale * vno), m ;
-      
-      // don't let the color be too close to 0 by scaling them
-      r = (nint(scale*f) / (256*256)) ;
-      g = (nint(scale*f) / 256) ;
-      b = (nint(scale*f) % 256) ;
-      m = vno % 10 ;
-      
-      // try to avoid having adjacent triangles with similar colors
-      switch (m)
-      {
-      default:
-      case 0: r += 128 ; break ;
-      case 1: g += 128 ; break ;
-      case 2: b += 128 ; break ;
-      case 3: r = 255-r ; break ;
-      case 4: g = 255-g ; break ;
-      case 5: b = 255-b ; break ;
-      case 6: b += 128 ; r = 255-r ; break ;
-      case 7: g += 128 ; b = 255-b ;break ;
-      case 8: g += 128 ; b = 255-b ;break ; r += 128 ;
-      case 9: g += 128 ; b = 255-b ;break ; r = 255-r ;
-      }
-      
-      if (r < 0)
-        r = 0 ;
-      if (g < 0)
-        g = 0 ;
-      if (b < 0)
-        b = 0 ;
-      r = r % 256 ; g = g % 256 ; b = b %256 ;
-      if (r > 255 || g > 255 || b > 255)
-        DiagBreak() ;
-      sprintf (mris->ct->entries[vno]->name, "%s_vertex_%d", ico_name, vno);
-      mris->ct->entries[vno]->ri = r ;
-      mris->ct->entries[vno]->gi = g ;
-      mris->ct->entries[vno]->bi = b ;
-      mris->ct->entries[vno]->ai = 255;
-      
-      /* Now calculate the float versions. */
-      mris->ct->entries[vno]->rf =
-        (float)mris->ct->entries[vno]->ri / 255.0;
-      mris->ct->entries[vno]->gf =
-        (float)mris->ct->entries[vno]->gi / 255.0;
-      mris->ct->entries[vno]->bf =
-        (float)mris->ct->entries[vno]->bi / 255.0;
-      mris->ct->entries[vno]->af =
-        (float)mris->ct->entries[vno]->ai / 255.0;
-    }
-    
+  printf("do_vertices = %d\n",do_vertices);
+  if(do_vertices){
+    int *nhits;
+    nhits = (int*)calloc(mris_ico->nvertices,sizeof(int));
     radius = MRISaverageRadius(mris) ;
     MRISscaleBrain(mris_ico, mris_ico, radius / mris_ico->radius) ;
     MRIScomputeMetricProperties(mris_ico) ;
-    
-    for (vno = 0 ; vno < mris->nvertices ; vno++)
-    {
+    for (vno = 0 ; vno < mris->nvertices ; vno++) {
       if ((((vno % (mris->nvertices/10))) == 0) && DIAG_VERBOSE_ON)
         printf("%2.1f%% done\n", 100.0*(float)vno / mris->nvertices) ;
       v = &mris->vertices[vno] ;
       fno = MRISfindClosestVertex(mris_ico, v->cx, v->cy, v->cz, NULL) ;
-      
       CTABannotationAtIndex(mris->ct, fno, &annot);
       v->annotation = annot ;
       v->marked = fno ;
+      CTABfindAnnotation(mris->ct, annot, &k);
+      nhits[k] ++;
     }
-  }
-  else
-  {
-    mris->ct = CTABalloc(mris_ico->nfaces) ;
-    strcpy (mris->ct->fname, ico_fname);
-    printf("parcellating hemisphere into %d units\n", mris_ico->nfaces) ;
-    for (fno = 0 ; fno < mris_ico->nfaces ; fno++)
-    {
-      int f = nint(scale * fno), m ;
-      
-      // don't let the color be too close to 0 by scaling them
-      r = (nint(scale*f) / (256*256)) ;
-      g = (nint(scale*f) / 256) ;
-      b = (nint(scale*f) % 256) ;
-      m = fno % 10 ;
-      
-      // try to avoid having adjacent triangles with similar colors
-      switch (m)
-      {
-      default:
-      case 0: r += 128 ; break ;
-      case 1: g += 128 ; break ;
-      case 2: b += 128 ; break ;
-      case 3: r = 255-r ; break ;
-      case 4: g = 255-g ; break ;
-      case 5: b = 255-b ; break ;
-      case 6: b += 128 ; r = 255-r ; break ;
-      case 7: g += 128 ; b = 255-b ;break ;
-      case 8: g += 128 ; b = 255-b ;break ; r += 128 ;
-      case 9: g += 128 ; b = 255-b ;break ; r = 255-r ;
+    // Check that all have representation
+    for(k=0; k<mris_ico->nvertices;k++){
+      if(nhits[k] == 0) {
+	v = &(mris_ico->vertices[k]);
+	printf("Parcellation %d is empty\n",k);
+	fflush(stdout);
       }
-      
-      if (r < 0)
-        r = 0 ;
-      if (g < 0)
-        g = 0 ;
-      if (b < 0)
-        b = 0 ;
-      r = r % 256 ; g = g % 256 ; b = b %256 ;
-      if (r > 255 || g > 255 || b > 255)
-        DiagBreak() ;
-      sprintf (mris->ct->entries[fno]->name, "%s_face_%d", ico_name, fno);
-      mris->ct->entries[fno]->ri = r ;
-      mris->ct->entries[fno]->gi = g ;
-      mris->ct->entries[fno]->bi = b ;
-      mris->ct->entries[fno]->ai = 255;
-      
-      /* Now calculate the float versions. */
-      mris->ct->entries[fno]->rf =
-        (float)mris->ct->entries[fno]->ri / 255.0;
-      mris->ct->entries[fno]->gf =
-        (float)mris->ct->entries[fno]->gi / 255.0;
-      mris->ct->entries[fno]->bf =
-        (float)mris->ct->entries[fno]->bi / 255.0;
-      mris->ct->entries[fno]->af =
-        (float)mris->ct->entries[fno]->ai / 255.0;
     }
-    
+    free(nhits);
+  }
+  else{
     mht = MHTfillTableAtResolution(mris_ico, NULL, CURRENT_VERTICES, 1.0);
     //  mht = MHTfillTableAtResolution(mris_ico, NULL, CURRENT_VERTICES, mris_ico->avg_vertex_dist/10);
-    
     for (vno = 0 ; vno < mris->nvertices ; vno++)
     {
       if ((((vno % (mris->nvertices/10))) == 0) && DIAG_VERBOSE_ON)
@@ -560,8 +482,8 @@ get_option(int argc, char *argv[]) {
   char *option ;
 
   option = argv[1] + 1 ;            /* past '-' */
-  if (!stricmp(option, "-help"))
-    print_help() ;
+  if (!stricmp(option, "-help"))      print_help() ;
+  else if (!stricmp(option, "help"))  print_help() ;
   else if (!stricmp(option, "markov")){
     parms.l_markov = atof(argv[2]) ;
     nargs = 1 ;
@@ -606,6 +528,11 @@ get_option(int argc, char *argv[]) {
     nargs = 1 ;
     printf("setting tol to %2.7f\n", parms.tol) ;
   }
+  else if (!stricmp(option, "ctab")){
+    ctab_fname = argv[2];
+    nargs = 1 ;
+    printf("Writing ctab to %s\n",ctab_fname);
+  }
   else if (!stricmp(option, "-version")){
     print_version() ;
   } else switch (toupper(*option)) {
@@ -637,6 +564,11 @@ get_option(int argc, char *argv[]) {
     parms.max_iterations = atof(argv[2]) ;
     nargs = 1 ;
     printf("setting max iterations to %d\n", parms.max_iterations) ;
+    break ;
+  case 'I':
+    nargs = 0 ;
+    InflatedOK = 1;
+    printf("OK to use inflated\n");
     break ;
   case 'R':
     randomize = atof(argv[2]) ;
@@ -677,18 +609,27 @@ get_option(int argc, char *argv[]) {
 
 static void
 print_usage(void) {
-  fprintf(stderr,
-          "usage: %s [options] <input surface> <ico file> <output annot>\n"
-          "example: %s lh.inflated $FREESURFER_HOME/lib/bem/ic3.tri "
-          "./lh.ic3.annot",
+  printf("usage: %s [options] <input surface> <ico file> <output annot>\n\n"
+          "example: %s lh.surf $FREESURFER_HOME/lib/bem/ic3.tri ./lh.ic3.annot\n",
           Progname, Progname) ;
+  printf("  surf should be either:\n");
+  printf("    sphere: units will be approximately equal size within subject but \n"
+	 "            not in correspondence across subjects\n");
+  printf("    sphere.reg: units will be different sizes within subject but \n"
+	 "            in correspondence across subjects\n");
+  printf("  Note: do not use inflated as was suggested by previous versions! \n");
+  printf("  \n");
 }
 
 static void
 print_help(void) {
   print_usage() ;
-  fprintf(stderr,
-    "\nThis generates a parcellation based on which icosahedral face each vertex maps to.\n");
+  printf(
+    "\nThis generates a parcellation based on which icosahedral face each vertex maps to.\n"
+    "Options: \n"
+    "  -ctab colortable.txt\n"
+    "  \n"
+    );
   exit(1) ;
 }
 
@@ -2156,4 +2097,3 @@ write_annot_correlations(MRI_SURFACE *mris, MRI *mri_cmatrix, PARMS *parms, char
   MRIfree(&mri_corr) ;
   return(NO_ERROR) ;
 }
-

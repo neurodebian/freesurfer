@@ -6,9 +6,9 @@
 /*
  * Original Author: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/14 23:44:47 $
- *    $Revision: 1.15 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:31 $
+ *    $Revision: 1.15.2.6 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -27,6 +27,8 @@
 #define Interactor3D_h
 
 #include "Interactor.h"
+
+class SurfaceROI;
 
 class Interactor3D : public Interactor
 {
@@ -54,6 +56,7 @@ protected:
 
   bool m_bWindowLevel;
   bool m_bMoveSlice;
+  SurfaceROI*   m_surfaceROI;
 };
 
 #endif

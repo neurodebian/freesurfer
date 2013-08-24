@@ -8,9 +8,9 @@
 /*
  * Original Author: Bruce Fischl
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/05/02 20:04:25 $
- *    $Revision: 1.55.2.2 $
+ *    $Author: greve $
+ *    $Date: 2012/09/10 18:14:54 $
+ *    $Revision: 1.55.2.6 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -32,8 +32,6 @@
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
-
 
 /*
  * colors for these labels defined in distribution/FreeSurferColorLUT.txt
@@ -114,8 +112,8 @@ extern "C" {
 #define Fifth_Ventricle               72
 #define Left_Interior                 73
 #define Right_Interior                74
-#define Left_Lateral_Ventricles       75
-#define Right_Lateral_Ventricles      76
+//#define Left_Lateral_Ventricles       75
+//#define Right_Lateral_Ventricles      76
 #define WM_hypointensities            77
 #define Left_WM_hypointensities       78
 #define Right_WM_hypointensities      79
@@ -125,8 +123,14 @@ extern "C" {
 #define Left_F1                       83
 #define Right_F1                      84
 #define Optic_Chiasm                  85
+#define Left_future_WMSA              87
+#define Right_future_WMSA             88
+#define future_WMSA                   89
+#define non_WM_hypointensities        80
 #define Left_Amygdala_Anterior        96
 #define Right_Amygdala_Anterior       97
+
+#define IS_FUTURE_WMSA(l) (((l) == Left_future_WMSA) || ((l) == Right_future_WMSA) || ((l) == future_WMSA))
 
 /*
  * no brain labels after this please unless you fix the IS_BRAIN macro
@@ -267,6 +271,43 @@ extern "C" {
 #define left_subiculum 557  //                          0   119 86  0
 #define left_fornix 558  //                             20  100 201 0
 
+#define Tumor       600 //                              253 253 253 0
+
+// Cerebellar parcellation labels from SUIT (matches FreeSurferColorLUT.txt)
+#define Cbm_Left_I_IV     601    // 70  130 180 0
+#define Cbm_Right_I_IV    602    // 245 245 245 0
+#define Cbm_Left_V        603    // 205 62  78  0
+#define Cbm_Right_V       604    // 120 18  134 0
+#define Cbm_Left_VI       605    // 196 58  250 0
+#define Cbm_Vermis_VI     606    // 0   148 0   0
+#define Cbm_Right_VI      607    // 220 248 164 0
+#define Cbm_Left_CrusI    608    // 230 148 34  0
+#define Cbm_Vermis_CrusI  609    // 0   118 14  0
+#define Cbm_Right_CrusI   610    // 0   118 14  0
+#define Cbm_Left_CrusII   611    // 122 186 220 0
+#define Cbm_Vermis_CrusII 612    // 236 13  176 0
+#define Cbm_Right_CrusII  613    // 12  48  255 0
+#define Cbm_Left_VIIb     614    // 204 182 142 0
+#define Cbm_Vermis_VIIb   615    // 42  204 164 0
+#define Cbm_Right_VIIb    616    // 119 159 176 0
+#define Cbm_Left_VIIIa    617    // 220 216 20  0
+#define Cbm_Vermis_VIIIa  618    // 103 255 255 0
+#define Cbm_Right_VIIIa   619    // 80  196 98  0
+#define Cbm_Left_VIIIb    620    // 60  58  210 0
+#define Cbm_Vermis_VIIIb  621    // 60  58  210 0
+#define Cbm_Right_VIIIb   622    // 60  58  210 0
+#define Cbm_Left_IX       623    // 60  58  210 0
+#define Cbm_Vermis_IX     624    // 60  60  60  0
+#define Cbm_Right_IX      625    // 255 165 0   0
+#define Cbm_Left_X        626    // 255 165 0   0
+#define Cbm_Vermis_X      627    // 0   255 127 0
+#define Cbm_Right_X       628    // 165 42  42  0
+
+
+#define SUSPICIOUS 999 //                               255 100 100 0
+
+
+// Tracula labeling
 #define fmajor 5100 //                                  204 102 102 0
 #define fminor 5101 //                                  204 102 102 0
 #define lh_atr 5102 //                                  255 255 102 0
@@ -286,9 +327,6 @@ extern "C" {
 #define rh_slft 5116 //                                 153 255 255 0
 #define rh_unc 5117 //                                  102 153 255 0
 
-#define Tumor       600 //                              253 253 253 0
-#define SUSPICIOUS 999 //                               255 100 100 0
-
 // be sure to update MAX_LABEL if additional labels are added!
 
 #define MAX_LABEL rh_unc
@@ -298,10 +336,11 @@ extern "C" {
 
 #define IS_UNKNOWN(label)  (((label) == Unknown) || (label == 255) || (label == Bright_Unknown) || (label == Dark_Unknown))
 
-#define IS_BRAIN(label)  (!IS_UNKNOWN(label) && label < Dura)
+#define IS_BRAIN(label)  ((!IS_UNKNOWN(label) && label < Dura) || IS_CC(label))
 
 #define IS_WM(label) (((label) == Left_Cerebral_White_Matter) || ((label) == Right_Cerebral_White_Matter) || ((label) == Left_Temporal_Cerebral_White_Matter) || ((label) == Right_Temporal_Cerebral_White_Matter))
-#define IS_HYPO(label) (((label) == WM_hypointensities)  || ((label) == Left_WM_hypointensities)  || ((label) == Right_WM_hypointensities))
+#define IS_HYPO(label) (((label) == WM_hypointensities)  || ((label) == Left_WM_hypointensities)  || ((label) == Right_WM_hypointensities) || IS_FUTURE_WMSA(label))
+#define IS_WMSA(label) IS_HYPO(label)
 #define IS_WMH(label) (IS_WM(label) || IS_HYPO(label))
 #define IS_THALAMUS(label)  (((label) == Left_Thalamus) || ((label) == Left_Thalamus_Proper) || ((label) == Right_Thalamus) || ((label) == Right_Thalamus_Proper))
 #define IS_GM(label) (((label) == Left_Cerebral_Cortex) || ((label) == Right_Cerebral_Cortex))
@@ -312,6 +351,7 @@ extern "C" {
 
 #define IS_HIPPO(l) (((l) == Left_Hippocampus) || ((l) == Right_Hippocampus))
 #define IS_AMYGDALA(l) (((l) == Left_Amygdala) || ((l) == Right_Amygdala))
+#define IS_MTL(l)   (IS_HIPPO(l) || IS_AMYGDALA(l))
 #define IS_CORTEX(l) (((l) == Left_Cerebral_Cortex) || \
                       ((l) == Right_Cerebral_Cortex))
 #define IS_LAT_VENT(l) (((l) == Left_Lateral_Ventricle) || \
@@ -321,6 +361,7 @@ extern "C" {
 #define IS_CSF(l) (IS_LAT_VENT(l) || ((l) == CSF) || ((l) == CSF_SA) || ((l) == Third_Ventricle) || ((l) == Fourth_Ventricle))
 
 #define IS_INF_LAT_VENT(l)  (((l) == Left_Inf_Lat_Vent) || ((l) == Right_Inf_Lat_Vent))
+#define IS_VENTRICLE(l)  (IS_LAT_VENT(l) || IS_INF_LAT_VENT(l) || ((l) == Third_Ventricle) || ((l) == Fourth_Ventricle))
 #define IS_CAUDATE(l) (((l) == Left_Caudate) || ((l) == Right_Caudate))
 #define IS_PUTAMEN(l) (((l) == Left_Putamen) || ((l) == Right_Putamen))
 #define IS_PALLIDUM(l) (((l) == Left_Pallidum) || ((l) == Right_Pallidum))
@@ -396,6 +437,9 @@ char *cma_label_to_name(int label) ;
 int IsSubCorticalGray(int SegId);
 #include "mri.h"
 double SupraTentorialVolCorrection(MRI *aseg, MRI *ribbon);
+double CorticalGMVolCorrection(MRI *aseg, MRI *ribbon, int hemi);
+double *ComputeBrainVolumeStats(char *subject);
+MRI *MRIfixAsegWithRibbon(MRI *aseg, MRI *ribbon, MRI *asegfixed);
 
 #define IS_FIMBRIA(l) ((l) == left_fimbria || (l) == right_fimbria || (l) == fimbria)
 #define CSF_CLASS        0
@@ -484,9 +528,10 @@ double SupraTentorialVolCorrection(MRI *aseg, MRI *ribbon);
 #define IS_CLASS(l,c) (c == CSF_CLASS ? IS_CSF_CLASS(l) : c == GM_CLASS ? IS_GRAY_CLASS(l) : IS_WHITE_CLASS(l))
 
 #include "mrisurf.h"
-int insert_ribbon_into_aseg(MRI *mri_src_aseg, MRI *mri_aseg, 
-                            MRI_SURFACE *mris_white, MRI_SURFACE *mris_pial, 
+int insert_ribbon_into_aseg(MRI *mri_src_aseg, MRI *mri_aseg,
+                            MRI_SURFACE *mris_white, MRI_SURFACE *mris_pial,
                             int hemi) ;
+MRI *MRIlrswapAseg(MRI *aseg);
 
 
 #if defined(__cplusplus)

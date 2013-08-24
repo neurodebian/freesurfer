@@ -10,9 +10,9 @@
  * Original Author: Kevin Teich
  * Reimplemented by: Ruopeng Wang
  * CVS Revision Info:
- *    $Author: nicks $
- *    $Date: 2011/03/14 23:44:47 $
- *    $Revision: 1.4 $
+ *    $Author: zkaufman $
+ *    $Date: 2013/05/03 17:52:32 $
+ *    $Revision: 1.4.2.7 $
  *
  * Copyright © 2011 The General Hospital Corporation (Boston, MA) "MGH"
  *
@@ -78,14 +78,17 @@ public:
 
   enum UpSampleMethod
   {
-    UM_None = 0, UM_NearestNeighbor, UM_BiLinear
+    UM_None = 0, UM_NearestNeighbor, UM_Linear, UM_Cubic
   };
 
   QVariantMap GetSettings();
+  QVariantMap GetActiveSettings();
+  QVariantMap GetFullSettings();
   void CopySettings  ( const LayerPropertyMRI* p );
-  void RestoreSettings(const QVariantMap& map);
+  void RestoreSettings( const QVariantMap& map);
   void RestoreSettings( const QString& filename );
   void SaveSettings   ( const QString& filename );
+  void RestoreFullSettings( const QVariantMap& map );
 
   void SetVolumeSource( FSVolume* source );
 
@@ -291,6 +294,34 @@ public:
     return m_nContourSmoothIterations;
   }
 
+  bool GetShowProjectionMap()
+  {
+    return m_bShowProjectionMap;
+  }
+
+  bool GetRememberFrameSettings()
+  {
+    return m_bRememberFrameSettings;
+  }
+
+  bool GetShowAsLabelContour()
+  {
+    return this->m_bShowAsLabelContour;
+  }
+
+  bool GetContourUpsample()
+  {
+    return this->m_bContourUpsample;
+  }
+
+  void SetActiveFrame(int nFrame);
+
+  void GetLabelContourRange(double* th1, double* th2)
+  {
+    *th1 = m_dLabelContourRange[0];
+    *th2 = m_dLabelContourRange[1];
+  }
+
 public slots:
   void SetOpacity( double opacity );
   void SetUpSampleMethod( int nUpSampleMethod );
@@ -298,6 +329,7 @@ public slots:
   void SetContourSmoothIterations( int nIterations );
   void SetTextureSmoothing ( int iSmooth );
   void SetShowAsContour( bool bContour );
+  void SetShowAsLabelContour(bool bLabelContour);
   void SetClearZero( bool bClear );
   void SetResliceInterpolation ( int iMode );
   void SetWindow( double iWindow );
@@ -312,11 +344,16 @@ public slots:
   void SetHeatScaleTruncate( bool bTruncate );
   void SetHeatScaleInvert( bool bInvert );
   void SetContourUseImageColorMap( bool bFlag );
+  void SetContourUpsample( bool bFlag );
   void SetContourExtractAllRegions( bool bExtractAll );
   void SetContourColor(const QColor& c)
   {
     SetContourColor(c.redF(), c.greenF(), c.blueF());
   }
+  void SetShowProjectionMap(bool bShow);
+  void SetRememberFrameSettings(bool bFlag);
+
+  void SetLabelContourRange(double dmin, double dmax);
 
 signals:
   void ColorMapChanged();
@@ -331,6 +368,7 @@ signals:
   void ContourSmoothIterationChanged( int );
   void LabelOutlineChanged( bool bOutline );
   void UpSampleMethodChanged( int nMethod );
+  void ProjectionMapShown(bool bShown);
 
 private:
 
@@ -381,6 +419,9 @@ private:
   double  mWindowRange[2];
   double  mLevelRange[2];
 
+  bool    m_bRememberFrameSettings;
+  QVariantMap m_frameSettings;
+
   // LUT drawing.
   COLOR_TABLE* mFreeSurferCTAB;
 
@@ -400,13 +441,20 @@ private:
   bool    m_bContourUseImageColorMap;
   bool    m_bContourExtractAll;
   int     m_nContourSmoothIterations;
+  bool    m_bContourUpsample;
+
+  bool    m_bShowAsLabelContour;
+  double  m_dLabelContourRange[2];
 
   bool    m_bShowLabelOutline;
   int     m_nUpSampleMethod;
 
+  bool    m_bShowProjectionMap;
+
   // ---------------------------------------------------------------------
 
   FSVolume*   mSource;
+  int     m_nActiveFrame;
   QString mfnVolume;
   //ETX
 
