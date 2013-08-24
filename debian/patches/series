@@ -33,3 +33,5 @@ kvlfixes
 fix_c++
 fix_trc
 dont_inline_functions
+addbackunwarpgrad
+addbacklut
