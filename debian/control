@@ -24,7 +24,8 @@ Build-Depends: debhelper (>= 7.0.50~), dh-autoreconf,
                libgts-dev, libboost-all-dev, libpetsc3.2-dev,
                libann-dev,
                libfltk1.1-dev,
-               libqt4-dev, libqt4-opengl-dev
+               libqt4-dev, libqt4-opengl-dev,
+               texlive-latex-base, texlive-latex-extra
 Build-Conflicts: libvtk5-dev (<< 5.6), tcl-dev (<< 8.5)
 Standards-Version: 3.9.2
 Homepage: http://surfer.nmr.mgh.harvard.edu/
