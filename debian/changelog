@@ -1,3 +1,9 @@
+freesurfer (5.3+cvs20130513-1~ynicwheezy1) wheezy-devel; urgency=low
+
+  * Initial freesurfer 5.3 build for YNiC.
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Sat, 24 Aug 2013 12:26:34 +0100
+
 freesurfer (5.1.0+dev+cvs20120104+1-1~ynicwheezy1) wheezy-devel; urgency=low
 
   * Rebuild for YNiC wheezy install.
