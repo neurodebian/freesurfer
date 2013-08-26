@@ -35,3 +35,29 @@
    exit(0) ;
    return(0) ;  /* for ansi */
  }
+--- a/mri_add_xform_to_header/mri_add_xform_to_header.c
++++ b/mri_add_xform_to_header/mri_add_xform_to_header.c
+@@ -171,7 +171,7 @@
+     fprintf(stderr, "done.\n") ;
+   }
+ 
+-  MRIfree(&mri) ;
++  //MRIfree(&mri) ;
+   exit(0) ;
+   return(0) ;
+ }
+--- a/mri_mask/mri_mask.c
++++ b/mri_mask/mri_mask.c
+@@ -326,9 +326,9 @@
+   MRIwrite(mri_dst, argv[3]);
+   printf("done.\n") ;
+ 
+-  MRIfree(&mri_src);
+-  MRIfree(&mri_mask);
+-  MRIfree(&mri_dst);
++  //MRIfree(&mri_src);
++  //MRIfree(&mri_mask);
++  //MRIfree(&mri_dst);
+ 
+   exit(0);
+ 
