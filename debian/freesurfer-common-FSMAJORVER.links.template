@@ -1,0 +1,12 @@
+/usr/share/freesurfer-data/ASegStatsLUT.txt /usr/share/freesurfer-FSMAJORVERSION/ASegStatsLUT.txt
+/usr/share/freesurfer-data/data /usr/share/freesurfer-FSMAJORVERSION/data
+/usr/share/freesurfer-data/FreeSurferColorLUT.txt /usr/share/freesurfer-FSMAJORVERSION/FreeSurferColorLUT.txt
+/usr/share/freesurfer-data/fsafd /usr/share/freesurfer-FSMAJORVERSION/fsafd
+/usr/share/freesurfer-data/SegmentNoLUT.txt /usr/share/freesurfer-FSMAJORVERSION/SegmentNoLUT.txt
+/usr/share/freesurfer-data/average /usr/share/freesurfer-FSMAJORVERSION/average
+/usr/share/freesurfer-data/Simple_surface_labels2009.txt /usr/share/freesurfer-FSMAJORVERSION/Simple_surface_labels2009.
+/usr/share/freesurfer-data/subjects /usr/share/freesurfer-FSMAJORVERSION/subjects
+/usr/share/freesurfer-data/diffusion /usr/share/freesurfer-FSMAJORVERSION/diffusion
+/usr/share/freesurfer-data/DefectLUT.txt /usr/share/freesurfer-FSMAJORVERSION/DefectLUT.txt
+/usr/share/freesurfer-data/WMParcStatsLUT.txt /usr/share/freesurfer-FSMAJORVERSION/WMParcStatsLUT.txt
+/usr/share/freesurfer-data/lib/bem /usr/lib/freesurfer-FSMAJORVERSION/lib/bem
