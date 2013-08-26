@@ -1,4 +1,4 @@
-freesurfer (5.1.0+dev+cvs20120104+1-1~ynicwheezy2) UNRELEASED; urgency=low
+freesurfer (5.1.0+dev+cvs20120104+1-1~ynicwheezy2) wheezy-devel; urgency=low
 
   * Change to using freesurfer-data package instead of freesurfer-data-5.1
   * Add links to freesurfer-common-5.1 to link into /usr/share/freesurfer-data
