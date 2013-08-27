@@ -5,8 +5,20 @@ freesurfer-5.3 (5.3+cvs20130513-1~ynicwheezy1) wheezy-devel; urgency=low
     around more easily.
   * Install scuba[2] desktop files with version number to allow
     co-installation of -common packages.
+  * Fix up use of -data and -subjects packages for 5.3 filelists.
 
  -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Sat, 24 Aug 2013 12:26:34 +0100
+
+freesurfer (5.1.0+dev+cvs20120104+1-1~ynicwheezy2) wheezy-devel; urgency=low
+
+  * Change to using freesurfer-data and freesurfer-subjects packages instead
+    of freesurfer-data-5.1
+  * Add links to freesurfer-common-5.1 to link into /usr/share/freesurfer-data
+  * Add more segfault "fixes".
+  * Rename scuba[2] desktop files for now.  TODO: Make these actually work and
+    add freeview.
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Mon, 26 Aug 2013 13:28:27 +0100
 
 freesurfer (5.1.0+dev+cvs20120104+1-1~ynicwheezy1) wheezy-devel; urgency=low
 

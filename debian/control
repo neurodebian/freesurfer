@@ -49,9 +49,12 @@ Description: Freesurfer 5.3 package
 Package: freesurfer-common-5.3
 Architecture: all
 Depends: ${misc:Depends}, tclsh, mni-autoreg-model
+Recommends: freesurfer-data (>= 5.3), freesurfer-subjects
 Description: Common data files for Freesurfer
  This package contains architecture independent data files of the
  Freesurfer 5.3 software.
+ This recommends freesurfer-data and freesurfer-subjects as the templates are
+ needed by many, but not all of the freesurfer tools.
 
 Package: freesurfer-fsfast-5.3
 Section: contrib/science
