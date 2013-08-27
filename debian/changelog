@@ -1,3 +1,9 @@
+freesurfer (5.1.0+dev+cvs20120104+1-1~ynicwheezy3) wheezy-devel; urgency=low
+
+  * Fix -common install paths.
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Tue, 27 Aug 2013 19:52:25 +0100
+
 freesurfer (5.1.0+dev+cvs20120104+1-1~ynicwheezy2) wheezy-devel; urgency=low
 
   * Change to using freesurfer-data and freesurfer-subjects packages instead
