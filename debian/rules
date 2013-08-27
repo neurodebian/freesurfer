@@ -20,6 +20,7 @@ override_dh_auto_configure:
 		--with-vxl-include=/usr \
 		--with-tcl-include=/usr/include/tcl8.5 \
 		--enable-tcltk-apps \
+		--with-tixwish=/usr/bin/wish \
 		--disable-static \
 		--with-gnu-ld \
 		--with-nifti-dir=/usr \

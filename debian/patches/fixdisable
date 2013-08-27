@@ -1,0 +1,12 @@
+--- a/configure.in
++++ b/configure.in
+@@ -1788,6 +1788,9 @@
+   tcltk_apps="NO"
+ fi
+ 
++# Stupid local hack until we figure out why the tcl/tk apps enable option isn't working
++tcltk_apps="yes"
++
+ if test "$tcltk_apps" = "yes"; then
+   AC_MSG_RESULT([Enabled building of Tcl/Tk apps.])
+   # enable testing for OpenGL libs:
