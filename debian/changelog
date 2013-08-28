@@ -1,3 +1,10 @@
+freesurfer-5.3 (5.3+cvs20130513-1~ynicwheezy2) UNRELEASED; urgency=low
+
+  * Merge libraries into a single lib.
+  * Fix missing stubs.
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Wed, 28 Aug 2013 10:37:38 +0100
+
 freesurfer-5.3 (5.3+cvs20130513-1~ynicwheezy1) wheezy-devel; urgency=low
 
   * Initial freesurfer 5.3 build for YNiC.
