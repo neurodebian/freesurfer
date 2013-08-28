@@ -1,0 +1,14 @@
+--- a/hipsstubs/hipsstubs.c
++++ b/hipsstubs/hipsstubs.c
+@@ -56,6 +56,11 @@
+   ErrorExit(ERROR_UNSUPPORTED, "HIPS unsupported") ;
+   return(-1);
+ }
++int h_morphdil(void) ;
++int h_morphdil(void){
++  ErrorExit(ERROR_UNSUPPORTED, "HIPS unsupported") ;
++  return(-1);
++}
+ int h_enlarge(void) ;
+ int h_enlarge(void) {
+   ErrorExit(ERROR_UNSUPPORTED, "HIPS unsupported") ;

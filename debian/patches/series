@@ -40,3 +40,5 @@ ignoregeodesic
 fixscuba2tcllink
 allowtcl8.5
 fixdisable
+singlelib
+morphdil
