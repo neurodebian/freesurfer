@@ -31,7 +31,7 @@ Vcs-Git: git://git.debian.org/git/pkg-exppsy/freesurfer.git
 Package: freesurfer
 Architecture: all
 Depends: ${misc:Depends}, freesurfer-5.1
-Description: Metapackage for the latest version of Freesurfer
+Description: analysis and visualization of functional brain imaging data
  FreeSurfer is a set of tools for analysis and visualization of
  structural and functional brain imaging data. It contains a fully
  automatic structural stream for processing cross sectional and

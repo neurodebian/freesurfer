@@ -10,7 +10,7 @@ freesurfer (5.1.0+dev+cvs20120104-1) UNRELEASED; urgency=low
     - remove sourceless ./talairach_avi/RLB700_preprocessing_statistics.pdf
 
   [ Andreas Tille ]
-  * Take over way more explicite long description from Debian Science task
+  * Take over way more explicite description from Debian Science task
     file neuroscience-cognitive
 
  -- Yaroslav Halchenko <debian@onerussian.com>  Tue, 12 Feb 2013 12:38:30 -0500
