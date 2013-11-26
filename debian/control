@@ -32,6 +32,20 @@ Package: freesurfer
 Architecture: all
 Depends: ${misc:Depends}, freesurfer-5.1
 Description: Metapackage for the latest version of Freesurfer
+ FreeSurfer is a set of tools for analysis and visualization of
+ structural and functional brain imaging data. It contains a fully
+ automatic structural stream for processing cross sectional and
+ longitudinal data.
+ .
+ FreeSurfer provides many anatomical analysis tools, including:
+ representation of the cortical surface between white and gray matter,
+ representation of the pial surface, segmentation of white matter from
+ the rest of the brain, skull stripping, B1 bias field correction,
+ nonlinear registration of the cortical surface of an individual with
+ an sterotaxic atlas, labeling of regions of the cortical surface,
+ statistical analysis of group morphometry differences, and labeling of
+ subcortical brain structures, etc.
+ .
  This package depends upon the latest version of freesurfer.
 
 Package: freesurfer-5.1

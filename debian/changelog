@@ -1,5 +1,6 @@
 freesurfer (5.1.0+dev+cvs20120104-1) UNRELEASED; urgency=low
 
+  [ Yaroslav Halchenko ]
   * debian/patches:
     - removed upstreamfixup patch (files seems to be present)
   * debian/repack.sh:
@@ -7,6 +8,10 @@ freesurfer (5.1.0+dev+cvs20120104-1) UNRELEASED; urgency=low
     - keep .rec and .ifh files (satellite of .img and .4dfp files)
       in -data as well
     - remove sourceless ./talairach_avi/RLB700_preprocessing_statistics.pdf
+
+  [ Andreas Tille ]
+  * Take over way more explicite long description from Debian Science task
+    file neuroscience-cognitive
 
  -- Yaroslav Halchenko <debian@onerussian.com>  Tue, 12 Feb 2013 12:38:30 -0500
 
