@@ -67,6 +67,8 @@ rm dev/INSTALL
 rm dev/config/*
 rm dev/qdec/qdec-boad-wink.wnk
 rm dev/fsfast/docs/MGH-NMR-StdProc-Handbook.doc
+# some non-free stuff
+rm -rf dev/gradient_nonlin_unwarp
 # docs with no sources
 rm -rf dev/docs ./talairach_avi/RLB700_preprocessing_statistics.pdf
 # generated wrappers
