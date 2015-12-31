@@ -13,6 +13,7 @@ freesurfer (5.1.0+dev+cvs20120104-1) UNRELEASED; urgency=low
   * Take over way more explicite description from Debian Science task
     file neuroscience-cognitive
   * Move debian/upstream to debian/upstream/metadata
+  * Take over Registration field from tasks file to upstream metadata
 
  -- Yaroslav Halchenko <debian@onerussian.com>  Tue, 12 Feb 2013 12:38:30 -0500
 
