@@ -86,8 +86,8 @@ install-exec-hook:qdec
 	/usr/pubsw/bin/chrpath -d $(DESTDIR)$(bindir)/qdec.bin; fi
 
 install-data-local:
-	test -z $(foodir) || $(mkdir_p) $(foodir)
-		$(INSTALL_DATA) $(foo_datafiles) $(foodir)
+	test -z $(DESTDIR)$(foodir) || $(mkdir_p) $(DESTDIR)$(foodir)
+		$(INSTALL_DATA) $(foo_datafiles) $(DESTDIR)$(foodir)
 
 uninstall-hook:
 	rm -f $(DESTDIR)$(bindir)/qdec.bin
@@ -147,8 +147,8 @@ install-exec-hook:
 	/usr/pubsw/bin/chrpath -d $(DESTDIR)$(bindir)/qdec.bin; fi
 
 install-data-local:
-	test -z $(foodir) || $(mkdir_p) $(foodir)
-		$(INSTALL_DATA) $(foo_datafiles) $(foodir)
+	test -z $(DESTDIR)$(foodir) || $(mkdir_p) $(DESTDIR)$(foodir)
+		$(INSTALL_DATA) $(foo_datafiles) $(DESTDIR)$(foodir)
 
 uninstall-hook:
 	rm -f $(DESTDIR)$(bindir)/qdec.bin
