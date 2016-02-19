@@ -2,7 +2,7 @@
 # Makefile.am
 #
 
-foodir=$(prefix)/data/GEMS
+foodir=$(DESTDIR)$(prefix)/data/GEMS
 
 foo_datafiles=\
 CurrentMeshCollection30.gz \

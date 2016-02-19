@@ -1,4 +1,4 @@
-foodir=$(prefix)/lib/images
+foodir=$(DESTDIR)$(prefix)/lib/images
 
 foo_datafiles=qdec_splash.png
 
@@ -46,7 +46,7 @@ qdec_LDADD=  \
 	$(KWWIDGETS_LIBS) -lKWWidgets
 qdec_LDFLAGS=$(OS_LDFLAGS) $(LDFLAGS_TCL)
 
-qdecdir=$(prefix)/lib/resource
+qdecdir=$(DESTDIR)$(prefix)/lib/resource
 qdec_DATA=QdecIcons.txt
 
 vtkKWQdecAppTcl.cxx: vtkKWQdecApp.h
@@ -123,7 +123,7 @@ endif
 # Copy over precompiled 32-bit versions until we get 64-bit builds working.
 if INSTALL_MAC32_GUIS
 
-qdecdir=$(prefix)/lib/resource
+qdecdir=$(DESTDIR)$(prefix)/lib/resource
 qdec_DATA=QdecIcons.txt
 
 install-exec-hook:

@@ -2,7 +2,7 @@
 # Makefile.am
 #
 
-foodir=$(prefix)/average/Buckner_JNeurophysiol11_MNI152
+foodir=$(DESTDIR)$(prefix)/average/Buckner_JNeurophysiol11_MNI152
 
 foo_datafiles=Buckner2011_17Networks_ColorLUT.txt \
 Buckner2011_17NetworksConfidence_MNI152_FreeSurferConformed1mm_LooseMask.nii.gz \

@@ -2,7 +2,7 @@
 # Makefile.am for HippoSF (hippocampal subfield segmentation tools)
 #
 
-foodir=$(prefix)/average/HippoSF/atlas
+foodir=$(DESTDIR)$(prefix)/average/HippoSF/atlas
 foo_datafiles=AtlasDump.mgz AtlasMesh.gz compressionLookupTable.txt
 
 if HAVE_MAC_OSX

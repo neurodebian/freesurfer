@@ -4,7 +4,7 @@
 
 SUBDIRS=
 
-foodir=$(prefix)/fsafd
+foodir=$(DESTDIR)$(prefix)/fsafd
 
 foo_datafiles=TalairachingCovariance.adf \
 	TalairachingMean.adf \

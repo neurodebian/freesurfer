@@ -2,7 +2,7 @@
 # Makefile.am
 # 
 
-foodir=$(prefix)/lib/images
+foodir=$(DESTDIR)$(prefix)/lib/images
 
 GIF=\
 	icon_analysis_open.gif \

@@ -2,7 +2,7 @@
 # Makefile.am
 #
 
-foodir=$(prefix)/average/Choi_JNeurophysiol12_MNI152
+foodir=$(DESTDIR)$(prefix)/average/Choi_JNeurophysiol12_MNI152
 
 foo_datafiles=Choi2012_17Networks_ColorLUT.txt \
 Choi2012_17NetworksConfidence_MNI152_FreeSurferConformed1mm_LooseMask.nii.gz \

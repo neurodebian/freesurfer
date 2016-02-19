@@ -58,7 +58,7 @@ orient_mri_LDADD= \
 	$(KWWIDGETS_LIBS) -lKWWidgets
 orient_mri_LDFLAGS=$(OS_LDFLAGS) $(LDFLAGS_TCL)
 
-orient_mridir=$(prefix)/lib/resource
+orient_mridir=$(DESTDIR)$(prefix)/lib/resource
 orient_mri_DATA=OrientMRIIcons.txt
 
 vtkKWOrientMRIAppTcl.cxx: vtkKWOrientMRIApp.h

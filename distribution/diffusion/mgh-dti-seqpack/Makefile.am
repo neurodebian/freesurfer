@@ -2,7 +2,7 @@
 # Makefile.am
 #
 
-foodir=$(prefix)/diffusion/mgh-dti-seqpack
+foodir=$(DESTDIR)$(prefix)/diffusion/mgh-dti-seqpack
 foo_DATA=README \
 	gradient_mgh_dti6.gdt   gradient_mgh_dti12.gdt \
 	gradient_mgh_dti13.gdt  gradient_mgh_dti57.gdt \

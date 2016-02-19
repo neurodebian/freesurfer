@@ -11,7 +11,7 @@ dist_bin_SCRIPTS = \
 # repository, and thus may not be present at compile time.
 #
 
-foodir=$(prefix)/bin
+foodir=$(DESTDIR)$(prefix)/bin
 
 foo_binaryfiles = \
 	SegmentSubject.bin

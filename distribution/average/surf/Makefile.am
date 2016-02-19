@@ -2,7 +2,7 @@
 # Makefile.am
 #
 
-foodir=$(prefix)/average/surf
+foodir=$(DESTDIR)$(prefix)/average/surf
 
 foo_datafiles=README lh.sphere.reg rh.sphere.reg \
 lh.sphere.ico0.reg  lh.sphere.ico4.reg  rh.sphere.ico0.reg  rh.sphere.ico4.reg \

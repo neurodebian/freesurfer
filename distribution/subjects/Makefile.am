@@ -2,7 +2,7 @@
 # Makefile.am
 #
 
-foodir=$(prefix)/subjects
+foodir=$(DESTDIR)$(prefix)/subjects
 foo_datafiles=README sample-001.mgz sample-002.mgz
 
 install-data-local:

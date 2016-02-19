@@ -2,7 +2,7 @@
 # Makefile.am
 #
 
-foodir=$(prefix)/average/Yeo_JNeurophysiol11_MNI152
+foodir=$(DESTDIR)$(prefix)/average/Yeo_JNeurophysiol11_MNI152
 
 foo_datafiles=Yeo_JNeurophysiol11_MNI152_README FSL_MNI152_FreeSurferConformed_1mm.nii.gz \
 Yeo2011_17Networks_ColorLUT.txt Yeo2011_17Networks_MNI152_FreeSurferConformed1mm_LiberalMask.nii.gz \

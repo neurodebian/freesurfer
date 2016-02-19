@@ -116,7 +116,7 @@ scuba_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) \
 	$(LIBTIFF) $(LIBS_TCL_OPENGL) $(X_LIBS) -lX11 -lXmu -lGL
 scuba_LDFLAGS=$(AM_LDFLAGS)
 
-foodir=$(prefix)/lib/tcl
+foodir=$(DESTDIR)$(prefix)/lib/tcl
 foo_SCRIPTS=\
 	histolabel.tcl \
 	scuba_glut.tcl \

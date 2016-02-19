@@ -6,7 +6,7 @@ SUBDIRS=surf \
 	Buckner_JNeurophysiol11_MNI152 \
 	Choi_JNeurophysiol12_MNI152
 
-foodir=$(prefix)/average
+foodir=$(DESTDIR)$(prefix)/average
 
 GCA=\
 	face.gca \

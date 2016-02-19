@@ -88,7 +88,7 @@ scuba2_LDADD=  \
 	$(KWWIDGETS_LIBS) -lKWWidgets
 scuba2_LDFLAGS=$(OS_LDFLAGS) $(LDFLAGS_TCL)
 
-scuba2dir=$(prefix)/lib/resource
+scuba2dir=$(DESTDIR)$(prefix)/lib/resource
 scuba2_DATA=ScubaIcons.txt
 
 vtkKWScubaAppTcl.cxx: vtkKWScubaApp.h

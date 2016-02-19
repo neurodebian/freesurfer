@@ -10,7 +10,7 @@
 # files are committed.  so this means that if the tex files change, 
 # someone must manually delete the pdfs then run make.   
 
-foodir=$(prefix)/fsfast/docs
+foodir=$(DESTDIR)$(prefix)/fsfast/docs
 # cannot specify *, since Makefile etc will be copied
 TEXFILES=\
 	bert-functional.howto.tex\

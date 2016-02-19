@@ -12,7 +12,7 @@ dist_bin_SCRIPTS = \
 # repository, and thus may not be present at compile time.
 #
 
-foodir=$(prefix)/bin
+foodir=$(DESTDIR)$(prefix)/bin
 
 install-data-local:
 	cp -RL segmentSubject.app $(foodir)

@@ -2,7 +2,7 @@
 # Makefile.am for BrainstemSS (brainstem substructure segmentation tools)
 #
 
-foodir=$(prefix)/average/BrainstemSS/atlas
+foodir=$(DESTDIR)$(prefix)/average/BrainstemSS/atlas
 foo_datafiles=AtlasDump.mgz AtlasMesh.gz compressionLookupTable.txt
 
 if HAVE_MAC_OSX

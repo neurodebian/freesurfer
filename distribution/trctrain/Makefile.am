@@ -2,7 +2,7 @@
 # Makefile.am
 #
 
-foodir=$(prefix)/trctrain
+foodir=$(DESTDIR)$(prefix)/trctrain
 
 install: trctraindata.tar.gz
 	rm -Rf $(DESTDIR)$(prefix)/trctrain
