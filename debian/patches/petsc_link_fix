@@ -1,6 +1,6 @@
 --- a/configure.in
 +++ b/configure.in
-@@ -1461,7 +1461,7 @@
+@@ -1543,7 +1543,7 @@ ac_petsc_includes="NO"
  ac_petsc_libraries="NO"
  ac_petsc_bindir="NO"
  ac_petsc_dir="NO"
@@ -9,7 +9,7 @@
  PETSC_LIBS=""
  PETSC_LIB=""
  PETSC_DIR=""
-@@ -3002,7 +3002,7 @@
+@@ -3180,7 +3180,7 @@ if test ! "x$ac_petsc_dir" = "xNO"; then
    else
      PMPICH=
    fi

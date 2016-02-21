@@ -1,24 +1,66 @@
-relocate_license_file
-dump_ancient_libtoolm4
-qt_build_compat
-datapkg_split
-remove_3rdparty_code
-dont_build_3rdparty
+#
+# ##? disabled for a long run for the sloppy package -- we are doing
+#    close to upstream building
+# #? disabled for the short run and might be brought in even for a
+#   sloppy one
+# #u - next patch to be sent upstream
+# #- - remove since upstream seems to deal with it nicely?
+
+#? relocate_license_file
+
+##? dump_ancient_libtoolm4
+
+##? qt_build_compat
+
+#? datapkg_split
+#? fix_flirtsch_location
+
+##? remove_3rdparty_code
+
+##? dont_build_3rdparty
+
+#u
 exhaustive_clean
-use_f2c_not_g2c
-internal_shared_libs
-fixgtsdetection
-install_path_mri_cvs_register
-missing_shared_libs
-deb_no_tktools
-fix_install_destdir
+
+#- use_f2c_not_g2c
+
+#   Internal libs patches to be started afresh in smaller steps
+#
+##? internal_shared_libs
+#  to be fixed -- takes care about placing code into shared lib while having main()s as well
+#? femelasticbotch
+#? missing_shared_libs
+
+
+#? fixgtsdetection
+
+#  Following should be fine with DESTDIR patch
+#- install_path_mri_cvs_register
+
+#  probably to be taken since we would need to clean out non-free portion
+#? deb_no_tktools
+
+#  oops -- I should have recalled having this one!
+#u fix_install_destdir
+
+#u?
 mris_decimate_gui_wx2.8
-petsc_link_fix
-femelasticbotch
+
+#? petsc_link_fix
+
+
+#  might be desired for upstream
+#u?
 petscupdate
+
+#u
 renamehsizet
-fixanndetection
-dynamicfltk
-no_morph_utils_warning
-prevent_segfaults
-fix_flirtsch_location
+
+#? fixanndetection
+#? dynamicfltk
+
+#  not clear why this one was needed besides silencing a useful warning
+## no_morph_utils_warning
+
+#  didn't check if needed still, may be no longer
+##u- prevent_segfaults

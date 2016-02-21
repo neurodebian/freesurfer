@@ -2,9 +2,9 @@ From: Michael Hanke <mih@debian.org>
 Subject: Let clean do it properly
 --- a/GEMS/Makefile.am
 +++ b/GEMS/Makefile.am
-@@ -906,6 +906,9 @@
- endif
- endif
+@@ -920,6 +920,9 @@ clean-local:
+ 	rm -f kvlAtlasMeshViewingConsoleGUI.cxx kvlImageThresholdingConsoleGUI.cxx \
+ 	kvlImageViewingConsoleGUI.cxx kvlSegmentationEvaluationConsoleGUI.cxx
  
 +clean-local:
 +	-rm kvlImageThresholdingConsoleGUI.h kvlImageViewingConsoleGUI.h
@@ -14,7 +14,7 @@ Subject: Let clean do it properly
  # release' target.
 --- a/orient_mri/Makefile.am
 +++ b/orient_mri/Makefile.am
-@@ -159,3 +159,8 @@
+@@ -163,3 +163,8 @@ vtkOrientMRIInteractorStyleView3D.h
  # release' target.
  EXCLUDE_FILES=
  include $(top_srcdir)/Makefile.extra
@@ -25,7 +25,7 @@ Subject: Let clean do it properly
 +
 --- a/qdec/Makefile.am
 +++ b/qdec/Makefile.am
-@@ -88,6 +88,9 @@
+@@ -92,6 +92,9 @@ install-data-local:
  uninstall-hook:
  	rm -f $(DESTDIR)$(bindir)/qdec.bin
  
@@ -37,7 +37,7 @@ Subject: Let clean do it properly
  
 --- a/scuba2/Makefile.am
 +++ b/scuba2/Makefile.am
-@@ -223,6 +223,9 @@
+@@ -223,6 +223,9 @@ install-exec-hook:scuba2
  uninstall-hook:
  	rm -f $(DESTDIR)$(bindir)/scuba2.bin
  
@@ -49,7 +49,7 @@ Subject: Let clean do it properly
  
 --- a/vtkutils/Makefile.am
 +++ b/vtkutils/Makefile.am
-@@ -183,3 +183,6 @@
+@@ -189,3 +189,6 @@ IconLoaderTest.cxx IconLoaderTestIcons.t
  # release' target.
  EXCLUDE_FILES=
  include $(top_srcdir)/Makefile.extra

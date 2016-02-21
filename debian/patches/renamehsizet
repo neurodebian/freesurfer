@@ -11,7 +11,7 @@ Subject: hsize_t is used by some MPI libraries so rename freesurfer version
          image in bytes */
  #ifdef AIX
  #define HPUXORAIX
-@@ -111,7 +111,7 @@
+@@ -111,7 +111,7 @@ struct hips_histo
  {
    int nbins;
    int *histo;
@@ -20,7 +20,7 @@ Subject: hsize_t is used by some MPI libraries so rename freesurfer version
    h_boolean histodealloc;
    int pixel_format;
    Pixelval minbin;
-@@ -210,7 +210,7 @@
+@@ -210,7 +210,7 @@ struct hips_filter
  char *strsave(),*memalloc(),*formatheader(),*formatheadera();
  char *formatheaderc(),*hformatname(),*hformatname_f(),*hformatname_t();
  byte *halloc(),*hmalloc();
@@ -31,7 +31,7 @@ Subject: hsize_t is used by some MPI libraries so rename freesurfer version
  /* h_boolean getline(),swallownl(),hfgets(); */
 --- a/include/hips_header.h
 +++ b/include/hips_header.h
-@@ -62,8 +62,8 @@
+@@ -62,8 +62,8 @@ struct header
    int pixel_format; /* The format of each pixel */
    int numcolor; /* The number of color frames per image */
    int numpix;  /* The number of pixels per stored frame */
@@ -55,7 +55,7 @@ Subject: hsize_t is used by some MPI libraries so rename freesurfer version
  #endif
 --- a/utils/image.c
 +++ b/utils/image.c
-@@ -122,7 +122,7 @@
+@@ -122,7 +122,7 @@ ImageAllocBuffer(IMAGE *I)
    int fcb,cb;
    long  npix ;
  
@@ -64,7 +64,7 @@ Subject: hsize_t is used by some MPI libraries so rename freesurfer version
    {
      I->imdealloc = (h_boolean) FALSE; /*dng*/
      return(NO_ERROR);
-@@ -2425,7 +2425,7 @@
+@@ -2427,7 +2427,7 @@ IMAGE *
  ImageMulScale(IMAGE *Isrc, IMAGE *Idst, Pixelval *p)
  {
    int    ecode;
@@ -73,7 +73,7 @@ Subject: hsize_t is used by some MPI libraries so rename freesurfer version
    float  real, imag, sreal, simag ;
    CPIX   *csrc, *cdst ;
  
-@@ -2466,7 +2466,7 @@
+@@ -2468,7 +2468,7 @@ ImageMulScale(IMAGE *Isrc, IMAGE *Idst,
  IMAGE *
  ImageAddScalar(IMAGE *Isrc, IMAGE *Idst, float scalar)
  {
@@ -82,7 +82,7 @@ Subject: hsize_t is used by some MPI libraries so rename freesurfer version
    float  *fpix ;
  
    if (!Idst)
-@@ -2476,7 +2476,7 @@
+@@ -2478,7 +2478,7 @@ ImageAddScalar(IMAGE *Isrc, IMAGE *Idst,
    switch (Isrc->pixel_format)
    {
    case PFFLOAT:
@@ -91,7 +91,7 @@ Subject: hsize_t is used by some MPI libraries so rename freesurfer version
      fpix = IMAGEFpix(Isrc, 0, 0) ;
      while (size--)
        *fpix++ += scalar ;
-@@ -2500,7 +2500,7 @@
+@@ -2502,7 +2502,7 @@ ImageReplace(IMAGE *Isrc, IMAGE *Idst, f
  {
    float  *fin, *fout ;
    byte   *cin, *cout, cinpix, coutpix ;
@@ -100,7 +100,7 @@ Subject: hsize_t is used by some MPI libraries so rename freesurfer version
  
    if (!Idst)
      Idst = ImageAlloc(Isrc->rows,Isrc->cols,Isrc->pixel_format,Isrc->num_frame);
-@@ -2508,7 +2508,7 @@
+@@ -2510,7 +2510,7 @@ ImageReplace(IMAGE *Isrc, IMAGE *Idst, f
    if (Idst->pixel_format != Isrc->pixel_format)
      ErrorReturn(NULL, (ERROR_BADPARM, "ImageReplace: src and dst formats must match")) ;
  
