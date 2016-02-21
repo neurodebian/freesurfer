@@ -1,4 +1,4 @@
-freesurfer-sloppy (6.0.0~a+git5636-ga9470f2-1~ndall+0) UNRELEASED; urgency=medium
+freesurfer-sloppy (5.999.0+20160221+git5636-ga9470f2-1~ndall+0) UNRELEASED; urgency=medium
 
   * Trying to reincarnate packaging while staying close to upstream
     build procedure and reusing their prebuilt binaries for now (thus -sloppy)
@@ -6,7 +6,7 @@ freesurfer-sloppy (6.0.0~a+git5636-ga9470f2-1~ndall+0) UNRELEASED; urgency=mediu
     - for now only patches intended for upstreaming, annotate the others
       and some of thos got refreshed
 
- --
+ -- Yaroslav Halchenko <debian@onerussian.com>  Sun, 21 Feb 2016 18:29:01 -0500
 
 freesurfer (5.1.0+dev+cvs20120104-1) UNRELEASED; urgency=low
 

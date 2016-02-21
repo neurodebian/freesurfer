@@ -30,7 +30,7 @@ Subject: Let clean do it properly
  	rm -f $(DESTDIR)$(bindir)/qdec.bin
  
 +clean-local:
-+	-rm *Tcl.cxx
++	-rm *Tcl.cxx QdecLibInit.cxx
 +
  else
  bin_PROGRAMS = 

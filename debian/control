@@ -51,7 +51,9 @@ Description: analysis and visualization of functional brain imaging data
  -sloppy is a package which largely reuses provided by upstream binaries,
  and stays very close with upstream build procedures.  5.999.0 version is
  to signal that it is not even yet alpha of upcoming 6.0 release.  .0
- suffix reserved for internal "releases"
+ suffix reserved for internal "releases".  Although remaining -sloppy it
+ maintains the modularity (-common, -fsfast, -matlab) of to be eventually
+ produced "proper" Debian package
 
 Package: freesurfer-sloppy-5.999.0
 Architecture: any

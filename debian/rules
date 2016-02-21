@@ -51,24 +51,24 @@ override_dh_auto_configure:
 #		CFLAGS="-I/usr/include/libxml2 -I/usr/include/GL" \
 #		LDFLAGS="-Wl,--allow-shlib-undefined"
 
-#override_dh_auto_build:
+override_dh_auto_build:
 #	# create fake data files that are part of the upstream source tree, but
 #	# come in a separate Debian package for space efficiency
 #	grep 'GEMS/data*' freesurfer-data.md5sums |cut -d ' ' -f 3,3| xargs touch
 #	grep 'talairach_avi/*' freesurfer-data.md5sums |cut -d ' ' -f 3,3 |xargs touch
 #
-#	# Set up files which require modifying for FSMAJORVERSION
-#	for tmpl in debian/*template; do \
-#		ofile=$$(basename $$tmpl); \
-#		if [ "$${ofile%*FSMAJORVER*}" = "$$ofile" ]; then \
-#			sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" $${tmpl} > debian/$${ofile%*.template}; \
-#		else \
-#			ofile=$${ofile/FSMAJORVER/$(FSMAJORVERSION)}; \
-#			sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" $${tmpl} > debian/$${ofile%*.template}; \
-#		fi; \
-#	done
-#
-#	dh_auto_build
+	: # Set up files which require modifying for FSMAJORVERSION
+	for tmpl in debian/*template; do \
+		ofile=$$(basename $$tmpl); \
+		if [ "$${ofile%*FSMAJORVER*}" = "$$ofile" ]; then \
+			sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" $${tmpl} > debian/$${ofile%*.template}; \
+		else \
+			ofile=$${ofile/FSMAJORVER/$(FSMAJORVERSION)}; \
+			sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" $${tmpl} > debian/$${ofile%*.template}; \
+		fi; \
+	done
+
+	dh_auto_build
 
 override_dh_auto_install:
 	dh_auto_install
@@ -114,7 +114,7 @@ override_dh_auto_clean:
 #	# remove files which upstream doesn't and which otherwise upset 3.0 (quilt)
 #	-rm -f GEMS/kvlAtlasMeshViewingConsoleGUI.h
 #	-rm -f GEMS/kvlSegmentationEvaluationConsoleGUI.h
-	# Remove files generated using FSMAJORVERSION
+	: # Remove files generated using FSMAJORVERSION
 	for tmpl in debian/*template; do \
 		tmpl=$${tmpl%*.template}; \
 		rm -f $${tmpl/FSMAJORVER/$(FSMAJORVERSION)}; \
