@@ -1,0 +1,41 @@
+--- a/fem_elastic/solver.h
++++ b/fem_elastic/solver.h
+@@ -658,9 +658,9 @@
+   CHKERRQ(ierr);
+   ierr = MatSetFromOptions(m_stiffness);
+   CHKERRQ(ierr);
+-  ierr = MatSetOption(m_stiffness, MAT_SYMMETRIC);
++  ierr = MatSetOption(m_stiffness, MAT_SYMMETRIC, PETSC_TRUE);
+   CHKERRQ(ierr);
+-  ierr = MatSetOption(m_stiffness, MAT_SYMMETRY_ETERNAL);
++  ierr = MatSetOption(m_stiffness, MAT_SYMMETRY_ETERNAL, PETSC_TRUE);
+   CHKERRQ(ierr);
+ 
+   int iold_val = -1;
+@@ -950,7 +950,7 @@
+   tNode* pnode;
+   int no_eqs = n * m_pmesh->get_no_nodes();
+ 
+-  ierr = MatSetOption(m_stiffness, MAT_NO_NEW_NONZERO_LOCATIONS);
++  ierr = MatSetOption(m_stiffness, MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE);
+   CHKERRQ(ierr);
+ 
+   std::map<int, double> mrhs;
+@@ -1030,7 +1030,7 @@
+ 
+   int no_eqs = n * m_pmesh->get_no_nodes();
+ 
+-  ierr = MatSetOption(m_stiffness, MAT_NO_NEW_NONZERO_LOCATIONS);
++  ierr = MatSetOption(m_stiffness, MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE);
+   CHKERRQ(ierr);
+   std::map<int,double> mrhs;
+ 
+@@ -1126,7 +1126,7 @@
+   CHKERRQ(ierr);
+   ierr = MatZeroRowsIS(m_stiffness, is, 1.0);
+   CHKERRQ(ierr);
+-  ierr = MatTranspose( m_stiffness, PETSC_NULL);
++  ierr = MatTranspose( m_stiffness, MAT_REUSE_MATRIX, &m_stiffness);
+   CHKERRQ(ierr);
+   ierr = MatZeroRowsIS(m_stiffness, is, 1.0);
+   CHKERRQ(ierr);

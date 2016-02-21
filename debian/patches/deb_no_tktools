@@ -1,0 +1,49 @@
+From: Michael Hanke <mih@debian.org>
+Subjects: Disable all Tk-related code.
+
+This stuff is ancient, probably useless and covered by a very non-free license.
+--- a/configure.in
++++ b/configure.in
+@@ -3793,10 +3793,6 @@
+            test_makevol/Makefile
+            test_window_env/Makefile
+            tetgen/Makefile
+-           tkmedit/Makefile
+-           tkregister2/Makefile
+-           tkregister2/cmdl/Makefile
+-           tksurfer/Makefile
+            trc/Makefile
+            tridec/Makefile
+            unix/Makefile
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -14,9 +14,6 @@
+ 	nmovie \
+ 	mris_show \
+ 	stim_polar \
+-	tkmedit \
+-	tkregister2 \
+-	tksurfer \
+ 	mri_probedicom \
+ 	orient_mri \
+ 	qdec
+--- a/scripts/Makefile.am
++++ b/scripts/Makefile.am
+@@ -264,17 +264,6 @@
+ 
+ tktoolsdir = $(prefix)/tktools
+ tktools_SCRIPTS= \
+-tkanalyse.tcl \
+-tkm_common.tcl \
+-tkm_dialog.tcl \
+-tkmedit.tcl \
+-tkm_functional.tcl \
+-tkm_graph.tcl \
+-tkm_wrappers.tcl \
+-tkregister.tcl \
+-tkregister2.tcl \
+-tksurfer.tcl \
+-tkUtils.tcl \
+ fsgdfPlot.tcl
+ 
+ xmldir=$(prefix)/docs/xml

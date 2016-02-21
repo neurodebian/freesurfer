@@ -1,0 +1,37 @@
+--- a/mri_mc/mris_extract_main_component.c
++++ b/mri_mc/mris_extract_main_component.c
+@@ -56,8 +56,8 @@
+   mris_in=MRISread(argv[1]);
+   mris_out=MRISextractMainComponent(mris_in,0,1,0);
+   MRISwrite(mris_out,argv[2]);
+-  MRISfree(&mris_out);
+-  MRISfree(&mris_in);
++  //MRISfree(&mris_out);
++  //MRISfree(&mris_in);
+   fprintf(stderr,"\ndone\n\n");
+   return 0;
+ }
+--- a/mrisp_paint/mrisp_paint.c
++++ b/mrisp_paint/mrisp_paint.c
+@@ -234,8 +234,8 @@
+ 
+   MRISwriteCurvature(mris, out_fname) ;
+ 
+-  MRISPfree(&mrisp) ;
+-  MRISfree(&mris) ;
++  //MRISPfree(&mrisp) ;
++  //MRISfree(&mris) ;
+   exit(0) ;
+   return(0) ;  /* for ansi */
+ }
+--- a/mris_jacobian/mris_jacobian.c
++++ b/mris_jacobian/mris_jacobian.c
+@@ -124,7 +124,7 @@
+   MRISwriteCurvature(mris, out_fname) ;
+ 
+ 
+-  MRISfree(&mris) ;
++  //MRISfree(&mris) ;
+   exit(0) ;
+   return(0) ;  /* for ansi */
+ }

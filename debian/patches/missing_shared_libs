@@ -1,0 +1,41 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Self-contained libs/proper linking for increased happiness
+--- a/vtkutils/Makefile.am
++++ b/vtkutils/Makefile.am
+@@ -54,6 +54,9 @@
+ 	vtkInflatePolyData.cxx \
+ 	IconLoader.cxx
+ 
++libvtkutils_la_LIBADD= \
++	-lKWWidgets -ltcl -lvtkCommon -lvtkCommonTCL -lvtkFiltering -lvtkGraphics -lvtkHybrid -lvtkRendering
++
+ # We use vtkWrapTcl to create the Tcl wrapped code for this object.
+ vtkKWRGBATransferFunctionEditorTcl.cxx: vtkKWRGBATransferFunctionEditor.h
+ 	${VTK_DIR}/bin/vtkWrapTcl vtkKWRGBATransferFunctionEditor.h \
+--- a/unix/Makefile.am
++++ b/unix/Makefile.am
+@@ -14,6 +14,8 @@
+ 	ftime.c windiag.c xwindow.c \
+ 	oglutil.c xvmri.c texfont.c xvutil.c glStub.c
+ 
++libunix_la_LIBADD=-lxview
++
+ EXTRA_DIST=lwpproto.h xvmri.h xwindow.h \
+ 	oglutil.h xvutil.h xwin.h
+ 
+--- a/nmovie/Makefile.am
++++ b/nmovie/Makefile.am
+@@ -24,11 +24,11 @@
+ if ENABLE_XAWPLUS_APPS
+ nmovie_LDADD= $(addprefix $(top_builddir)/,$(LIBS_MGH)) $(DLIBS_MGH) \
+ 	$(LIBS_OPENGL) $(XAWPLUS_LIBS) $(LIBS_XAWPLUS) -lXext \
+-	$(top_builddir)/glut/libglut.a
++	-lglut
+ else
+ nmovie_LDADD= $(addprefix $(top_builddir)/,$(LIBS_MGH)) $(DLIBS_MGH) \
+ 	$(LIBS_OPENGL) -lXt -lXext -lXaw \
+-	$(top_builddir)/glut/libglut.a
++	-lglut
+ endif
+ nmovie_LDFLAGS=$(X_LIBS)
+ else

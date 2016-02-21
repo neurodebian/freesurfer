@@ -1,0 +1,37 @@
+# Freesurfer configuration file
+
+# Set up FREESURFER_HOME
+
+# Debian has a fixed FREESURFER_HOME for each version
+FREESURFER_HOME=/usr/share/freesurfer-FSMAJORVERSION
+export FREESURFER_HOME
+
+# add the freesurfer binary path to the search path
+PATH=$PATH:/usr/lib/freesurfer-FSMAJORVERSION/bin
+export PATH
+
+# let freesurfer know where its libraries are
+LD_LIBRARY_PATH="/usr/lib/freesurfer-FSMAJORVERSION/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH
+
+# YNiC modifications
+# Set this to your subjects/ dir, usually freesurfer/subjects/
+if [ -z $SUBJECTS_DIR ]; then
+    export SUBJECTS_DIR=/scratch${HOME}/freesurfer/subjects
+    if [ ! -d ${SUBJECTS_DIR} ]; then
+        mkdir -p ${SUBJECTS_DIR}
+    fi
+fi
+
+# Set this to your functional sessions dir, usually freesurfer/sessions/
+if [ -z $FUNCTIONALS_DIR ]; then
+    export FUNCTIONALS_DIR=/scratch${HOME}/freesurfer/sessions
+    if [ ! -d ${FUNCTIONALS_DIR} ]; then
+        mkdir -p ${FUNCTIONALS_DIR}
+    fi
+fi
+
+# load user configuration
+if [ -f "${HOME}/.freesurfer.sh" ]; then
+  . "${HOME}/.freesurfer.sh"
+fi

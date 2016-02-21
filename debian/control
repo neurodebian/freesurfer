@@ -1,0 +1,79 @@
+Source: freesurfer
+Section: science
+Priority: extra
+Maintainer: NeuroDebian Team <team@neuro.debian.net>
+Uploaders: Michael Hanke <mih@debian.org>, Yaroslav Halchenko <debian@onerussian.com>
+Build-Depends: debhelper (>= 7.0.50~), dh-autoreconf,
+               gfortran, libf2c2-dev,
+               liblapack-dev,
+               libminc-dev,
+               libvxl1-dev,
+               tk8.5-dev, tcl-dev, tix-dev,
+               blt-dev,
+               libvtk5-dev (>= 5.6),
+               freeglut3-dev, libxaw7-dev,
+               libxinerama-dev,
+               xviewg-dev,
+               libinsighttoolkit3-dev,
+               libwxgtk2.8-dev, libkwwidgets1-dev,
+               fluid,
+               tcsh,
+               libnifti-dev,
+               texlive-fonts-recommended,
+               libcv-dev (>=2.2), libhighgui-dev,
+               libgts-dev, libboost-all-dev, libpetsc3.1-dev,
+               libann-dev
+Standards-Version: 3.9.2
+Homepage: http://surfer.nmr.mgh.harvard.edu/
+Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/freesurfer.git
+Vcs-Git: git://git.debian.org/git/pkg-exppsy/freesurfer.git
+
+Package: freesurfer
+Architecture: all
+Depends: ${misc:Depends}, freesurfer-5.1
+Description: analysis and visualization of functional brain imaging data
+ FreeSurfer is a set of tools for analysis and visualization of
+ structural and functional brain imaging data. It contains a fully
+ automatic structural stream for processing cross sectional and
+ longitudinal data.
+ .
+ FreeSurfer provides many anatomical analysis tools, including:
+ representation of the cortical surface between white and gray matter,
+ representation of the pial surface, segmentation of white matter from
+ the rest of the brain, skull stripping, B1 bias field correction,
+ nonlinear registration of the cortical surface of an individual with
+ an sterotaxic atlas, labeling of regions of the cortical surface,
+ statistical analysis of group morphometry differences, and labeling of
+ subcortical brain structures, etc.
+ .
+ This package depends upon the latest version of freesurfer.
+
+Package: freesurfer-5.1
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+ freesurfer-common-5.1 (= ${source:Version}), ${python:Depends},
+ tcsh, python
+Description: Freesurfer 5.1 package
+ This package contains the Freesurfer 5.1 software.
+
+Package: freesurfer-common-5.1
+Architecture: all
+Depends: ${misc:Depends}, tclsh
+Description: Common data files for Freesurfer
+ This package contains architecture independent data files of the
+ Freesurfer 5.1 software.
+
+Package: freesurfer-fsfast-5.1
+Section: contrib/science
+Architecture: all
+Depends: ${misc:Depends}, matlab-freesurfer-5.1 (= ${source:Version}),
+ tcsh, tclsh, python
+Description: Freesurfer's fMRI processing toolbox
+ This package contains the FSFAST toolbox from Freesurfer 5.1.
+
+Package: matlab-freesurfer-5.1
+Section: contrib/science
+Architecture: all
+Depends: ${misc:Depends}
+Description: Freesurfer's Matlab toolboxes
+ This package contains all Matlab toolboxes shipped with Freesurfer 5.1.

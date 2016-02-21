@@ -1,0 +1,22 @@
+--- a/scripts/fsl_rigid_register
++++ b/scripts/fsl_rigid_register
+@@ -189,7 +189,7 @@
+ # this bug fix is necessary only for v5.4.2b
+ set flirtversion=`flirt.fsl -version`
+ if ("$flirtversion" == "FLIRT version 5.4.2b") then
+-  set schedulefile="$FREESURFER_HOME/bin/flirt.newdefault.20080811.sch"
++  set schedulefile="$FREESURFER_HOME/data/flirt.newdefault.20080811.sch"
+   if ( -e $schedulefile) then
+     set cmd = ($cmd -schedule $schedulefile)
+   endif
+--- a/scripts/fslregister
++++ b/scripts/fslregister
+@@ -617,7 +617,7 @@
+   endif
+ 
+   if($UseNewSchedule) then
+-    set sch = $FREESURFER_HOME/bin/flirt.newdefault.20080811.sch
++    set sch = $FREESURFER_HOME/data/flirt.newdefault.20080811.sch
+     if(! -e $sch) then
+       echo "ERROR: cannot find $sch"
+       exit 1;

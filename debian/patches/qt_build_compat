@@ -1,0 +1,35 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Make Freesurfer happy with Debian's Qt4
+--- a/m4/autotroll.m4
++++ b/m4/autotroll.m4
+@@ -162,9 +162,11 @@
+       && tmp_qt_paths="$tmp_qt_paths:/usr/pubsw/packages/qt/current/bin"
+   fi
+ 
++  tmp_qt_paths="$tmp_qt_paths:/usr/bin"
++
+   # Find qmake.
+   AC_ARG_VAR([QMAKE], [Qt Makefile generator command])
+-  AC_PATH_PROGS([QMAKE], [qmake qmake-qt4 qmake-qt3], [missing],
++  AC_PATH_PROGS([QMAKE], [qmake-qt4 qmake-qt3], [missing],
+                 [$QT_DIR:$QT_PATH:$tmp_qt_paths])
+   if test x"$QMAKE" = xmissing; then
+     AC_MSG_WARN([Cannot find qmake in your PATH. Try using --with-qt. Disabling Qt apps])
+@@ -174,7 +176,7 @@
+ 
+   # Find moc (Meta Object Compiler).
+   AC_ARG_VAR([MOC], [Qt Meta Object Compiler command])
+-  AC_PATH_PROGS([MOC], [moc moc-qt4 moc-qt3], [missing],
++  AC_PATH_PROGS([MOC], [moc-qt4 moc-qt3], [missing],
+                 [$QT_PATH:$tmp_qt_paths])
+   if test x"$MOC" = xmissing; then
+     AC_MSG_WARN([Cannot find moc (Meta Object Compiler) in your PATH. Try using --with-qt. Disabling Qt apps])
+@@ -184,7 +186,7 @@
+ 
+   # Find uic (User Interface Compiler).
+   AC_ARG_VAR([UIC], [Qt User Interface Compiler command])
+-  AC_PATH_PROGS([UIC], [uic uic-qt4 uic-qt3 uic3], [missing],
++  AC_PATH_PROGS([UIC], [uic-qt4 uic-qt3 uic3], [missing],
+                 [$QT_PATH:$tmp_qt_paths])
+   if test x"$UIC" = xmissing; then
+     AC_MSG_WARN([Cannot find uic (User Interface Compiler) in your PATH. Try using --with-qt. Disabling Qt apps])

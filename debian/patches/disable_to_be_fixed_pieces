@@ -1,0 +1,43 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Disables pieces that FTBFS with recent compilers.
+
+Needs to be fixed at some point.
+
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -281,7 +281,6 @@
+ 	stat_normalize
+ 
+ MISCDIRS=\
+-	GEMS \
+ 	histo_compute_joint_density \
+ 	histo_register_block \
+ 	regdat2xfm \
+@@ -327,7 +326,6 @@
+ 	$(DMRISUBDIRS) \
+ 	fsfast \
+ 	matlab \
+-	scuba \
+ 	scuba2 \
+ 	freeview \
+ 	qdec_glmfit \
+--- a/configure.in
++++ b/configure.in
+@@ -3328,9 +3328,6 @@
+ # output
+ #########################################################################
+ AC_OUTPUT([Makefile
+-           GEMS/Makefile
+-           GEMS/data/Makefile
+-           GEMS/scripts/Makefile
+            check_siemens_dir/Makefile
+            cudatest/Makefile
+            cudatest/gcatest/Makefile
+@@ -3627,7 +3624,6 @@
+            repair_siemens_file/Makefile
+            rgb/Makefile
+            scripts/Makefile
+-           scuba/Makefile
+            scuba2/Makefile
+            freeview/Makefile
+            connectgraph/Makefile

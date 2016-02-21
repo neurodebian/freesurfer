@@ -1,0 +1,67 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Disable 3rd-party code with its own Debian packages.
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -10,7 +10,6 @@
+   dmri_tensoreig  
+ 
+ GLSUBDIRS=\
+-	glut \
+ 	mris2rgb \
+ 	nmovie \
+ 	mris_show \
+@@ -338,10 +337,6 @@
+ 	unix \
+ 	dicom \
+ 	hipsstubs \
+-	expat \
+-	jpeg \
+-	tiff \
+-	xml2 \
+ 	rgb \
+ 	log \
+ 	gpu_utils \
+--- a/configure.in
++++ b/configure.in
+@@ -3449,7 +3449,6 @@
+            dngtester/Makefile
+            dummy/Makefile
+            dummy_qt/Makefile
+-           expat/Makefile
+            fem_elastic/Makefile
+            fsfast/Makefile
+            fsfast/bin/Makefile
+@@ -3457,7 +3456,6 @@
+            fsfast/toolbox/Makefile
+            fsgdf/Makefile
+            fslutils/Makefile
+-           glut/Makefile
+            gpu_utils/Makefile
+            gradient_nonlin_unwarp/Makefile
+            gradient_nonlin_unwarp/gradient_coil_files/Makefile
+@@ -3484,7 +3482,6 @@
+            include/fs_vnl/Makefile
+            itkio/Makefile
+            itkutils/Makefile
+-           jpeg/Makefile
+            label_area/Makefile
+            label_border/Makefile
+            label2patch/Makefile
+@@ -3783,7 +3780,6 @@
+            test_makevol/Makefile
+            test_window_env/Makefile
+            tetgen/Makefile
+-           tiff/Makefile
+            tkmedit/Makefile
+            tkregister2/Makefile
+            tkregister2/cmdl/Makefile
+@@ -3802,8 +3798,7 @@
+            qdecproject/Makefile
+            vtkfsio/Makefile
+            vtkutils/Makefile
+-           lineprof/Makefile
+-           xml2/Makefile])
++           lineprof/Makefile])
+ 
+ #           mri_edit_seg_with_ribbons/Makefile
+ 

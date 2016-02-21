@@ -1,0 +1,19 @@
+From: Yaroslav Halchenko <debian@onerussian.com>
+Subject: Removed $(DESTDIR) which is already implied
+
+otherwise it would install under debian/tmp/$PWD/bin
+
+This location is anyways flawed since it installs not only scripts but some
+text files
+
+--- a/mri_cvs_register/Makefile.am
++++ b/mri_cvs_register/Makefile.am
+@@ -4,7 +4,7 @@
+ 
+ dist_bin_SCRIPTS = mri_cvs_register mri_cvs_check mri_cvs_data_copy
+ 
+-foodir=$(DESTDIR)$(bindir)
++foodir=$(bindir)
+ foo_DATA= \
+ 	id.xfm \
+ 	mri_cvs_requiredfiles.txt

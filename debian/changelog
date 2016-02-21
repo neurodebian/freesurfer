@@ -1,0 +1,61 @@
+freesurfer (5.1.0+dev+cvs20120104-1) UNRELEASED; urgency=low
+
+  [ Yaroslav Halchenko ]
+  * debian/patches:
+    - removed upstreamfixup patch (files seems to be present)
+  * debian/repack.sh:
+    - move .gca files into -data as well
+    - keep .rec and .ifh files (satellite of .img and .4dfp files)
+      in -data as well
+    - remove sourceless ./talairach_avi/RLB700_preprocessing_statistics.pdf
+
+  [ Andreas Tille ]
+  * Take over way more explicite description from Debian Science task
+    file neuroscience-cognitive
+  * Move debian/upstream to debian/upstream/metadata
+  * Take over Registration field from tasks file to upstream metadata
+
+ -- Yaroslav Halchenko <debian@onerussian.com>  Tue, 12 Feb 2013 12:38:30 -0500
+
+freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze3) squeeze-devel; urgency=low
+
+  * Look for flirt.sch in the data directory.  Helps close YNiC RT: #1299. 
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Fri, 07 Sep 2012 21:02:15 +0100
+
+freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze2) squeeze-devel; urgency=low
+
+  * Install XML doc files.
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Fri, 13 Jul 2012 11:30:23 +0100
+
+freesurfer (5.1.0+dev+cvs20120104-1~ynicsqueeze1) squeeze-devel; urgency=low
+
+  * Rebuild for YNiC Squeeze backport.
+
+ -- Mark Hymers <mark.hymers@ynic.york.ac.uk>  Wed, 08 Feb 2012 13:02:06 +0000
+
+freesurfer (5.1.0+dev+cvs20120104-1) UNRELEASED; urgency=low
+
+  * New upstream snapshot from 'stable5' CVS branch.
+
+ -- Mark Hymers <mhy@debian.org>  Tue, 24 Jan 2012 15:05:16 +0000
+
+freesurfer (5.1.0+cvs20111031-1) UNRELEASED; urgency=low
+
+  * New upstream snapshot from 'stable5' CVS branch.
+
+ -- Michael Hanke <mih@debian.org>  Tue, 01 Nov 2011 13:54:05 +0100
+
+freesurfer (5.1.0+cvs20110526-1) UNRELEASED; urgency=low
+
+  * Fresh upstream post-release snapshot.
+  * [line to float up until released] Initial release. (Closes: #628183)
+
+ -- Yaroslav Halchenko <debian@onerussian.com>  Fri, 27 May 2011 22:30:12 -0400
+
+freesurfer (5~cvs20110426-1) UNRELEASED; urgency=low
+
+  * Initial packaging.
+
+ -- Michael Hanke <mih@debian.org>  Sat, 30 Apr 2011 09:10:39 -0400

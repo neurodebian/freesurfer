@@ -1,0 +1,58 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Let clean do it properly
+--- a/GEMS/Makefile.am
++++ b/GEMS/Makefile.am
+@@ -906,6 +906,9 @@
+ endif
+ endif
+ 
++clean-local:
++	-rm kvlImageThresholdingConsoleGUI.h kvlImageViewingConsoleGUI.h
++
+ # Our release target. Include files to be excluded here. They will be
+ # found and removed after 'make install' is run during the 'make
+ # release' target.
+--- a/orient_mri/Makefile.am
++++ b/orient_mri/Makefile.am
+@@ -159,3 +159,8 @@
+ # release' target.
+ EXCLUDE_FILES=
+ include $(top_srcdir)/Makefile.extra
++
++clean-local:
++	-rm *Tcl.cxx OrientMRILibInit.cxx
++
++
+--- a/qdec/Makefile.am
++++ b/qdec/Makefile.am
+@@ -88,6 +88,9 @@
+ uninstall-hook:
+ 	rm -f $(DESTDIR)$(bindir)/qdec.bin
+ 
++clean-local:
++	-rm *Tcl.cxx
++
+ else
+ bin_PROGRAMS = 
+ 
+--- a/scuba2/Makefile.am
++++ b/scuba2/Makefile.am
+@@ -223,6 +223,9 @@
+ uninstall-hook:
+ 	rm -f $(DESTDIR)$(bindir)/scuba2.bin
+ 
++clean-local:
++	-rm *Tcl.cxx
++
+ else
+ bin_PROGRAMS = 
+ 
+--- a/vtkutils/Makefile.am
++++ b/vtkutils/Makefile.am
+@@ -183,3 +183,6 @@
+ # release' target.
+ EXCLUDE_FILES=
+ include $(top_srcdir)/Makefile.extra
++
++clean-local:
++	-rm *Tcl.cxx

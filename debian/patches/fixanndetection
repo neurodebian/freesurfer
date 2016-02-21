@@ -1,0 +1,22 @@
+--- a/configure.in
++++ b/configure.in
+@@ -2989,7 +2989,7 @@
+ # ANN check
+ if test ! "x$ac_ann_dir" = "xNO"; then
+   # if --with-ann-dir was used, make sure necessary libs exist
+-  AC_CHECK_LIB([ANN], [main],[],
++  AC_CHECK_LIB([ann], [main],[],
+     [AC_MSG_ERROR([FATAL: ANN Approximate Nearest Neighbors lib not found. \
+   Set LDFLAGS or --with-ann-dir.])] )
+ fi
+--- a/mris_resample/Makefile.am
++++ b/mris_resample/Makefile.am
+@@ -10,7 +10,7 @@
+ bin_PROGRAMS = mris_resample
+ mris_resample_SOURCES=mris_resample.cpp
+ mris_resample_LDADD= $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
+-	$(BOOST_PO_LIB) $(ANN_LIBS) -lANN
++	$(BOOST_PO_LIB) $(ANN_LIBS) -lann
+ mris_resample_LDFLAGS=$(OS_LDFLAGS)
+ 
+ endif

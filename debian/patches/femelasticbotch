@@ -1,0 +1,120 @@
+--- a/fem_elastic/Makefile.am
++++ b/fem_elastic/Makefile.am
+@@ -65,8 +65,8 @@
+ # Workaround for fem_elastic/Makefile.am: object `fcreateMorph.$(OBJEXT)' created both with libtool and without
+ # per http://www.gnu.org/software/hello/manual/automake/Objects-created-both-with-libtool-and-without.html
+ # And since it is not just the 'main()' so it should be safer to just allow those two objects to duplicate
+-createMorph_CPPFLAGS = $(AM_CFLAGS)
+-applyMorph_CPPFLAGS = $(AM_CFLAGS)
++createMorph_CPPFLAGS = $(AM_CPPFLAGS) -DMAINPROGRAM
++applyMorph_CPPFLAGS = $(AM_CPPFLAGS) -DMAINPROGRAM
+ 
+ 
+ exportGcam_SOURCES=\
+@@ -97,7 +97,7 @@
+     $(addprefix $(top_builddir)/, $(LIBS_MGH)) $(DLIBS_MGH) \
+     $(top_builddir)/tetgen/libtetgen.la \
+     $(PETSC_LIBS) -lpetscts -lpetscsnes -lpetscksp -lpetscdm -lpetscmat \
+-    -lpetscvec -lpetsc -lmpich \
++    -lpetscvec -lpetsc -lmpi \
+ 		$(LIB_GFORTRAN) $(LIB_LAPACK_A) $(LIB_BLAS_A) $(LIB_G2C_A) $(LIB_GFORTRAN) \
+ 		libfem_elastic.la
+ endif
+--- a/fem_elastic/fapplyMorph.cpp
++++ b/fem_elastic/fapplyMorph.cpp
+@@ -26,8 +26,10 @@
+ #include "mri.h"
+ };
+ 
++#ifdef MAINPROGRAM
+ // required by FreeSurfer
+ char *Progname;
++#endif
+ 
+ int tractPointList = 0;
+ 
+@@ -39,8 +41,6 @@
+   return val*val;
+ }
+ 
+-std::vector<int> g_vDbgCoords;
+-
+ //void initOctree( gmp::VolumeMorph& morph);
+ 
+ struct DataItem
+@@ -129,6 +129,7 @@
+ 
+ //------------------------------------------------------
+ 
++#ifdef MAINPROGRAM
+ struct IoParams
+ {
+   std::vector<DataItem> items;
+@@ -468,6 +469,7 @@
+     ++cit;
+   }
+ }
++#endif
+ 
+ //----------------------------------------------
+ 
+--- a/fem_elastic/fcreateMorph.cpp
++++ b/fem_elastic/fcreateMorph.cpp
+@@ -24,7 +24,10 @@
+ #include "gcamorph.h"
+ #include "mri.h"
+ };
++
++#ifdef MAINPROGRAM
+ char *Progname;
++#endif
+ 
+ //==================================================
+ 
+@@ -34,8 +37,7 @@
+   std::string file;
+ };
+ 
+-std::vector<int> g_vDbgCoords;
+-
++#ifdef MAINPROGRAM
+ struct IoParams
+ {
+   std::string strOut;
+@@ -239,7 +241,6 @@
+   return 0;
+ }
+ 
+-
+ void
+ IoParams::parse(int ac,
+                 char* av[])
+@@ -296,6 +297,7 @@
+     this->items.push_back(item);
+   } // next it
+ }
++#endif
+ 
+ inline int myNint(double x)
+ {
+--- a/fem_elastic/morph.cpp
++++ b/fem_elastic/morph.cpp
+@@ -17,6 +17,8 @@
+   return x*x;
+ }
+ 
++std::vector<int> g_vDbgCoords;
++
+ namespace gmp
+ {
+ 
+--- a/fem_elastic/morph.h
++++ b/fem_elastic/morph.h
+@@ -45,6 +45,7 @@
+ #undef class
+ };
+ 
++extern std::vector<int> g_vDbgCoords;
+ 
+ /*
+ 

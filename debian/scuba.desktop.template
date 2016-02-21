@@ -1,0 +1,11 @@
+[Desktop Entry]
+Encoding=UTF-8
+GenericName=Scuba (FSMAJORVERSION)
+Name=SCUBA vFSMAJORVERSION
+Exec=scuba-FSMAJORVERSION
+TryExec=scuba-FSMAJORVERSION
+Icon=freesurfer-FSMAJORVERSION.xpm
+Type=Application
+Terminal=false
+Comment=This program is part of Freesurfer FSMAJORVERSION
+Categories=Utility;Science;MedicalSoftware;

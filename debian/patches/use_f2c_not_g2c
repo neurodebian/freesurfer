@@ -1,0 +1,15 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Force f2c on Debian
+--- a/configure.in
++++ b/configure.in
+@@ -341,6 +341,10 @@
+     LIB_G2C_A="/usr/lib/libg2c.a"
+   fi
+ fi
++# On Debian systems use f2c library
++if test -e /usr/lib/libf2c.so ; then
++  LIB_G2C_A="/usr/lib/libf2c.so"
++fi
+ AC_SUBST(LIB_G2C_A)
+ 
+ # as the law of unintended consequences would have it, when linking

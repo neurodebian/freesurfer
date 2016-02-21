@@ -1,0 +1,23 @@
+General issues
+--------------
+
+* freeview core-dumps upon exit
+* What do we do about the license file issue? Do we ship one? Do we patch it
+  away? Do we change the location to /etc/freesurfer/license? Do we make the
+  package acquire a license upon first install?
+* Do we want to have a git-style wrapper for the FS commandline tools, ala:
+
+  $ freesurfer-5.1 mri_convert ....
+* Missing file issue when running qdec
+  attempt to provide package BLT 2.4 failed: no version of package BLT provided
+  FsgdfPlot::InitFsgdf:  Couldn't find fsgdfPlot.tcl
+* orient_mri issue upon exit
+  *** glibc detected *** orient_mri.bin: corrupted double-linked list: 0x09131580 ***
+  <backtrace>
+  Abort (core dumped)
+
+
+Lintian unhappiness
+-------------------
+
+... lots ...

@@ -1,0 +1,21 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Relocate the Freesurfer "license" file to /etc/freesurfer
+
+The license file is more of a conffile, and also agnostic of particular
+Freesurfer versions, hence it should go into /etc. We may want to think about
+the future of the whole mechanism anyway. If we want to have Freesurfer in
+Debian main, we need to get rid of it anyway. For now, let's keep it in place,
+just a better one.
+
+--- a/utils/chklc.c
++++ b/utils/chklc.c
+@@ -94,7 +94,8 @@
+   key   = (char*)calloc(1,512);
+   gkey  = (char*)calloc(1,1024);
+ 
+-  sprintf(lfilename,"%s/.lic%s",dirname, "ense");
++  //sprintf(lfilename,"%s/.lic%s",dirname, "ense");
++  sprintf(lfilename,"/etc/freesurfer/license");
+ 
+   lfile = fopen(lfilename,"r");
+   if (lfile == NULL)

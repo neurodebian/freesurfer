@@ -1,0 +1,2 @@
+# Yeah, upstream uses tcsh.  Shut up lintian.
+freesurfer-fsfast-FSMAJORVERSION binary: csh-considered-harmful

@@ -1,0 +1,13 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Disable code that comes in its own Debian package.
+--- a/utils/Makefile.am
++++ b/utils/Makefile.am
+@@ -414,7 +414,7 @@
+ 
+ 
+ 
+-bin_PROGRAMS=gifti_tool gifti_test fsPrintHelp xmlToHtml
++bin_PROGRAMS=fsPrintHelp xmlToHtml
+ 
+ gifti_tool_SOURCES=gifti_tool.c gifti_tool.h \
+ 	gifti_io.c gifti_xml.c nifti1_io.c znzlib.c

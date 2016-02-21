@@ -1,0 +1,11 @@
+--- a/configure.in
++++ b/configure.in
+@@ -2603,7 +2603,7 @@
+ # use the handy wx-config utility to get the compiler and linker flags
+ if test ! "x$GTS_DIR" = "x"; then
+   AC_MSG_RESULT([Enabled building of GTS apps.])
+-  GTSCONFIG="${GTS_DIR}/bin/gts-config"
++  GTSCONFIG="pkg-config gts"
+   GTS_CFLAGS="`${GTSCONFIG} --cflags`"
+   # we want to use the local / static jpeg, tiff and expat libs
+   GTS_LIBS="`${GTSCONFIG} --libs`"

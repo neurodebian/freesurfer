@@ -1,0 +1,2 @@
+debian/tmp/usr/lib/freesurfer-FSMAJORVERSION/bin usr/lib/freesurfer-FSMAJORVERSION/
+debian/tmp/usr/lib/freesurfer-FSMAJORVERSION/lib/*.so* usr/lib/freesurfer-FSMAJORVERSION/lib/

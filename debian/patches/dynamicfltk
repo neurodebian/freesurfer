@@ -1,0 +1,11 @@
+--- a/configure.in
++++ b/configure.in
+@@ -1434,7 +1434,7 @@
+   #for item in $ac_fltk_includes; do
+   #  FLTK_CFLAGS="${FLTK_CFLAGS} -I${item}"
+   FLTK_CXXFLAGS=`"$withval"/bin/fltk-config --cxxflags --use-gl --use-glut --use-forms --use-images`
+-  FLTK_LDFLAGS=`"$withval"/bin/fltk-config --ldstaticflags --use-gl --use-glut --use-forms --use-images`
++  FLTK_LDFLAGS=`"$withval"/bin/fltk-config --ldflags --use-gl --use-glut --use-forms --use-images`
+   FLTK_DIR=$ac_fltk_dir
+ else
+   AC_MSG_RESULT(FLTK directory is not supplied)

@@ -1,0 +1,20 @@
+--- a/configure.in
++++ b/configure.in
+@@ -1461,7 +1461,7 @@
+ ac_petsc_libraries="NO"
+ ac_petsc_bindir="NO"
+ ac_petsc_dir="NO"
+-PETSC_CFLAGS=""
++PETSC_CFLAGS="-I/usr/include/mpi"
+ PETSC_LIBS=""
+ PETSC_LIB=""
+ PETSC_DIR=""
+@@ -3002,7 +3002,7 @@
+   else
+     PMPICH=
+   fi
+-  AC_CHECK_LIB([petsc -lmpich -lpthread ${PMPICH}], [PetscInitialize],[],
++  AC_CHECK_LIB([petsc], [PetscInitialize],[],
+     [AC_MSG_ERROR([FATAL: petsc lib not found. \
+   Set LDFLAGS or --with-petsc-dir.])] )
+ fi

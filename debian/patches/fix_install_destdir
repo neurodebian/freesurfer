@@ -1,0 +1,140 @@
+Description: Fix install of scripts to use $(DESTDIR)
+
+Author: Mark Hymers <mark.hymers@ynic.york.ac.uk>
+
+--- a/freeview/Makefile.am
++++ b/freeview/Makefile.am
+@@ -553,7 +553,7 @@
+ # put a wrapper around the bin, used to setup tcltktixblt,vtk enviro vars
+ # and if the OS is MACOSX have a different install-hook to create a bundle
+ install-exec-hook:freeview
+-	cp $(top_builddir)/freeview/freeview $(DESTDIR)$(bindir)/freeview.bin
++	mv $(DESTDIR)$(bindir)/freeview $(DESTDIR)$(bindir)/freeview.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/freeview
+ 	echo "source \$$FREESURFER_HOME/bin/tcl_setup" \
+ 		>> $(DESTDIR)$(bindir)/freeview
+--- a/GEMS/Makefile.am
++++ b/GEMS/Makefile.am
+@@ -763,7 +763,7 @@
+ 
+ # put a wrapper around the gui bins, used to setup vtk enviro vars
+ install-exec-hook:kvlThresholdImage kvlEstimateAtlasParameters
+-	cp $(top_builddir)/GEMS/kvlThresholdImage \
++	mv $(DESTDIR)$(bindir)/kvlThresholdImage \
+ 		$(DESTDIR)$(bindir)/kvlThresholdImage.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/kvlThresholdImage
+ 	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+@@ -778,7 +778,7 @@
+ 	chmod a+x $(DESTDIR)$(bindir)/kvlThresholdImage
+ 	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
+ 	/usr/pubsw/bin/chrpath -d $(DESTDIR)$(bindir)/kvlThresholdImage.bin; fi
+-	cp $(top_builddir)/GEMS/kvlEstimateAtlasParameters \
++	mv $(DESTDIR)$(bindir)/kvlEstimateAtlasParameters \
+ 		$(DESTDIR)$(bindir)/kvlEstimateAtlasParameters.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/kvlEstimateAtlasParameters
+ 	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+@@ -796,7 +796,7 @@
+ 	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
+ 	/usr/pubsw/bin/chrpath -d \
+ 		$(DESTDIR)$(bindir)/kvlEstimateAtlasParameters.bin; fi
+-	cp $(top_builddir)/GEMS/kvlViewImage \
++	mv $(DESTDIR)$(bindir)/kvlViewImage \
+ 		$(DESTDIR)$(bindir)/kvlViewImage.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/kvlViewImage
+ 	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+@@ -811,7 +811,7 @@
+ 	chmod a+x $(DESTDIR)$(bindir)/kvlViewImage
+ 	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
+ 	/usr/pubsw/bin/chrpath -d $(DESTDIR)$(bindir)/kvlViewImage.bin; fi
+-	cp $(top_builddir)/GEMS/kvlViewMeshCollectionWithGUI \
++	mv $(DESTDIR)$(bindir)/kvlViewMeshCollectionWithGUI \
+ 		$(DESTDIR)$(bindir)/kvlViewMeshCollectionWithGUI.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/kvlViewMeshCollectionWithGUI
+ 	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+@@ -826,7 +826,7 @@
+ 	chmod a+x $(DESTDIR)$(bindir)/kvlViewMeshCollectionWithGUI
+ 	if [[ -f /usr/pubsw/bin/chrpath ]]; then \
+ 	/usr/pubsw/bin/chrpath -d $(DESTDIR)$(bindir)/kvlViewMeshCollectionWithGUI.bin; fi
+-	cp $(top_builddir)/GEMS/kvlEvaluateSegmentation \
++	mv $(DESTDIR)$(bindir)/kvlEvaluateSegmentation \
+ 		$(DESTDIR)$(bindir)/kvlEvaluateSegmentation.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/kvlEvaluateSegmentation
+ 	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+--- a/scuba/Makefile.am
++++ b/scuba/Makefile.am
+@@ -347,7 +347,7 @@
+ if ENABLE_TCLTK_APPS
+ # put a wrapper around the bin, used to setup tcltktixblt enviro vars
+ install-exec-hook:
+-	cp $(top_builddir)/scuba/scuba $(DESTDIR)$(bindir)/scuba.bin
++	mv $(DESTDIR)$(bindir)/scuba $(DESTDIR)$(bindir)/scuba.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/scuba
+ 	echo "source \$$FREESURFER_HOME/bin/tcl_setup" >> $(DESTDIR)$(bindir)/scuba
+ 	echo "scuba.bin \$$argv" >> $(DESTDIR)$(bindir)/scuba
+--- a/qdec/Makefile.am
++++ b/qdec/Makefile.am
+@@ -66,7 +66,7 @@
+ 
+ # put a wrapper around the bin, used to setup tcltktixblt,vtk,kww enviro vars
+ install-exec-hook:qdec
+-	cp $(top_builddir)/qdec/qdec $(DESTDIR)$(bindir)/qdec.bin
++	mv $(DESTDIR)$(bindir)/qdec $(DESTDIR)$(bindir)/qdec.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/qdec
+ 	echo "source \$$FREESURFER_HOME/bin/tcl_setup" \
+ 		>> $(DESTDIR)$(bindir)/qdec
+--- a/scuba2/Makefile.am
++++ b/scuba2/Makefile.am
+@@ -205,7 +205,7 @@
+ 
+ # put a wrapper around the bin, used to setup tcltktixblt,vtk,kww enviro vars
+ install-exec-hook:scuba2
+-	cp $(top_builddir)/scuba2/scuba2 $(DESTDIR)$(bindir)/scuba2.bin
++	mv $(DESTDIR)$(bindir)/scuba2 $(DESTDIR)$(bindir)/scuba2.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/scuba2
+ 	echo "source \$$FREESURFER_HOME/bin/tcl_setup" \
+ 		>> $(DESTDIR)$(bindir)/scuba2
+--- a/orient_mri/Makefile.am
++++ b/orient_mri/Makefile.am
+@@ -82,7 +82,7 @@
+ 
+ # put a wrapper around the bin, used to setup tcltktixblt,vtk,kww enviro vars
+ install-exec-hook:orient_mri
+-	cp $(top_builddir)/orient_mri/orient_mri $(DESTDIR)$(bindir)/orient_mri.bin
++	mv $(DESTDIR)$(bindir)/orient_mri $(DESTDIR)$(bindir)/orient_mri.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/orient_mri
+ 	echo "source \$$FREESURFER_HOME/bin/tcl_setup" \
+ 		>> $(DESTDIR)$(bindir)/orient_mri
+--- a/freeview_wx/Makefile.am
++++ b/freeview_wx/Makefile.am
+@@ -484,7 +484,7 @@
+ # put a wrapper around the bin, used to setup tcltktixblt,vtk,kww enviro vars
+ # and if the OS is MACOSX have a different install-hook to create a bundle
+ install-exec-hook:freeview_wx
+-	cp $(top_builddir)/freeview_wx/freeview_wx $(DESTDIR)$(bindir)/freeview_wx.bin
++	cp $(DESTDIR)$(bindir)/freeview_wx $(DESTDIR)$(bindir)/freeview_wx.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/freeview_wx
+ 	echo "source \$$FREESURFER_HOME/bin/tcl_setup" \
+ 		>> $(DESTDIR)$(bindir)/freeview_wx
+--- a/mris_decimate_gui/Makefile.am
++++ b/mris_decimate_gui/Makefile.am
+@@ -88,7 +88,7 @@
+ 	rm -rf $(DESTDIR)$(bindir)/MrisDecimatey.app
+ else
+ install-exec-hook:mris_decimate_gui
+-	cp $(top_builddir)/mris_decimate_gui/mris_decimate_gui $(DESTDIR)$(bindir)/mris_decimate_gui.bin
++	cp $(DESTDIR)$(bindir)/mris_decimate_gui $(DESTDIR)$(bindir)/mris_decimate_gui.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/mris_decimate_gui
+ 	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+ 		>> $(DESTDIR)$(bindir)/mris_decimate_gui
+--- a/mris_volmask/Makefile.am
++++ b/mris_volmask/Makefile.am
+@@ -69,8 +69,7 @@
+ # put a wrapper around the bin, used to setup VTK enviro vars
+ if HAVE_VTK_LIBS
+ install-exec-hook:
+-	cp $(top_builddir)/mris_volmask/mris_volmask_vtk \
+-		$(DESTDIR)$(bindir)/mris_volmask_vtk.bin
++	mv $(DESTDIR)$(bindir)/mris_volmask_vtk $(DESTDIR)$(bindir)/mris_volmask_vtk.bin
+ 	echo "#!/bin/tcsh -ef" > $(DESTDIR)$(bindir)/mris_volmask_vtk
+ 	echo "source \$$FREESURFER_HOME/bin/vtk_setup" \
+ 		>> $(DESTDIR)$(bindir)/mris_volmask_vtk

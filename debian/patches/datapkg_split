@@ -1,0 +1,40 @@
+From: Michael Hanke <mih@debian.org>
+Subjects: Remove traces of data shiped with Freesurfer
+
+The data is shipped in a dedicated package.
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -359,7 +359,6 @@
+ 	qdecproject \
+ 	svm-lib \
+ 	scripts \
+-	distribution \
+ 	$(GLSUBDIRS) \
+ 	$(MRISUBDIRS) \
+ 	$(MRISSUBDIRS) \
+--- a/configure.in
++++ b/configure.in
+@@ -3444,23 +3444,6 @@
+            cudatest/volumecopy/Makefile
+            cudatest/mrilabeltest/Makefile
+            dicom/Makefile
+-           distribution/Makefile
+-           distribution/average/Makefile
+-           distribution/average/surf/Makefile
+-           distribution/average/Yeo_JNeurophysiol11_MNI152/Makefile
+-           distribution/average/Buckner_JNeurophysiol11_MNI152/Makefile
+-           distribution/average/Choi_JNeurophysiol12_MNI152/Makefile
+-           distribution/docs/Makefile
+-           distribution/diffusion/Makefile
+-           distribution/diffusion/mgh-dti-seqpack/Makefile
+-           distribution/trctrain/Makefile
+-           distribution/fsafd/Makefile
+-           distribution/grad_unwarp_tables/Makefile
+-           distribution/lib/Makefile
+-           distribution/lib/bem/Makefile
+-           distribution/sessions/Makefile
+-           distribution/subjects/Makefile
+-           distribution/fsl-extra/Makefile
+            dmri_poistats/Makefile
+            dmri_tensoreig/Makefile
+            dngtester/Makefile
