@@ -1,6 +1,7 @@
 #!/usr/bin/make -f
-export AUTOMAKE = automake --add-missing -Wno-portability
-export LIBTOOLIZE = libtoolize --force
+
+# export AUTOMAKE = automake --add-missing -Wno-portability
+# export LIBTOOLIZE = libtoolize --force
 
 # Enable extended globbing in the shell to be able to use more
 # sophisticated stuff in dh_install files
@@ -9,105 +10,110 @@ SHELL := /bin/bash -O extglob
 FSMAJORVERSION = 5.999.0
 
 %:
-	dh $@ --with autoreconf
+	dh $@
 
 override_dh_auto_configure:
+	./setup_configure
 	dh_auto_configure -- \
 		--prefix=/usr/lib/freesurfer-$(FSMAJORVERSION) \
 		--disable-Werror \
-		--with-cuda=no \
-		--enable-scuba \
-		--with-vxl-include=/usr \
-		--with-tcl-include=/usr/include/tcl8.5 \
-		--enable-tcltk-apps \
-		--disable-static \
-		--with-gnu-ld \
-		--with-nifti-dir=/usr \
-		--with-mni-dir=/usr \
-		--with-tiff-dir=/usr \
-		--with-jpeg-dir=/usr \
-		--with-expat-dir=/usr \
-		--with-x \
-		--x-includes=/usr/include/X11 \
-		--x-libraries=/usr \
-		--with-gl-dir=/usr \
-		--with-cppunit-dir=/usr \
-		--with-qt=/usr/bin \
-		--with-vtk-dir=/usr \
-		--with-vtk-include=/usr/include/vtk-5.6 \
-		--with-kwwidgets-dir=/usr \
-		--with-wxwidgets-dir=/usr \
-		--with-itk-dir=/usr \
-		--with-fltk-dir=/usr \
-		--with-opencv=/usr \
-		--with-gts-dir=/usr \
-		--with-boost-dir=/usr \
-		--with-petsc-dir=/usr \
-		--with-petsc-include=/usr/include/petsc \
-		--with-ann-dir=/usr \
-		CFLAGS="-I/usr/include/libxml2 -I/usr/include/GL" \
-		LDFLAGS="-Wl,--allow-shlib-undefined"
+		--with-pkgs-dir=/opt/freesurfer-extlibs
+#		--with-cuda=no \
+#		--enable-scuba \
+#		--with-vxl-include=/usr \
+#		--with-tcl-include=/usr/include/tcl8.5 \
+#		--enable-tcltk-apps \
+#		--disable-static \
+#		--with-gnu-ld \
+#		--with-nifti-dir=/usr \
+#		--with-mni-dir=/usr \
+#		--with-tiff-dir=/usr \
+#		--with-jpeg-dir=/usr \
+#		--with-expat-dir=/usr \
+#		--with-x \
+#		--x-includes=/usr/include/X11 \
+#		--x-libraries=/usr \
+#		--with-gl-dir=/usr \
+#		--with-cppunit-dir=/usr \
+#		--with-qt=/usr/bin \
+#		--with-vtk-dir=/usr \
+#		--with-vtk-include=/usr/include/vtk-5.6 \
+#		--with-kwwidgets-dir=/usr \
+#		--with-wxwidgets-dir=/usr \
+#		--with-itk-dir=/usr \
+#		--with-fltk-dir=/usr \
+#		--with-opencv=/usr \
+#		--with-gts-dir=/usr \
+#		--with-boost-dir=/usr \
+#		--with-petsc-dir=/usr \
+#		--with-petsc-include=/usr/include/petsc \
+#		--with-ann-dir=/usr \
+#		CFLAGS="-I/usr/include/libxml2 -I/usr/include/GL" \
+#		LDFLAGS="-Wl,--allow-shlib-undefined"
 
-override_dh_auto_build:
-	# create fake data files that are part of the upstream source tree, but
-	# come in a separate Debian package for space efficiency
-	grep 'GEMS/data*' freesurfer-data.md5sums |cut -d ' ' -f 3,3| xargs touch
-	grep 'talairach_avi/*' freesurfer-data.md5sums |cut -d ' ' -f 3,3 |xargs touch
-
-	# Set up files which require modifying for FSMAJORVERSION
-	for tmpl in debian/*template; do \
-		ofile=$$(basename $$tmpl); \
-		if [ "$${ofile%*FSMAJORVER*}" = "$$ofile" ]; then \
-			sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" $${tmpl} > debian/$${ofile%*.template}; \
-		else \
-			ofile=$${ofile/FSMAJORVER/$(FSMAJORVERSION)}; \
-			sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" $${tmpl} > debian/$${ofile%*.template}; \
-		fi; \
-	done
-
-	dh_auto_build
+#override_dh_auto_build:
+#	# create fake data files that are part of the upstream source tree, but
+#	# come in a separate Debian package for space efficiency
+#	grep 'GEMS/data*' freesurfer-data.md5sums |cut -d ' ' -f 3,3| xargs touch
+#	grep 'talairach_avi/*' freesurfer-data.md5sums |cut -d ' ' -f 3,3 |xargs touch
+#
+#	# Set up files which require modifying for FSMAJORVERSION
+#	for tmpl in debian/*template; do \
+#		ofile=$$(basename $$tmpl); \
+#		if [ "$${ofile%*FSMAJORVER*}" = "$$ofile" ]; then \
+#			sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" $${tmpl} > debian/$${ofile%*.template}; \
+#		else \
+#			ofile=$${ofile/FSMAJORVER/$(FSMAJORVERSION)}; \
+#			sed "s@FSMAJORVERSION@${FSMAJORVERSION}@g" $${tmpl} > debian/$${ofile%*.template}; \
+#		fi; \
+#	done
+#
+#	dh_auto_build
 
 override_dh_auto_install:
 	dh_auto_install
-	# fix tcsh interpreter location
-	for f in $$(egrep -lR '^#![ ]*/bin/tcsh' debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/bin debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/fsfast/bin); do \
-		echo "Fixing tcsh interpreter location in '$$f'" ; \
-		sed -i -e 's|^#![ ]*/bin/tcsh|#!/usr/bin/tcsh|' $$f ; \
-	done
-	# fix csh interpreter location
-	for f in $$(egrep -lR '^#![ ]*/bin/csh' debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/bin debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/fsfast/bin); do \
-		echo "Fixing csh interpreter location in '$$f'" ; \
-		sed -i -e 's|^#![ ]*/bin/csh|#!/bin/csh|' $$f ; \
-	done
+# yoh: I don't think this is any longer necessary, shells are available from within /bin
+#	# fix tcsh interpreter location
+#	for f in $$(egrep -lR '^#![ ]*/bin/tcsh' debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/bin debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/fsfast/bin); do \
+#		echo "Fixing tcsh interpreter location in '$$f'" ; \
+#		sed -i -e 's|^#![ ]*/bin/tcsh|#!/usr/bin/tcsh|' $$f ; \
+#	done
+#	# fix csh interpreter location
+#	for f in $$(egrep -lR '^#![ ]*/bin/csh' debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/bin debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/fsfast/bin); do \
+#		echo "Fixing csh interpreter location in '$$f'" ; \
+#		sed -i -e 's|^#![ ]*/bin/csh|#!/bin/csh|' $$f ; \
+#	done
+#
 
-	# Fix up some data file paths
-	rm -f debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data/GEMS/CurrentMeshCollection30.gz
-	rm -f debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data/GEMS/imageDump.mgz
-	mkdir -p debian/tmp/usr/share/freesurfer-$(FSMAJORVERSION)/data
-	mv debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data/GEMS debian/tmp/usr/share/freesurfer-$(FSMAJORVERSION)/data/
-	rmdir debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data
+# yoh: may be later ;)
+#	# Fix up some data file paths
+#	rm -f debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data/GEMS/CurrentMeshCollection30.gz
+#	rm -f debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data/GEMS/imageDump.mgz
+#	mkdir -p debian/tmp/usr/share/freesurfer-$(FSMAJORVERSION)/data
+#	mv debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data/GEMS debian/tmp/usr/share/freesurfer-$(FSMAJORVERSION)/data/
+#	rmdir debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data
 
 override_dh_auto_test:
 	: # none for now
 
 override_dh_auto_clean:
 	dh_auto_clean
-	# get recreated by autoreconf
-	find . -name Makefile.in -delete
-	-rm aclocal.m4 config.h.in INSTALL
-	-rm config/*
-	-rm config.log
-	-rm cpuflags.mak
-	# remove help headers
-	for f in $$(find . -name '*.xml' ! -wholename '*debian*'); do \
-		[ -f $${f}.h ] && rm $${f}.h || :; \
-	done
-	# remove fake data files
-	-grep 'GEMS/data*' freesurfer-data.md5sums |cut -d ' ' -f 3,3| xargs rm
-	-grep 'talairach_avi/*' freesurfer-data.md5sums |cut -d ' ' -f 3,3 |xargs rm
-	# remove files which upstream doesn't and which otherwise upset 3.0 (quilt)
-	-rm -f GEMS/kvlAtlasMeshViewingConsoleGUI.h
-	-rm -f GEMS/kvlSegmentationEvaluationConsoleGUI.h
+#	# get recreated by autoreconf
+#	find . -name Makefile.in -delete
+#	-rm aclocal.m4 config.h.in INSTALL
+#	-rm config/*
+#	-rm config.log
+#	-rm cpuflags.mak
+#	# remove help headers
+#	for f in $$(find . -name '*.xml' ! -wholename '*debian*'); do \
+#		[ -f $${f}.h ] && rm $${f}.h || :; \
+#	done
+#	# remove fake data files
+#	-grep 'GEMS/data*' freesurfer-data.md5sums |cut -d ' ' -f 3,3| xargs rm
+#	-grep 'talairach_avi/*' freesurfer-data.md5sums |cut -d ' ' -f 3,3 |xargs rm
+#	# remove files which upstream doesn't and which otherwise upset 3.0 (quilt)
+#	-rm -f GEMS/kvlAtlasMeshViewingConsoleGUI.h
+#	-rm -f GEMS/kvlSegmentationEvaluationConsoleGUI.h
 	# Remove files generated using FSMAJORVERSION
 	for tmpl in debian/*template; do \
 		tmpl=$${tmpl%*.template}; \
