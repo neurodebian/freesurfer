@@ -6,7 +6,7 @@ export LIBTOOLIZE = libtoolize --force
 # sophisticated stuff in dh_install files
 SHELL := /bin/bash -O extglob
 
-FSMAJORVERSION = 5.1
+FSMAJORVERSION = 5.999.0
 
 %:
 	dh $@ --with autoreconf

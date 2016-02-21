@@ -1,4 +1,4 @@
-Source: freesurfer
+Source: freesurfer-sloppy
 Section: science
 Priority: extra
 Maintainer: NeuroDebian Team <team@neuro.debian.net>
@@ -22,15 +22,16 @@ Build-Depends: debhelper (>= 7.0.50~), dh-autoreconf,
                texlive-fonts-recommended,
                libcv-dev (>=2.2), libhighgui-dev,
                libgts-dev, libboost-all-dev, libpetsc3.1-dev,
-               libann-dev
-Standards-Version: 3.9.2
+               libann-dev,
+			   freesurfer-extlibs-sloppy,
+Standards-Version: 3.9.7
 Homepage: http://surfer.nmr.mgh.harvard.edu/
 Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/freesurfer.git
-Vcs-Git: git://git.debian.org/git/pkg-exppsy/freesurfer.git
+Vcs-Git: git://git.debian.org/git/pkg-exppsy/freesurfer.git -b debian-sloppy
 
-Package: freesurfer
+Package: freesurfer-sloppy
 Architecture: all
-Depends: ${misc:Depends}, freesurfer-5.1
+Depends: ${misc:Depends}, freesurfer-sloppy-5.999.0
 Description: analysis and visualization of functional brain imaging data
  FreeSurfer is a set of tools for analysis and visualization of
  structural and functional brain imaging data. It contains a fully
@@ -46,34 +47,44 @@ Description: analysis and visualization of functional brain imaging data
  statistical analysis of group morphometry differences, and labeling of
  subcortical brain structures, etc.
  .
- This package depends upon the latest version of freesurfer.
+ This package depends upon the latest version of freesurfer-sloppy.
+ -sloppy is a package which largely reuses provided by upstream binaries,
+ and stays very close with upstream build procedures.  5.999.0 version is
+ to signal that it is not even yet alpha of upcoming 6.0 release.  .0
+ suffix reserved for internal "releases"
 
-Package: freesurfer-5.1
+Package: freesurfer-sloppy-5.999.0
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
- freesurfer-common-5.1 (= ${source:Version}), ${python:Depends},
- tcsh, python
-Description: Freesurfer 5.1 package
- This package contains the Freesurfer 5.1 software.
+ ${python:Depends},
+ freesurfer-extlibs-sloppy,
+ freesurfer-sloppy-common-5.999.0 (= ${source:Version}),
+ tcsh, python,
+Recommends:
+ freesurfer-sloppy-fsfast-5.999.0,
+Description: Freesurfer 5.999.0 package
+ This package contains the Freesurfer 5.999.0 software.
 
-Package: freesurfer-common-5.1
+Package: freesurfer-sloppy-common-5.999.0
 Architecture: all
-Depends: ${misc:Depends}, tclsh
+Depends: ${misc:Depends},
+ tclsh
 Description: Common data files for Freesurfer
  This package contains architecture independent data files of the
- Freesurfer 5.1 software.
+ Freesurfer 5.999.0 software.
 
-Package: freesurfer-fsfast-5.1
+Package: freesurfer-sloppy-fsfast-5.999.0
 Section: contrib/science
 Architecture: all
-Depends: ${misc:Depends}, matlab-freesurfer-5.1 (= ${source:Version}),
+Depends: ${misc:Depends},
+ matlab-freesurfer-sloppy-5.999.0 (= ${source:Version}),
  tcsh, tclsh, python
 Description: Freesurfer's fMRI processing toolbox
- This package contains the FSFAST toolbox from Freesurfer 5.1.
+ This package contains the FSFAST toolbox from Freesurfer 5.999.0.
 
-Package: matlab-freesurfer-5.1
+Package: matlab-freesurfer-sloppy-5.999.0
 Section: contrib/science
 Architecture: all
 Depends: ${misc:Depends}
 Description: Freesurfer's Matlab toolboxes
- This package contains all Matlab toolboxes shipped with Freesurfer 5.1.
+ This package contains all Matlab toolboxes shipped with Freesurfer 5.999.0.

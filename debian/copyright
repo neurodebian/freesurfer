@@ -1,16 +1,18 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: freesurfer
 Upstream-Contact: freesurfer@nmr.mgh.harvard.edu
-Source: https://surfer.nmr.mgh.harvard.edu/fswiki/ReadOnlyCVS
+Source: https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/repo/freesurfer.git
+Comment:  This file is very far from being complete!!!!  Please refer to the source code for now
 
 Files: *
-Copyright: 2011, The General Hospital Corporation (Boston, MA) "MGH"
+Copyright: 2011-2016, The General Hospital Corporation (Boston, MA) "MGH"
 License: FreeSurfer-Software-License-Agreement
 
 
 Files: debian/*
 Copyright: 2011, Michael Hanke <mih@debian.org>
-           2011, Yaroslav Halchenko <debian@onerussian.com>
+           2011-2016, Yaroslav Halchenko <debian@onerussian.com>
+           2011-2012, Mark Hymers <mark.hymers@ynic.york.ac.uk>
 License: BSD
 
 License: BSD
