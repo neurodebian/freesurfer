@@ -8,6 +8,7 @@
 SHELL := /bin/bash -O extglob
 
 FSMAJORVERSION = 5.999.0
+BPKGDIR = $(CURDIR)/debian/freesurfer-sloppy-$(FSMAJORVERSION)/
 
 %:
 	dh $@
@@ -71,7 +72,7 @@ override_dh_auto_build:
 	dh_auto_build
 
 override_dh_auto_install:
-	dh_auto_install
+	dh_auto_install --destdir=$(BPKGDIR)
 # yoh: I don't think this is any longer necessary, shells are available from within /bin
 #	# fix tcsh interpreter location
 #	for f in $$(egrep -lR '^#![ ]*/bin/tcsh' debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/bin debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/fsfast/bin); do \
@@ -93,13 +94,17 @@ override_dh_auto_install:
 #	mv debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data/GEMS debian/tmp/usr/share/freesurfer-$(FSMAJORVERSION)/data/
 #	rmdir debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data
 
+override_dh_install:
+	# we are moving (?) from BPKGDIR which should absorb the most
+	dh_install --sourcedir=$(BPKGDIR)
+
 override_dh_auto_test:
 	: # none for now
 
 override_dh_auto_clean:
 	dh_auto_clean
-#	# get recreated by autoreconf
-#	find . -name Makefile.in -delete
+	# get recreated by autoreconf
+	find . -name Makefile.in -delete
 #	-rm aclocal.m4 config.h.in INSTALL
 #	-rm config/*
 #	-rm config.log

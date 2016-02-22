@@ -1,2 +1,2 @@
-debian/tmp/usr/lib/freesurfer-FSMAJORVERSION/matlab usr/share/freesurfer-FSMAJORVERSION/
-debian/tmp/usr/lib/freesurfer-5.1/fsfast/toolbox usr/share/freesurfer-FSMAJORVERSION/fsfast/
+usr/lib/freesurfer-FSMAJORVERSION/matlab
+usr/lib/freesurfer-FSMAJORVERSION/fsfast/toolbox
