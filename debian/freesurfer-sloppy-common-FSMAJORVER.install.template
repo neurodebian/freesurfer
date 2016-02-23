@@ -1,3 +1,3 @@
-debian/freesurfer.sh etc/freesurfer/FSMAJORVERSION/
-debian/*.desktop usr/share/applications/
-debian/freesurfer_gui_app_wrapper usr/lib/freesurfer-FSMAJORVERSION/
+../freesurfer.sh etc/freesurfer/FSMAJORVERSION/
+../*.desktop usr/share/applications/
+../freesurfer_gui_app_wrapper usr/lib/freesurfer-FSMAJORVERSION/

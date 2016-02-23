@@ -19,7 +19,7 @@
 
 ##? dont_build_3rdparty
 
-#u
+#u  sent out
 exhaustive_clean
 
 #- use_f2c_not_g2c
@@ -43,7 +43,7 @@ exhaustive_clean
 #  oops -- I should have recalled having this one!
 #u fix_install_destdir
 
-#u?
+#u?  sent out
 mris_decimate_gui_wx2.8
 
 #? petsc_link_fix
@@ -53,7 +53,7 @@ mris_decimate_gui_wx2.8
 #u?
 petscupdate
 
-#u
+#u  sent out
 renamehsizet
 
 #? fixanndetection
