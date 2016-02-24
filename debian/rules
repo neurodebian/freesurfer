@@ -79,6 +79,9 @@ override_dh_shlibdeps:
 
 override_dh_auto_install:
 	dh_auto_install --destdir=$(BPKGDIR)
+
+override_dh_install:
+	dh_install --sourcedir=$(BPKGDIR)
 	# and then move fsfast toolbox under matlab- pkg
 	mkdir -p debian/matlab-freesurfer-sloppy-$(FSMAJORVERSION)/usr/lib/freesurfer-${FSMAJORVERSION}/fsfast
 	mv debian/{freesurfer-sloppy-fsfast,matlab-freesurfer-sloppy}-$(FSMAJORVERSION)/usr/lib/freesurfer-${FSMAJORVERSION}/fsfast/toolbox
@@ -105,10 +108,6 @@ override_dh_auto_install:
 #	mkdir -p debian/tmp/usr/share/freesurfer-$(FSMAJORVERSION)/data
 #	mv debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data/GEMS debian/tmp/usr/share/freesurfer-$(FSMAJORVERSION)/data/
 #	rmdir debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/data
-
-override_dh_install:
-	# we are moving (?) from BPKGDIR which should absorb the most
-	dh_install --sourcedir=$(BPKGDIR)
 
 override_dh_auto_test:
 	: # none for now

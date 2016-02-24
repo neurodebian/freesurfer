@@ -1,6 +1,8 @@
 General issues
 --------------
 
+* modularize away -data and -nonfree
+
 * What do we do about the license file issue? Do we ship one? Do we patch it
   away? Do we change the location to /etc/freesurfer/license? Do we make the
   package acquire a license upon first install?
@@ -25,4 +27,4 @@ Send upstream
 -------------
 
 - remove qdec/morph_tables-rh.bak
-- #u patches
+- #u patches -- almost all pushed and accepted
