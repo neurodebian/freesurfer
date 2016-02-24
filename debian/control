@@ -81,6 +81,7 @@ Architecture: all
 Depends: ${misc:Depends},
  matlab-freesurfer-sloppy-5.999.0 (= ${source:Version}),
  tcsh, tclsh, python
+Recommends: matlab-support
 Description: Freesurfer's fMRI processing toolbox
  This package contains the FSFAST toolbox from Freesurfer 5.999.0.
 
@@ -88,5 +89,6 @@ Package: matlab-freesurfer-sloppy-5.999.0
 Section: contrib/science
 Architecture: all
 Depends: ${misc:Depends}
+Recommends: matlab-support
 Description: Freesurfer's Matlab toolboxes
  This package contains all Matlab toolboxes shipped with Freesurfer 5.999.0.

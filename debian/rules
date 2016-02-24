@@ -10,6 +10,8 @@ SHELL := /bin/bash -O extglob
 FSMAJORVERSION = 5.999.0
 BPKGDIR = $(CURDIR)/debian/freesurfer-sloppy-$(FSMAJORVERSION)/
 
+PRIV_LD_PATHS = $(shell find /opt/freesurfer-extlibs/ -iname *.so* | xargs dirname | uniq | tr '\n' ':')
+
 %:
 	dh $@
 
@@ -71,8 +73,18 @@ override_dh_auto_build:
 
 	dh_auto_build
 
+override_dh_shlibdeps:
+	# TODO: go through all those extensions etc and strip binaries, rebuild from source etc
+	dh_shlibdeps -l $(PRIV_LD_PATHS) -X.glnxa64 -X.glnx64 -XegmentSubject
+
 override_dh_auto_install:
 	dh_auto_install --destdir=$(BPKGDIR)
+	# and then move fsfast toolbox under matlab- pkg
+	mkdir -p debian/matlab-freesurfer-sloppy-$(FSMAJORVERSION)/usr/lib/freesurfer-${FSMAJORVERSION}/fsfast
+	mv debian/{freesurfer-sloppy-fsfast,matlab-freesurfer-sloppy}-$(FSMAJORVERSION)/usr/lib/freesurfer-${FSMAJORVERSION}/fsfast/toolbox
+	# Remove those which were copied into other packages from BPKGDIR
+	for d in `grep -h '^usr/lib/freesurfer' debian/*.install`; do \
+		rm -r $(CURDIR)/debian/freesurfer-sloppy-$(FSMAJORVERSION)/$$d; done
 # yoh: I don't think this is any longer necessary, shells are available from within /bin
 #	# fix tcsh interpreter location
 #	for f in $$(egrep -lR '^#![ ]*/bin/tcsh' debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/bin debian/tmp/usr/lib/freesurfer-$(FSMAJORVERSION)/fsfast/bin); do \
