@@ -9,10 +9,6 @@ GEMS/*
 !GEMS/*.*
 !GEMS/*/
 CVS/
-# a bit more complicated for GEMS to go first so that later patterns pick up ignores as well
-GEMS/*
-!GEMS/*.*
-!GEMS/*/
 *.[oa]
 Makefile
 Makefile.in
