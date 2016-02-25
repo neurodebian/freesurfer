@@ -1,12 +1,13 @@
-freesurfer-sloppy (5.999.0+20160221+git5636-ga9470f2-1~ndall+0) UNRELEASED; urgency=medium
+freesurfer-sloppy (5.999.20160224-1~ndall+0) unstable; urgency=medium
 
+  * Based on stable5_branch-5644-gc371f4e
   * Trying to reincarnate packaging while staying close to upstream
     build procedure and reusing their prebuilt binaries for now (thus -sloppy)
   * debian/patches
     - for now only patches intended for upstreaming, annotate the others
       and some of thos got refreshed
 
- -- Yaroslav Halchenko <debian@onerussian.com>  Sun, 21 Feb 2016 18:29:01 -0500
+ -- Yaroslav Halchenko <debian@onerussian.com>  Thu, 25 Feb 2016 09:32:37 -0500
 
 freesurfer (5.1.0+dev+cvs20120104-1) UNRELEASED; urgency=low
 
