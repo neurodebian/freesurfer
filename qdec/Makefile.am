@@ -92,6 +92,9 @@ install-data-local:
 uninstall-hook:
 	rm -f $(DESTDIR)$(bindir)/qdec.bin
 
+clean-local:
+	-rm *Tcl.cxx QdecLibInit.cxx
+
 else
 bin_PROGRAMS = 
 
